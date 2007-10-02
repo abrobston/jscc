@@ -1,0 +1,363 @@
+/~
+	XPL - eXample Programming Language v0.4 (OPTIMIZED VERSION)
+	Written 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+	
+	The complete source of this program is in the Public Domain.
+	
+	This example demonstrates the implementation of XPL, a complete,
+	interpretered scripting language, written in JS/CC.
+	
+	XPL provides simple input/output operations and can only handle
+	numeric values.
+	
+	Watch out for the *.xpl-files within the example directory, which
+	contain example scripts to be executed using XPL.
+~/
+
+	
+[*
+
+//Structs
+function NODE()
+{
+	var type;
+	var value;
+	var children;
+}
+
+//Defines
+var NODE_OP		= 0;
+var NODE_VAR	= 1;
+var NODE_CONST	= 2;
+
+var OP_NONE		= -1;
+var OP_ASSIGN	= 0;
+var OP_IF		= 1;
+var OP_IF_ELSE	= 2;
+var OP_WHILE_DO	= 3;
+var OP_DO_WHILE	= 4;
+var OP_WRITE	= 5;
+var OP_READ		= 6;
+var OP_SAY		= 7;
+
+var OP_EQU		= 10;
+var OP_NEQ		= 11;
+var OP_GRT		= 12;
+var OP_LOT		= 13;
+var OP_GRE		= 14;
+var OP_LOE		= 15;
+var OP_ADD		= 16;
+var OP_SUB		= 17;
+var OP_DIV		= 18;
+var OP_MUL		= 19;
+var OP_NEG		= 20;
+
+//Management functions
+function createNode( type, value, childs )
+{
+	var n = new NODE();
+	n.type = type;
+	n.value = value;	
+	n.children = new Array();
+	
+	for( var i = 2; i < arguments.length; i++ )
+		n.children.push( arguments[i] );
+		
+	return n;
+}
+
+//Array to store variable names and values to
+var v_names = new Array();
+var v_values = new Array();
+
+//Function to store a variable's content to a variables name. If the name does
+//not exist already, the variable is automatically created.
+function letvar( vname, value )
+{
+	var i;
+	for( i = 0; i < v_names.length; i++ )
+		if( v_names[i].toString() == vname.toString() )
+			break;
+		
+	if( i == v_names.length )
+	{
+		v_names.push( vname );
+		v_values.push( 0 );
+	}
+	
+	v_values[i] = value;
+}
+
+//Function to get a variable's content over its name
+function getvar( vname )
+{
+	var i;
+	for( i = 0; i < v_names.length; i++ )
+		if( v_names[i].toString() == vname.toString() )
+			return v_values[i];
+			
+	return 0;
+}
+
+//This is the interpreting function, working on base of the compiled program structure.
+function execute( node )
+{
+	var ret = 0;
+	
+	if( !node )
+		return 0;
+		
+	switch( node.type )
+	{
+		case NODE_OP:
+			switch( node.value )
+			{
+				case OP_NONE: 
+					/* OP_NONE can have childs (a block!) */
+					if( node.children[0] )
+						execute( node.children[0] );
+					if( node.children[1] )
+						ret = execute(
+						node.children[1] );
+					break;
+				case OP_ASSIGN:
+					letvar( node.children[0], execute(
+						 node.children[1] ) );
+					break;
+				case OP_IF:
+					if( execute( node.children[0] ) )
+						execute( node.children[1] );
+					break;
+				case OP_IF_ELSE:
+					if( execute( node.children[0] ) )
+						execute( node.children[1] );
+					else
+						execute( node.children[2] );
+					break;
+				case OP_WHILE_DO:
+					while( execute( node.children[0] ) )
+						execute( node.children[1] );
+					break;
+				case OP_DO_WHILE:
+					do
+						execute( node.children[0] )
+					while( execute( node.children[1] ) );
+					break;
+				case OP_WRITE:
+					WScript.Echo( execute( node.children[0] )
+						 );
+					break;
+				case OP_READ:
+					letvar( node.children[0].toString(),
+						WScript.StdIn.ReadLine() );
+					break;
+				case OP_SAY:
+					WScript.Echo( node.children[0] );
+					break;
+				case OP_EQU:
+					ret = execute( node.children[0] ) ==
+						execute( node.children[1] );
+					break;
+				case OP_NEQ:
+					ret = execute( node.children[0] ) !=
+						execute( node.children[1] );
+					break;
+				case OP_GRT:
+					ret = execute( node.children[0] ) >
+						execute( node.children[1] );
+					break;
+				case OP_LOT:
+					ret = execute( node.children[0] ) <
+						execute( node.children[1] );
+					break;
+				case OP_GRE:
+					ret = execute( node.children[0] ) >=
+						execute( node.children[1] );
+					break;
+				case OP_LOE:
+					ret = execute( node.children[0] ) <=
+						execute( node.children[1] );
+					break;
+				case OP_ADD:
+					ret = execute( node.children[0] ) +
+						execute( node.children[1] );
+					break;
+				case OP_SUB:
+					ret = execute( node.children[0] ) -
+						execute( node.children[1] );
+					break;
+				case OP_DIV:
+					ret = execute( node.children[0] ) /
+						execute( node.children[1] );
+					break;
+				case OP_MUL:
+					ret = execute( node.children[0] ) *
+						execute( node.children[1] );
+					break;
+				case OP_NEG:
+					ret = execute( node.children[0] ) * -1;
+					break;
+			}
+			break;
+			
+		case NODE_VAR:
+			ret = Number( getvar( node.value ) );
+			break;
+			
+		case NODE_CONST:
+			ret = Number( node.value );
+			break;
+	}
+	return ret;
+}
+
+*]
+
+/~ Defining whitespaces and comments ~/
+!	' |\r|\n|\t|//[^\n]*\n'
+
+/~ Keywords (case-insensitive!) and program structure operators ~/
+	"IF"
+	"ELSE"
+	"WHILE"
+	"DO"
+	"SAY"
+	"WRITE"
+	"READ"
+	'{'
+	'}'
+	';'
+	'\('
+	'\)'
+	'='
+	'[A-Za-z_][A-Za-z0-9_]*'	Identifier
+	'\'([^\']|\'\')*\''		String	[* %match = %match.substr( 1,
+						 %match.length - 2 );
+					   %match = %match.replace( /''/g,
+						"\'" );
+					*]
+	'[0-9]+'			Integer
+	'[0-9]+\.[0-9]*|[0-9]*\.[0-9]+'	Float
+	;
+
+/~ Operators to be used in expressions ~/
+>	'=='
+	'!='
+	'<='
+	'>='
+	'>'
+	'<'
+	;
+
+<	'\+'
+	'\-'
+	;
+	
+<	'/'
+	'\*'
+	;
+
+##
+
+Program:		Program Stmt		[* execute( %2 ); *]
+		|
+		;
+
+Stmt_List:		Stmt_List Stmt		[* %% = createNode( NODE_OP,
+						OP_NONE, %1, %2 ); *]
+		|
+		;
+								
+Stmt:		IF Expression Stmt 		[* %% = createNode( NODE_OP, 
+						OP_IF, %2, %3 ); *]
+		| IF Expression Stmt ELSE Stmt 	[* %% = createNode( NODE_OP,
+						OP_IF_ELSE, %2, %3, %5 ); *]
+		| WHILE Expression DO Stmt 	[* %% = createNode( NODE_OP,
+						OP_WHILE_DO, %2, %4 ); *]
+		| DO Stmt WHILE Expression ';'	[* %% = createNode( NODE_OP, OP_DO_WHILE,
+						 %2, %4 ); *]
+		| SAY String ';'		[* %% = createNode( NODE_OP, OP_SAY,
+						%2 ); *]
+		| WRITE Expression ';'		[* %% = createNode( NODE_OP, OP_WRITE,
+						%2 ); *]
+		| READ Identifier ';'		[* %% = createNode( NODE_OP, OP_READ,
+						%2 ); *]
+		| Identifier '=' Expression ';'	[* %% = createNode( NODE_OP, OP_ASSIGN,
+						%1, %3 ); *]
+		| '{' Stmt_List '}'		[* %% = %2; *]
+		| ';'			[* %% = createNode( NODE_OP, OP_NONE );
+					*]
+		;
+				
+Expression:		Expression '==' Expression	[* %% = createNode( NODE_OP, OP_EQU,
+						%1, %3 ); *]
+		| Expression '<' Expression	[* %% = createNode( NODE_OP, OP_LOT,
+						%1, %3 ); *]
+		| Expression '>' Expression	[* %% = createNode( NODE_OP, OP_GRT,
+						%1, %3 ); *]
+		| Expression '<=' Expression	[* %% = createNode( NODE_OP, OP_LOE,
+						%1, %3 ); *]
+		| Expression '>=' Expression	[* %% = createNode( NODE_OP, OP_GRE,
+						%1, %3 ); *]
+		| Expression '!=' Expression	[* %% = createNode( NODE_OP, OP_NEQ,
+						%1, %3 ); *]
+		| Expression '-' Expression	[* %% = createNode( NODE_OP, OP_SUB,
+						%1, %3 ); *]
+		| Expression '+' Expression	[* %% = createNode( NODE_OP, OP_ADD,
+						%1, %3 ); *]
+		| Expression '*' Expression	[* %% = createNode( NODE_OP, OP_MUL,
+						%1, %3 ); *]
+		| Expression '/' Expression	[* %% = createNode( NODE_OP, OP_DIV,
+						%1, %3 ); *]
+		| '-' Expression	&'*'	[* %% = createNode( NODE_OP, OP_NEG,
+						%2 ); *]
+		| '(' Expression ')'		[* %% = %2; *]
+		| Integer			[* %% = createNode( NODE_CONST, %1 ); *]
+		| Float			[* %% = createNode( NODE_CONST, %1 ); *]
+		| Identifier		[* %% = createNode( NODE_VAR, %1 ); *]
+		;
+
+
+
+
+[*
+//Utility function: Open and read a file
+function open_file( file )
+{
+	var fs = new ActiveXObject( 'Scripting.FileSystemObject' );	
+	var src = new String();
+
+	if( fs && fs.fileExists( file ) )
+	{
+		var f = fs.OpenTextFile( file, 1 );
+		if( f )
+		{
+			src = f.ReadAll();
+			f.Close();
+		}
+	}
+	
+	return src;
+}
+
+//Main
+if( WScript.Arguments.length > 0 )
+{
+	var str		= open_file( WScript.Arguments(0) );
+	var error_cnt 	= 0;
+	var error_off	= new Array();
+	var error_la	= new Array();
+	
+	if( ( error_cnt = __##PREFIX##parse( str, error_off, error_la ) ) > 0 )
+	{
+		var i;
+		for( i = 0; i < error_cnt; i++ )
+			WScript.Echo( "Parse error near \"" 
+				+ str.substr( error_off[i], 10 ) +
+			( ( str.length > error_off[i] + 10 ) ? "..." : "" ) +
+				"\", expecting \"" + error_la[i].join() + "\"" );
+	}
+}
+else
+	WScript.Echo( 'usage: xpl.js <filename>' );
+*]
