@@ -1,0 +1,86 @@
+/~
+	Expression calculator written in JS/CC (browser-based JavaScript Version)
+
+	This is a WSH-script implementation; For JScript.NET or even JavaScript
+	on the web, use the according functions to interact with the user.
+~/
+
+[*
+<html>
+<body>
+
+<script language="JavaScript">
+
+*]
+
+/~
+	--- These are the token definitions ---
+~/
+!	' |\t' ;		/~ Characters to be ignored... ~/
+
+	'\('			/~ Non-associative tokens ~/
+	'\)'
+	'[0-9]+'			INT			[* %match = parseInt( %match );	*]
+	;
+
+<	'\+'			/~ Left-associative tokens, lowest precedence ~/
+	'\-';
+	
+<	'\*'			/~ Left-associative tokens, highest precedence ~/
+	'/';
+
+##
+
+/~
+	--- And here's the grammar specification ---
+~/
+
+p:	e								[* alert( %1 ); 				*]
+	;
+
+/~
+	Don't confuse with the tokens:
+	Here, we use the unescaped values because these are not
+	interpretered as regular expressions at this position!
+~/
+e: 	e '+' e							[* %% = %1 + %3; 				*]
+	| e '-' e						[* %% = %1 - %3; 				*]
+	| e '*' e						[* %% = %1 * %3; 				*]
+	| e '/' e						[* %% = %1 / %3; 				*]
+	| '-' e			&'*'			[* %% = %2 * -1;				*]
+	| '(' e ')'						[* %% = %2; 					*]
+	| INT
+	;
+
+/~
+	This is the parser entry point; Because this entry point could be
+	very individual, the compiler programmer has to decide which way
+	he want to read the source, parse it and report the errors, if
+	there are any.
+~/
+[*
+var error_offsets = new Array();
+var error_lookaheads = new Array();
+var error_count = 0;
+
+var str = prompt( "Please enter an expression:", "" );
+
+##PREFIX##_dbg_withtrace = true;
+
+if( ( error_count = __##PREFIX##parse( str,
+	error_offsets, error_lookaheads ) ) > 0 )
+{
+	var errstr = new String();
+	for( var i = 0; i < error_count; i++ )
+		errstr += "Parse error near \"" 
+				+ str.substr( error_offsets[i] ) +
+					"\", expecting \"" +
+						error_lookaheads[i].join() +
+							"\"\n" ;
+	alert( errstr );
+}
+
+</script>
+</body>
+</html>
+*]
