@@ -80,7 +80,7 @@ token_assoc:	'<' token_defs	';'					[*	for( var i = 0; i < %2.length; i++ )
 				| '!' string						[*	if( whitespace_token == -1 )
 														{
 															var regex = %2.substr( 1, %2.length - 2 );
-															whitespace_token = create_symbol( "^", SYM_TERM );
+															whitespace_token = create_symbol( "^", SYM_TERM, false );
 															compile_regex( regex, whitespace_token, 
 																( %2.charAt( 0 ) == '\'' ) ? false : true );
 														}
@@ -96,7 +96,7 @@ token_defs:		token_defs token_def 				[*	%1.push( %2 );
 				|									[*	%% = new Array(); 		*]
 				;
 
-token_def:		string identifier code 				[*	%% = create_symbol( %2, SYM_TERM );
+token_def:		string identifier code 				[*	%% = create_symbol( %2, SYM_TERM, false );
 														var regex = %1.substr( 1, %1.length - 2 );
 														symbols[%%].code = %3;
 														
@@ -104,7 +104,7 @@ token_def:		string identifier code 				[*	%% = create_symbol( %2, SYM_TERM );
 															( %1.charAt( 0 ) == '\'' ) ? false : true );
 													*]
 				| string code 						[*	var regex = %1.substr( 1, %1.length - 2 );
-														%% = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM );
+														%% = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, false );
 														symbols[%%].code = %2;
 
 														compile_regex( regex, symbols[ %% ].id, 
@@ -119,7 +119,7 @@ grammar_defs:	grammar_defs grammar_def
 				|
 				;
 
-grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1, SYM_NONTERM );
+grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1, SYM_NONTERM, false );
 														symbols[nonterm].defined = true;
 														for( var i = 0; i < %3.length; i++ )
 														{
@@ -170,13 +170,14 @@ rhs:			sequence rhs_prec code				[*	var prod = new PROD();
 				;
 
 rhs_prec:		'&' identifier						[* 	var index;
-														if( ( index = find_symbol( %2, SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( %2, SYM_TERM, false ) ) > -1 )
 															%% = symbols[index].level;
 														else
 															_error( "Call to undefined terminal \"" + %2 + "\"" );
 													*]
 				| '&' string						[*	var index;
-														if( ( index = find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ), SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ),
+																		SYM_TERM, false ) ) > -1 )
 															%% = symbols[index].level;
 														else
 															_error( "Call to undefined terminal \"" + %2 + "\"" );
@@ -192,15 +193,14 @@ sequence:		sequence symbol						[*	%% = new Array();
 				;
 
 symbol:			identifier							[*	var index;
-														if( ( index = find_symbol( %1,
-																SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( %1, SYM_TERM, false ) ) > -1 )
 															%% = index;
 														else
-															%% = create_symbol( %1, SYM_NONTERM );
+															%% = create_symbol( %1, SYM_NONTERM, false );
 													*]
 				| string							[*	var index;
 														if( ( index = find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ),
-																SYM_TERM ) ) > -1 )
+																SYM_TERM, false ) ) > -1 )
 															%% = index;
 														else
 															_error( "Call to undefined terminal \"" + %1 + "\"" );

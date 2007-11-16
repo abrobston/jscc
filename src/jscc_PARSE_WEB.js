@@ -711,7 +711,7 @@ switch( act )
 			if( whitespace_token == -1 )
 														{
 															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
-															whitespace_token = create_symbol( "^", SYM_TERM );
+															whitespace_token = create_symbol( "^", SYM_TERM, false );
 															compile_regex( regex, whitespace_token, 
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
@@ -734,7 +734,7 @@ switch( act )
 	break;
 	case 13:
 	{
-			rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM );
+			rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, false );
 														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 														
@@ -746,7 +746,7 @@ switch( act )
 	case 14:
 	{
 			var regex = vstack[ vstack.length - 2 ].substr( 1, vstack[ vstack.length - 2 ].length - 2 );
-														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM );
+														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, false );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
 														compile_regex( regex, symbols[ rval ].id, 
@@ -766,7 +766,7 @@ switch( act )
 	break;
 	case 17:
 	{
-			var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM );
+			var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, false );
 														symbols[nonterm].defined = true;
 														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
 														{
@@ -827,7 +827,7 @@ switch( act )
 	case 21:
 	{
 		 	var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, false ) ) > -1 )
 															rval = symbols[index].level;
 														else
 															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
@@ -837,7 +837,8 @@ switch( act )
 	case 22:
 	{
 			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ), SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
+																		SYM_TERM, false ) ) > -1 )
 															rval = symbols[index].level;
 														else
 															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
@@ -865,11 +866,10 @@ switch( act )
 	case 26:
 	{
 			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ],
-																SYM_TERM ) ) > -1 )
+														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, false ) ) > -1 )
 															rval = index;
 														else
-															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM );
+															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM, false );
 													
 	}
 	break;
@@ -877,7 +877,7 @@ switch( act )
 	{
 			var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
-																SYM_TERM ) ) > -1 )
+																SYM_TERM, false ) ) > -1 )
 															rval = index;
 														else
 															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
