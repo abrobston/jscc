@@ -78,7 +78,7 @@ function reset_all( mode )
 	dfa_states = new Array();
 	lex = new Array();
 	
-	create_symbol( "", SYM_NONTERM );
+	create_symbol( "", SYM_NONTERM, false );
 	symbols[0].defined = true;
 	
 	p = new PROD();

@@ -120,13 +120,18 @@ function get_undone_state()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.11.2007	Jan Max Meyer	Allow to find eof_character
 ----------------------------------------------------------------------------- */
-function find_symbol( label, kind )
+function find_symbol( label, kind, is_eof )
 {
+	if( !is_eof )
+		is_eof = false;
+
 	for( var i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].label.toString() == label.toString()
-			&& symbols[i].kind == kind )
+			&& symbols[i].kind == kind
+				&& symbols[i].is_eof == is_eof )
 			return i;
 	}
 	
@@ -150,17 +155,20 @@ function find_symbol( label, kind )
 										terminal symbol.
 					kind				Type of the symbol. This can be
 										SYM_NONTERM or SYM_TERM
+					is_eof				Flag, if the symbol is the EOF symbol.
+										If not specified, is_eof is always false.
 	
 	Returns:		The particular object of type SYMBOL.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.11.2007	Jan Max Meyer	Bugfix: EOF-character is a special case!
 ----------------------------------------------------------------------------- */
-function create_symbol( label, kind )
+function create_symbol( label, kind, is_eof )
 {
 	var exists;
 	
-	if( ( exists = find_symbol( label, kind ) ) > -1 )
+	if( ( exists = find_symbol( label, kind, is_eof ) ) > -1 )
 		return symbols[ exists ].id;
 	
 	var sym = new SYMBOL();
@@ -175,7 +183,11 @@ function create_symbol( label, kind )
 	sym.level = 0; //Could be changed by grammar parser
 	
 	//Flags
-	sym.is_eof = false;
+	if( is_eof )
+		sym.is_eof = true;
+	else
+		sym.is_eof = false;
+
 	sym.defined = false;
 
 	sym.first = new Array();
@@ -615,8 +627,7 @@ function lalr1_parse_table( debug )
 	var i, j, k, item, s, p;
 	
 	item = create_item( 0 );
-	s = create_symbol( "$", SYM_TERM );
-	symbols[s].is_eof = true;
+	s = create_symbol( "$", SYM_TERM, true );
 	item.lookahead.push( s );
 	
 	/*

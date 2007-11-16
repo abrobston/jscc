@@ -16,11 +16,11 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.24.1";
+var JSCC_VERSION			= "0.25";
 
 //Symbol types
 var SYM_NONTERM				= 0;
-var	SYM_TERM				= 1;
+var SYM_TERM				= 1;
 
 //Symbol associativity
 var ASSOC_NONE				= 0;
@@ -40,10 +40,6 @@ var TOK_DELIMITER			= 7;
 var TOK_SEMANTIC			= 8;
 var	TOK_IGNORE				= 9;
 var TOK_PREFIX				= 10;
-
-var TOKEN_NAMES				= new Array( "(Undefined)", "(End of File)", "Identifier", 
-								"\"...\"", "'...'", "':'", "';'", "'|'", "[* ... *]", "'^'" );
-
 
 //Miscelleanous constants
 var DEF_PROD_CODE			= "%% = %1;";
