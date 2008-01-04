@@ -1,0 +1,24 @@
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+~~~ CHANGES AND NEW FEATURES IN THE LATEST VERSION ~~~
+
+[+] New feature
+[-] Bugfix
+
+-------------------------------------------------------
+JS/CC v0.25 (build Jan 04, 2008)
+-------------------------------------------------------
+[+] Bugfix with '$' symbol
+[+] Smaller changes in the source files
+
+-------------------------------------------------------
+JS/CC v0.24.1 (build Sept 27, 2007)
+-------------------------------------------------------
+[+] CHANGES log text in root directory (this file ;))
+[-] Formatting of the Web-interface
+[-] Better readable example grammars in the
+	web-interface
+
+-------------------------------------------------------
+JS/CC v0.24 (build Sept 25, 2007)
+-------------------------------------------------------
+[+] First public release of JS/CC
