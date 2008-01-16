@@ -1,0 +1,61 @@
+#-------------------------------------------------------------------------------
+# Makefile for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# --- Targets ---
+# all:		Builds both the JS/CC executable and source version.
+# sources:	Build sources only (compiles grammar parser and regular expression
+#			parser using JS/CC itself).
+# clean:	Deletes the JS/CC executable.
+#
+# The file jscc1.js is temporarily build and has no further usage.
+#
+#
+# You may use, modify and distribute this software under the terms and conditions
+# of the Artistic License. Please see ARTISTIC for more information.
+#-------------------------------------------------------------------------------
+
+rhino_boot: jscc_parse_RHINO_BOOTSTRAP.js jscc_regex_RHINO_BOOTSTRAP.js jscc_RHINO.js
+	cat jscc_global.js \
+			 jscc_debug.js \
+			 jscc_first.js \
+			 jscc_parse_RHINO_BOOTSTRAP.js \
+			 jscc_printtab.js \
+			 jscc_tabgen.js \
+			 jscc_util.js \
+			 jscc_bitset.js \
+			 jscc_integrity.js \
+			 jscc_regex_RHINO_BOOTSTRAP.js \
+			 jscc_lexdfa.js \
+			 jscc_lexdbg.js \
+			 jscc_RHINO.js \
+			> jscc1r.js
+	@echo ==================================================================
+	@echo == Following assumes you have Rhino\'s js.jar in your CLASSPATH ==
+	@echo ==================================================================
+	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_parse_RHINO.js -p jscc -t ../driver_rhino.js_ jscc_parse.par
+	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_regex_RHINO.js -p regex -t ../driver_rhino.js_ jscc_regex.par
+	mv jscc1r.js ../jsccrbs.js
+
+rhino: jscc_parse_RHINO.js jscc_regex_RHINO.js jscc_RHINO.js
+	cat jscc_global.js \
+			 jscc_debug.js \
+			 jscc_first.js \
+			 jscc_parse_RHINO.js \
+			 jscc_printtab.js \
+			 jscc_tabgen.js \
+			 jscc_util.js \
+			 jscc_bitset.js \
+			 jscc_integrity.js \
+			 jscc_regex_RHINO.js \
+			 jscc_lexdfa.js \
+			 jscc_lexdbg.js \
+			 jscc_RHINO.js \
+			> jscc1r.js
+	@echo ==================================================================
+	@echo == Following assumes you have Rhino\'s js.jar in your CLASSPATH ==
+	@echo ==================================================================
+	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_parse_RHINO.js -p jscc -t ../driver_rhino.js_ jscc_parse.par
+	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_regex_RHINO.js -p regex -t ../driver_rhino.js_ jscc_regex.par
+	mv jscc1r.js ../jsccr.js
+

@@ -1,0 +1,29 @@
+To use JS/CC with Mozilla/Rhino, you need to do the following
+
+* Download the Rhino JavaScript Engine from:
+http://www.mozilla.org/rhino/download.html
+
+JS/CC 0.24 and 0.25 have been tested with Rhino 1.6R7 and CVS
+versions dated 2007-10-30 and later.
+
+* Place js.jar from Rhino in your CLASSPATH or add it to your
+CLASSPATH.
+
+** On *nix systems, you would do something like this:
+   sudo cp js.jar /usr/lib/
+   export CLASSPATH=/usr/lib/js.jar:$CLASSPATH
+
+** On Windows, you would do something like this:
+   copy js.jar C:\path\to\your\JDK\Install\lib
+   set CLASSPATH=C:\path\to\your\JDK\Install\lib\js.js;%CLASSPATH%
+
+To build a Rhino-compatible version of JS/CC (jsccr.js), you also
+need 'make' or you can run the commands that 'make' does manually.  In
+the src/ directory of JS/CC type:
+
+make rhino_boot
+make rhino
+
+Once, you've built JS/CC successfully with 'make rhino_boot', you can 
+use 'make rhino' from then on.
+
