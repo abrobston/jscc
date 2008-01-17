@@ -572,7 +572,7 @@ var labels = new Array(
 				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
 			
 			err_cnt++;
-			err_off.push( info.offset - info.att.length );			
+			err_off.push( info.offset - info.att.length );
 			err_la.push( new Array() );
 			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
@@ -1057,10 +1057,12 @@ function parse_grammar( str, filename )
 	if( ( error_count += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
 	{
 		for( i = 0; i < error_count; i++ )
-			_error( filename + ": Parse error near \"" 
-					+ str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects.join() + "\"" );
+			_error( filename + ", line " + ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
+				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ) + 
+					": Parse error near \"" 
+						+ str.substr( error_offsets[i], 30 ) +
+							( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+								"..." : "" ) + "\", expecting \"" + error_expects[i].join() + "\"" );
 	}
 }
 	

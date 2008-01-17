@@ -303,10 +303,15 @@ function compile_regex( str, accept, case_insensitive )
 	else
 	{
 		for( i = 0; i < error_count; i++ )
-			_error( "Regular expression parse error near \"" 
-					+ str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects.join() + "\"" );
+		{
+			var spaces = new String();
+			for( j = 0; j < error_offsets[i]; j++ )
+				spaces += " ";
+			
+			_error( "Regular expression \"" + str + "\"\n" +
+			 "                           " + spaces + "^\n" +
+			 "       expecting \"" + error_expects[i].join() + "\"" );
+		}
 	}
 }
 
