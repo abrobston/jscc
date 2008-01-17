@@ -4,6 +4,16 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [+] New feature
 [-] Bugfix
 
+
+-------------------------------------------------------
+JS/CC v0.26 (build Jan 17, 2008)
+-------------------------------------------------------
+[+] Improved error reporting in JS/CC itself
+[+] Switch warnings in the web environment
+[+] Some additional files and changes on port to
+	Mozilla/Rhino JavaScript Engine
+	by Louis P. Santillan
+
 -------------------------------------------------------
 JS/CC v0.25 (build Jan 04, 2008)
 -------------------------------------------------------
