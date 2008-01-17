@@ -232,10 +232,12 @@ function parse_grammar( str, filename )
 	if( ( error_count += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
 	{
 		for( i = 0; i < error_count; i++ )
-			_error( filename + ": Parse error near \"" 
-					+ str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects.join() + "\"" );
+			_error( filename + ", line " + ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
+				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ) + 
+					": Parse error near \"" 
+						+ str.substr( error_offsets[i], 30 ) +
+							( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+								"..." : "" ) + "\", expecting \"" + error_expects[i].join() + "\"" );
 	}
 }
 	

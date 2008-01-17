@@ -27,9 +27,9 @@ function _error( msg )
 	if( show_errors )
 	{
 		@if( @js_dotnet )
-		print( "Error: " + msg );
+		print( "Error: " + msg  + "\n" );
 		@else
-		WScript.Echo( "Error: " + msg );
+		WScript.Echo( "Error: " + msg + "\n" );
 		@end
 	}
 	
@@ -41,9 +41,9 @@ function _warning( msg )
 	if( show_warnings )
 	{
 		@if( @js_dotnet )
-		print( "Warning: " + msg );
+		print( "Warning: " + msg + "\n" );
 		@else
-		WScript.Echo( "Warning: " + msg );
+		WScript.Echo( "Warning: " + msg + "\n" );
 		@end
 	}
 	
