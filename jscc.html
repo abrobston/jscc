@@ -45,7 +45,6 @@
 		-->
 		</style>
 		
-	
 		<script type="text/javascript" src="src/jscc_global.js"></script>
 		<script type="text/javascript" src="src/jscc_debug.js"></script>
 		<script type="text/javascript" src="src/jscc_first.js"></script>	
@@ -93,6 +92,7 @@
 					document.source.code.value = "";
 					document.source.code.focus();
 					document.source.run.disabled = true;
+					return true;
 				}
 				else
 					return false;
@@ -116,8 +116,8 @@
 			var driver = "##HEADER##\nvar _dbg_withtrace = false; var _dbg_string = new String(); function __dbg_print( text )\n{ _dbg_string += text + \"\\n\";}\nfunction __lex( info )\n{ var state = 0; var match = -1; var match_pos = 0; var start = 0; var pos = info.offset + 1; do\n{ pos--; state = 0; match = -2; start = pos; if( info.src.length <= start )\nreturn ##EOF##; do\n{ ##DFA##\npos++;}\nwhile( state > -1 );}\nwhile( ##WHITESPACE## > -1 && match == ##WHITESPACE## ); if( match > -1 )\n{ info.att = info.src.substr( start, match_pos - start ); info.offset = match_pos; ##TERMINAL_ACTIONS##\n}\nelse\n{ info.att = new String(); match = -1;}\nreturn match;}\nfunction __parse( src, err_off, err_la )\n{ var sstack = new Array(); var vstack = new Array(); var err_cnt = 0; var act; var go; var la; var rval; var parseinfo = new Function( \"\", \"var offset; var src; var att;\" ); var info = new parseinfo(); ##TABLES##\n##LABELS##\ninfo.offset = 0; info.src = src; info.att = new String(); if( !err_off )\nerr_off = new Array(); if( !err_la )\nerr_la = new Array(); sstack.push( 0 ); vstack.push( 0 ); la = __lex( info ); while( true )\n{ act = ##ERROR##; for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n{ if( act_tab[sstack[sstack.length-1]][i] == la )\n{ act = act_tab[sstack[sstack.length-1]][i+1]; break;}\n}\nif( _dbg_withtrace && sstack.length > 0 )\n{ __dbg_print( \"\\nState \" + sstack[sstack.length-1] + \"\\n\" + \"\\tLookahead: \" + labels[la] + \" (\\\"\" + info.att + \"\\\")\\n\" + \"\\tAction: \" + act + \"\\n\" + \"\\tSource: \\\"\" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?\n\"...\" : \"\" ) + \"\\\"\\n\" + \"\\tStack: \" + sstack.join() + \"\\n\" + \"\\tValue stack: \" + vstack.join() + \"\\n\" );}\nif( act == ##ERROR## )\n{ if( _dbg_withtrace )\n__dbg_print( \"Error detected: There is no reduce or shift on the symbol \" + labels[la] ); err_cnt++; err_off.push( info.offset - info.att.length ); err_la.push( new Array() ); for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\nerr_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] ); var rsstack = new Array(); var rvstack = new Array(); for( var i = 0; i < sstack.length; i++ )\n{ rsstack[i] = sstack[i]; rvstack[i] = vstack[i];}\nwhile( act == ##ERROR## && la != ##EOF## )\n{ if( _dbg_withtrace )\n__dbg_print( \"\\tError recovery\\n\" + \"Current lookahead: \" + labels[la] + \" (\" + info.att + \")\\n\" + \"Action: \" + act + \"\\n\\n\" ); if( la == -1 )\ninfo.offset++; while( act == ##ERROR## && sstack.length > 0 )\n{ sstack.pop(); vstack.pop(); if( sstack.length == 0 )\nbreak; act = ##ERROR##; for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n{ if( act_tab[sstack[sstack.length-1]][i] == la )\n{ act = act_tab[sstack[sstack.length-1]][i+1]; break;}\n}\n}\nif( act != ##ERROR## )\nbreak; for( var i = 0; i < rsstack.length; i++ )\n{ sstack.push( rsstack[i] ); vstack.push( rvstack[i] );}\nla = __lex( info );}\nif( act == ##ERROR## )\n{ if( _dbg_withtrace )\n__dbg_print( \"\\tError recovery failed, terminating parse process...\" ); break;}\nif( _dbg_withtrace )\n__dbg_print( \"\\tError recovery succeeded, continuing\" );}\nif( act > 0 )\n{ if( _dbg_withtrace )\n__dbg_print( \"Shifting symbol: \" + labels[la] + \" (\" + info.att + \")\" ); sstack.push( act ); vstack.push( info.att ); la = __lex( info ); if( _dbg_withtrace )\n__dbg_print( \"\\tNew lookahead symbol: \" + labels[la] + \" (\" + info.att + \")\" );}\nelse\n{ act *= -1; if( _dbg_withtrace )\n__dbg_print( \"Reducing by producution: \" + act ); rval = void(0); if( _dbg_withtrace )\n__dbg_print( \"\\tPerforming semantic action...\" ); ##ACTIONS##\nif( _dbg_withtrace )\n__dbg_print( \"\\tPopping \" + pop_tab[act][1] + \" off the stack...\" ); for( var i = 0; i < pop_tab[act][1]; i++ )\n{ sstack.pop(); vstack.pop();}\ngo = -1; for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )\n{ if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )\n{ go = goto_tab[sstack[sstack.length-1]][i+1]; break;}\n}\nif( act == 0 )\nbreak; if( _dbg_withtrace )\n__dbg_print( \"\\tPushing non-terminal \" + labels[ pop_tab[act][0] ] ); sstack.push( go ); vstack.push( rval );}\nif( _dbg_withtrace )\n{ alert( _dbg_string ); _dbg_string = new String();}\n}\nif( _dbg_withtrace )\n{ __dbg_print( \"\\nParse complete.\" ); alert( _dbg_string );}\nreturn err_cnt;}\n##FOOTER##";
 				
 				if( !code_foot )
-					code_foot = "var error_offsets = new Array(); var error_lookaheads = new Array(); var error_count = 0; var str = prompt( \"Please enter a string to be parsed:\", \"\" ); if( ( error_count = __parse( str, error_offsets, error_lookaheads ) ) > 0 ) { var errstr = new String(); for( var i = 0; i < error_count; i++ ) errstr += \"Parse error near \\\"\" + str.substr( error_offsets[i] ) + \"\\\", expecting \\\"\" + error_lookaheads[i].join() + \"\\\"\\n\" ; alert( errstr );}";
-				
+					code_foot = "var error_offsets = new Array(); var error_lookaheads = new Array(); var error_count = 0; var str = prompt( \"Please enter a string to be parsed:\", \"\" ); if( ( error_count = __parse( str, error_offsets, error_lookaheads ) ) > 0 ) { var errstr = new String(); for( var i = 0; i < error_count; i++ ) errstr += \"Parse error in line \" + ( str.substr( 0, error_offsets[i] ).match( /\\n/g ) ? str.substr( 0, error_offsets[i] ).match( /\\n/g ).length : 1 ) + \" near \\\"\" + str.substr( error_offsets[i] ) + \"\\\", expecting \\\"\" + error_lookaheads[i].join() + \"\\\"\\n\" ; alert( errstr );}";
+
 				driver = driver.replace( /##HEADER##/gi, code_head );
 				driver = driver.replace( /##TABLES##/gi, print_parse_tables( MODE_GEN_JS ) );
 				driver = driver.replace( /##DFA##/gi, print_dfa_table( dfa_table ) );
@@ -130,6 +130,7 @@
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
 								
 				document.getElementById( "js_code" ).innerHTML = driver.replace( /\n/g, "<br />" ).replace( /\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;" );
+
 				eval( driver );
 		}
 		
@@ -140,7 +141,8 @@
 			html_output = new String();
 			error_output = new String();
 			reset_all( EXEC_WEB );
-			show_warnings = true;
+			
+			show_warnings = document.source.with_warnings.checked;
 
 			var src = new String( document.source.code.value );
 			parse_grammar( src );
@@ -169,7 +171,7 @@
 				}
 			}
 
-			if( errors > 0 || warnings > 0 )
+			if( errors > 0 || warnings > 0 && error_output != "" )
 				alert( error_output );
 			
 			if( errors == 0 )
@@ -198,7 +200,7 @@
 						-->
 						</script>
 					</div>
-					<div id="copyright">Copyright &copy; 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies</div>
+					<div id="copyright">Copyright &copy; 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies</div>
 					<div id="visit_us"><a href="http://jscc.jmksf.com">http://jscc.jmksf.com</a></div>
 				</td>
 			</tr>
@@ -232,9 +234,10 @@
 							</tr>
 						</table>
 						
-						<textarea name="code" rows="10" cols="255" style="width: 100%;" onchange="document.source.run.disabled = true;"></textarea>
+						<textarea id="code" name="code" rows="10" cols="255" style="width: 100%;" onchange="document.source.run.disabled = true;"></textarea>
 						<br />
-						<input type="button" value="Build" style="width:50%" onclick="build()" /><input type="button" name="run" value="Run" style="width:50%" onclick="run_parser()" disabled="disabled" />
+						<input type="button" value="Build" style="width:50%" onclick="build()" /><input type="button" name="run" value="Run" style="width:50%" onclick="run_parser()" disabled="disabled" /><br />
+						<input name="with_warnings" type="checkbox" />Show warnings
 					</form>
 				</td>
 			</tr>
@@ -268,8 +271,7 @@
 			<tr>
 				<td colspan="2">
 					<div id="js_code">
-						<!-- Element to output generated code -->
-						Please hit the build and then the run button to get the full source code of the current parser.
+					Run your parser to obtain the source code!
 					</div>
 				</td>
 			</tr>				
