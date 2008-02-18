@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.25";
+var JSCC_VERSION			= "0.26";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -1596,10 +1596,12 @@ function parse_grammar( str, filename )
 	if( ( error_count += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
 	{
 		for( i = 0; i < error_count; i++ )
-			_error( filename + ": Parse error near \"" 
-					+ str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects.join() + "\"" );
+			_error( filename + ", line " + ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
+				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ) + 
+					": Parse error near \"" 
+						+ str.substr( error_offsets[i], 30 ) +
+							( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+								"..." : "" ) + "\", expecting \"" + error_expects[i].join() + "\"" );
 	}
 }
 	
@@ -4043,10 +4045,15 @@ function compile_regex( str, accept, case_insensitive )
 	else
 	{
 		for( i = 0; i < error_count; i++ )
-			_error( "Regular expression parse error near \"" 
-					+ str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects.join() + "\"" );
+		{
+			var spaces = new String();
+			for( j = 0; j < error_offsets[i]; j++ )
+				spaces += " ";
+			
+			_error( "Regular expression \"" + str + "\"\n" +
+			 "                           " + spaces + "^\n" +
+			 "       expecting \"" + error_expects[i].join() + "\"" );
+		}
 	}
 }
 
@@ -4630,7 +4637,7 @@ function copyright_info()
 {
 	var info = new String();
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser Generator written in JavaScript\n";
-	info += "Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer\n";
+	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer\n";
 	info += "Contributions (C) 2007 by Louis P. Santillan <lpsantil@gmail.com>\n";
 	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
 	

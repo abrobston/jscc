@@ -4,6 +4,13 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [+] New feature
 [-] Bugfix
 
+-------------------------------------------------------
+JS/CC v0.26 (build Feb 18, 2008)
+-------------------------------------------------------
+[-] Some extensions on the manual
+[-] Now with updated jsccr.js for Rhino
+	(the first v0.26 release came with a v0.25 compile
+	for Rhino!)
 
 -------------------------------------------------------
 JS/CC v0.26 (build Jan 17, 2008)

@@ -81,7 +81,7 @@ function copyright_info()
 {
 	var info = new String();
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser Generator written in JavaScript\n";
-	info += "Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer\n";
+	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer\n";
 	info += "Contributions (C) 2007 by Louis P. Santillan <lpsantil@gmail.com>\n";
 	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
 	
