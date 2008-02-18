@@ -1,20 +1,3 @@
-#-------------------------------------------------------------------------------
-# Makefile for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
-#
-# --- Targets ---
-# all:		Builds both the JS/CC executable and source version.
-# sources:	Build sources only (compiles grammar parser and regular expression
-#			parser using JS/CC itself).
-# clean:	Deletes the JS/CC executable.
-#
-# The file jscc1.js is temporarily build and has no further usage.
-#
-#
-# You may use, modify and distribute this software under the terms and conditions
-# of the Artistic License. Please see ARTISTIC for more information.
-#-------------------------------------------------------------------------------
-
 rhino_boot: jscc_parse_RHINO_BOOTSTRAP.js jscc_regex_RHINO_BOOTSTRAP.js jscc_RHINO.js
 	cat jscc_global.js \
 			 jscc_debug.js \
