@@ -1,6 +1,6 @@
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	jscc_util.js
@@ -105,6 +105,8 @@ function reset_all( mode )
 	shifts = 0;
 	reduces = 0;
 	gotos = 0;
+	
+	regex_weight = 0;
 	
 	code_head = new String();
 	code_foot = new String();

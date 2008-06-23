@@ -548,7 +548,7 @@ function rhs_first( item, p, begin )
 	return nullable;
 }
 /*
-	Default driver template for JS/CC generated parsers for Mozilla/Rhino
+	Default driver template for JS/CC generated parsers for JScript
 	
 	WARNING: Do not use for parsers that should run as browser-based JavaScript!
 			 Use driver_web.js_ instead!
@@ -560,11 +560,14 @@ function rhs_first( item, p, begin )
 	- Pseudo-graphical parse tree generation
 	
 	Written 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies
-        Modified 2007 from driver.js_ to support Mozilla/Rhino
-           by Louis P.Santillan <lpsantil@gmail.com>
 	
 	This is in the public domain.
 */
+
+@if( @_jscript_version >= 7 )
+import System;
+@end
+
 
 var		first_lhs;
 
@@ -575,15 +578,20 @@ var jscc_dbg_withstepbystep	= false;
 
 function __jsccdbg_print( text )
 {
+@if( @_jscript_version < 7 )
+	WScript.Echo( text );
+@else
 	print( text );
+@end
 }
 
 function __jsccdbg_wait()
 {
-   var kbd = new java.io.BufferedReader(
-                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
-
-   kbd.readLine();
+@if( @_jscript_version < 7 )
+	WScript.StdIn.ReadLine()
+@else
+	Console.ReadLine();
+@end
 }
 
 function __jscclex( info )
@@ -3150,7 +3158,7 @@ function check_empty_lines()
 			_error( "No lookaheads in state " + i + ", watch for endless list definition" );
 }
 /*
-	Default driver template for JS/CC generated parsers for Mozilla/Rhino
+	Default driver template for JS/CC generated parsers for JScript
 	
 	WARNING: Do not use for parsers that should run as browser-based JavaScript!
 			 Use driver_web.js_ instead!
@@ -3162,11 +3170,14 @@ function check_empty_lines()
 	- Pseudo-graphical parse tree generation
 	
 	Written 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies
-        Modified 2007 from driver.js_ to support Mozilla/Rhino
-           by Louis P.Santillan <lpsantil@gmail.com>
 	
 	This is in the public domain.
 */
+
+@if( @_jscript_version >= 7 )
+import System;
+@end
+
 
 var first_nfa;
 var last_nfa;
@@ -3212,15 +3223,20 @@ var regex_dbg_withstepbystep	= false;
 
 function __regexdbg_print( text )
 {
+@if( @_jscript_version < 7 )
+	WScript.Echo( text );
+@else
 	print( text );
+@end
 }
 
 function __regexdbg_wait()
 {
-   var kbd = new java.io.BufferedReader(
-                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
-
-   kbd.readLine();
+@if( @_jscript_version < 7 )
+	WScript.StdIn.ReadLine()
+@else
+	Console.ReadLine();
+@end
 }
 
 function __regexlex( info )
@@ -4560,18 +4576,32 @@ http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	jscc.js
 Author:	Jan Max Meyer
-Usage:	Console-based ersion of the JS/CC LALR(1) Parser Generator
-		to be executed as Mozilla/Rhino code on a local machine.
+Usage:	Console-based WSH version of the JS/CC LALR(1) Parser Generator
+		to be executed as JScript code on a local machine.
 
 You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
+@if( @_jscript_version >= 7 )
+@set @js_dotnet = 1
+@else
+@set @js_dotnet = 0
+@end
+
+@if( @js_dotnet )
+import System;
+@end
+
 function _error( msg )
 {
 	if( show_errors )
 	{
-		print( "Error: " + msg );
+		@if( @js_dotnet )
+		print( "Error: " + msg  + "\n" );
+		@else
+		WScript.Echo( "Error: " + msg + "\n" );
+		@end
 	}
 	
 	errors++;
@@ -4581,7 +4611,11 @@ function _warning( msg )
 {
 	if( show_warnings )
 	{
-		print( "Warning: " + msg );
+		@if( @js_dotnet )
+		print( "Warning: " + msg + "\n" );
+		@else
+		WScript.Echo( "Warning: " + msg + "\n" );
+		@end
 	}
 	
 	warnings++;
@@ -4589,22 +4623,40 @@ function _warning( msg )
 
 function _print( txt )
 {
+	@if( @js_dotnet )
 	print( txt );
+	@else
+	WScript.Echo( txt );
+	@end
 }
 
 function read_file( file )
 {
+	var fs = new ActiveXObject( "Scripting.FileSystemObject" );	
 	var src = new String();
 	
-	if( ( new java.io.File( file ).exists() ) )
+	if( !fs )
+		return null;
+	
+	if( fs.fileExists( file ) )
 	{
-		src = readFile( file );
+		var f = fs.OpenTextFile( file, 1 );
+		
+		if( f && !f.AtEndOfStream )
+		{
+			src = f.ReadAll();
+			f.Close();
+		}
 	}
 	else
 	{
 		_error( "File " + file + " is necessary, but does not exist." );
-
-		quit();
+		
+		@if( !@js_dotnet )
+		WScript.Quit( -1 );
+		@else
+		Environment.Exit( -1 );
+		@end
 	}
 	
 	return src;
@@ -4612,13 +4664,18 @@ function read_file( file )
 
 function write_file( file, content )
 {
-        var src = new String();
-	var f = new java.io.PrintWriter( file );
+	var fs = new ActiveXObject( "Scripting.FileSystemObject" );	
+	var src = new String();
+	
+	if( !fs )
+		return null;
+	
+	var f = fs.OpenTextFile( file, 2, true );
 		
 	if( f )
 	{
 		f.write( content );
-		f.close();
+		f.Close();
 	}
 	else
 		_error( "Unable to create file " + file );
@@ -4626,18 +4683,32 @@ function write_file( file, content )
 	return src;
 }
 
-var args_global_var = arguments;
+@if( !@js_dotnet )
 function get_arguments()
 {
-   return( args_global_var );
+	var enu = new Enumerator( WScript.Arguments )
+	var params = new Array();
+	
+	for( ; !enu.atEnd(); enu.moveNext() )
+		params.push( enu.item() );
+		
+	return params;
 }
+@else
+function get_arguments()
+{
+	var params = new Array( Environment.GetCommandLineArgs() );
+	
+	params.shift();
+	return params;
+}
+@end
 
 function copyright_info()
 {
 	var info = new String();
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser Generator written in JavaScript\n";
 	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer\n";
-	info += "Contributions (C) 2007 by Louis P. Santillan <lpsantil@gmail.com>\n";
 	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
 	
 	info += "You may use, modify and distribute this software under the terms and conditions\n";
@@ -4646,31 +4717,47 @@ function copyright_info()
 	_print( info );
 }
 
-function help_opt()
+function help()
 {
-	var help_str = new String();
-	help_str += "Usage: \tjscc [ -o <output-file> ] [ -t <parser-template> ]\n\t\t[ -p <prefix> ] [ -nologo ] [ -w ] <grammar-file>\n\n";
-
-	help_str += "\t-o <output-file>\tSpecifies the generated output file\n";
-	help_str += "\t\t\t\tIf not specified, output is written to stdout.\n";
+	var help = new String();
+	help += "Usage: \tjscc [ -o <output-file> ] [ -t <parser-template> ]\n\t\t[ -p <prefix> ] [ -nologo ] [ -w ] <grammar-file>\n\n";
 	
-	help_str += "\t-t <template-file>\tSpecifies the parser driver to be used\n";
-	help_str += "\t\t\t\tIf not specified, driver.js_ will be the\n";
-	help_str += "\t\t\t\tstandard driver.\n";
+	help += "\t-o <output-file>\tSpecifies the generated output file\n";
+	help += "\t\t\t\tIf not specified, output is written to stdout.\n";
 	
-	help_str += "\t-p <prefix>\t\tSpecifies a prefix to be inserted in the\n"
-	help_str += "\t\t\t\toutput-file's positions marked with ##PREFIX##.\n";
+	help += "\t-t <template-file>\tSpecifies the parser driver to be used\n";
+	help += "\t\t\t\tIf not specified, driver.js_ will be the\n";
+	help += "\t\t\t\tstandard driver.\n";
 	
-	help_str += "\t-w\t\t\tPrints warnings\n";
+	help += "\t-p <prefix>\t\tSpecifies a prefix to be inserted in the\n"
+	help += "\t\t\t\toutput-file's positions marked with ##PREFIX##.\n";
 	
-	help_str += "\t-nologo\t\t\tHides the copyright message and outputs\n";	
+	help += "\t-w\t\t\tPrints warnings\n";
 	
-	help_str += "\t<grammar file>\t\tThe grammar definition file; This is required!\n";
+	help += "\t-nologo\t\t\tHides the copyright message and outputs\n";	
 	
-	_print( help_str );
+	help += "\t<grammar file>\t\tThe grammar definition file; This is required!\n";
+	
+	_print( help );
 }
 
 // --- JS/CC entry ---
+
+//Reading the modules (WSH only!)
+@if( !@js_dotnet )
+eval( read_file( "jscc_global.js" ) );
+eval( read_file( "jscc_first.js" ) );
+eval( read_file( "jscc_parse.js" ) );
+eval( read_file( "jscc_printtab.js" ) );
+eval( read_file( "jscc_tabgen.js" ) );
+eval( read_file( "jscc_util.js" ) );
+eval( read_file( "jscc_integrity.js" ) );
+eval( read_file( "jscc_bitset.js" ) );
+eval( read_file( "jscc_REGEX.js" ) );
+eval( read_file( "jscc_lexdfa.js" ) );
+eval( read_file( "jscc_lexdbg.js" ) );
+eval( read_file( "jscc_debug.js" ) );
+@end
 
 //Initialize the globals
 reset_all( EXEC_CONSOLE );
@@ -4717,6 +4804,7 @@ for( var i = 0; i < argv.length; i++ )
 		if( src_file == "" )
 			src_file = argv[i];
 }
+
 
 if( show_logo )
 	copyright_info();
@@ -4800,6 +4888,12 @@ else
 	if( !show_logo )
 		copyright_info();
 
-	help_opt();
+	help();
 }
 
+//Exit with number of errors
+@if( !@js_dotnet )
+WScript.Quit( errors );
+@else
+Environment.Exit( errors );
+@end

@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------------
 # Makefile for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
 #
 # --- Targets ---
 # all:		Builds both the JS/CC executable and source version.
@@ -16,6 +16,7 @@
 #-------------------------------------------------------------------------------
 
 EXEC		=	..\jscc.exe
+
 TMP_EXEC	=	jscc1.js
 SRC			=	jscc.js \
 				jscc_debug.js \
@@ -36,25 +37,10 @@ all: $(EXEC)
 	@echo --- Compilation succeeded! ---
 
 sources: $(SRC)
-	copy 	/B jscc_global.js + \
-			/B jscc_debug.js + \
-			/B jscc_first.js + \
-			/B jscc_parse.js + \
-			/B jscc_printtab.js + \
-			/B jscc_tabgen.js + \
-			/B jscc_util.js + \
-			/B jscc_bitset.js + \
-			/B jscc_integrity.js + \
-			/B jscc_REGEX.js + \
-			/B jscc_lexdfa.js + \
-			/B jscc_lexdbg.js + \
-			/B jscc.js \
-			jscc1.js
-	cscript //Nologo jscc1.js -o jscc_PARSE.js -p jscc -t ..\driver.js_ jscc_parse.par
-	cscript //Nologo jscc1.js -o jscc_PARSE_WEB.js -p jscc -t ..\driver_web.js_ jscc_parse.par
-	cscript //Nologo jscc1.js -o jscc_REGEX.js -p regex -t ..\driver.js_ jscc_regex.par
-	cscript //Nologo jscc1.js -o jscc_REGEX_WEB.js -p regex -t ..\driver_web.js_ jscc_regex.par
-	@del jscc1.js
+	cscript //Nologo jscc.js -o jscc_PARSE.js -p jscc -t ..\driver.js_ jscc_parse.par
+	cscript //Nologo jscc.js -o jscc_PARSE_WEB.js -p jscc -t ..\driver_web.js_ jscc_parse.par
+	cscript //Nologo jscc.js -o jscc_REGEX.js -p regex -t ..\driver.js_ jscc_regex.par
+	cscript //Nologo jscc.js -o jscc_REGEX_WEB.js -p regex -t ..\driver_web.js_ jscc_regex.par
 
 $(EXEC): sources
 	copy 	/B jscc_global.js + \
@@ -71,8 +57,9 @@ $(EXEC): sources
 			/B jscc_lexdbg.js + \
 			/B jscc.js \
 			jscc1.js
-	jsc /out:$(EXEC) /t:exe jscc1.js
+	jsc /out:$@ /t:exe jscc1.js
 	@del jscc1.js
 
 clean:
 	@del $(EXEC)
+	@del ..\jscc.js

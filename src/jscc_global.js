@@ -1,6 +1,6 @@
 /* -HEADER----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	jscc_global.js
@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.26";
+var JSCC_VERSION			= "0.27";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -167,3 +167,5 @@ var gotos;
 var exec_mode;
 
 var assoc_level;
+
+var	regex_weight;

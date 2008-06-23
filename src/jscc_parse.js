@@ -572,7 +572,7 @@ var labels = new Array(
 				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
 			
 			err_cnt++;
-			err_off.push( info.offset - info.att.length );
+			err_off.push( info.offset - info.att.length );			
 			err_la.push( new Array() );
 			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
