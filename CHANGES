@@ -5,6 +5,16 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
+JS/CC v0.27 (build Jun 23, 2008)
+-------------------------------------------------------
+[-] Bugfix solved in regular expression matching,
+	a lot of thanks to Radim Cebis
+[+] Parse tree construction in web environment
+[+] Zoom-in parser and generator outouts in web
+	environment for better readability
+[+] Some design improovements in web environment
+
+-------------------------------------------------------
 JS/CC v0.26 (build Feb 18, 2008)
 -------------------------------------------------------
 [-] Some extensions on the manual
