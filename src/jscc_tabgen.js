@@ -1,6 +1,6 @@
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	jscc_tabgen.js
@@ -659,7 +659,7 @@ function lalr1_parse_table( debug )
 	}
 	
 	if( debug )
-	{
+	{		
 		for( i = 0; i < states.length; i++ )
 		{
 			print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,

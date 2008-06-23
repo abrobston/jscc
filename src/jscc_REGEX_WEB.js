@@ -792,23 +792,16 @@ function compile_regex( str, accept, case_insensitive )
 			}
 		}
 
-		//Compute the symbol's weight
-		for( i = 0; i < created_nfas.length; i++ )
-		{
-			if( nfa_states[ created_nfas[i] ].edge != EDGE_FREE )
-			{
-				true_edges++;
-				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR )
-					weight += bitset_count( nfa_states[ created_nfas[i] ].ccl );
-			}
-		}
-		
-		nfa_states[ last_nfa ].accept = accept;
-		nfa_states[ last_nfa ].weight = weight * true_edges;
-		
-		//_print( "For symbol " + accept + " I computed the weight " + nfa_states[ last_nfa ].weight );
-		
-						
+		/* 
+			2008-5-9	Radim Cebis:
+			
+			I think that computing weight of the nfa_states is weird,
+			IMHO nfa_state which accepts a symbol, should have
+			weight according to the order...
+		*/
+		nfa_states[ last_nfa ].accept = accept;   
+		nfa_states[ last_nfa ].weight = regex_weight++;
+
 		if( first_nfa > 0 )
 		{
 			i = 0;
@@ -833,6 +826,8 @@ function compile_regex( str, accept, case_insensitive )
 	}
 }
 
+
+//TESTING AREA ;)
 //compile_regex( "[A-Z][A-Z0-9]*", 0 );
 //compile_regex( "ab|c", 1 );
 //compile_regex( "[0-9]+", 1 );
