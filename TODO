@@ -1,0 +1,28 @@
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+~~~ TO-DO LIST FOR FUTURE RELEASES ~~~
+
+This is the todo list for the JS/CC project.
+
+-------------------------------------------------------
+Priority		Description
+1=low, 3=high
+-------------------------------------------------------
+3				Makefile has to be rewritten to run
+				with GNU Make (the current version does
+				only run with Borland MAKE and Micro-
+				soft NMAKE)
+				
+2				JS/CC Web Environment improovements:
+				- XHTML/CSS validation required
+				- Support for Opera, Safari and
+				  Konqueror
+				  
+1				Syntax-highlighting in Web Environment
+				(there is a project which allows this,
+				but it's GNU GPL, and can't be combined
+				with JS/CC's Artistic License)
+				
+1				Port to more ECMAScript-enabled platforms
+				- DMDScript
+				- SEE
+				- wxJavaScript (maybe IDE for it??)

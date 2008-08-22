@@ -366,11 +366,15 @@ function print_symbol_labels()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	22.08.2008	Jan Max Meyer	Bugfix: %offset returned the offset BEHIND the
+								terminal, now it's the correct value; %source,
+								which was documented in the manual since v0.24
+								was not implemented.
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
 	var code = new String();
-	var re = new RegExp( "%match|%offset" );
+	var re = new RegExp( "%match|%offset|%source" );
 	var i, j, k;	
 	var matches = 0;
 	var semcode;
@@ -395,7 +399,9 @@ function print_term_actions()
 					if( strmatch[0] == "%match" )
 						semcode += "info.att";
 					else if( strmatch[0] == "%offset" )
-						semcode += "info.offset";
+						semcode += "( info.offset - info.att.length )";
+					else if( strmatch[0] == "%source" )
+						semcode += "info.src";
 					
 					j += strmatch[0].length - 1;
 					k = semcode.length;
