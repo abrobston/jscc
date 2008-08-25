@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.27";
+var JSCC_VERSION			= "0.28";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -475,8 +475,8 @@ function first()
 {
 	var	cnt			= 0,
 		old_cnt		= 0;
-	var nullable	= false;
-		
+	var nullable;
+
 	do
 	{
 		old_cnt = cnt;
@@ -493,13 +493,15 @@ function first()
 					{
 						symbols[i].first = union( symbols[i].first, symbols[productions[symbols[i].prods[j]].rhs[k]].first );
 						
-						if( !(symbols[productions[symbols[i].prods[j]].rhs[k]].nullable) )
+						if( !( nullable = symbols[productions[symbols[i].prods[j]].rhs[k]].nullable ) )
 							break;
 					}
 					cnt += symbols[i].first.length;
 					
 					if( k == productions[symbols[i].prods[j]].rhs.length )
-						symbols[i].nullable = true;
+						nullable = true;
+
+					symbols[i].nullable |= nullable;
 				}
 			}
 		}

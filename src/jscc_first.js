@@ -27,13 +27,23 @@ of the Artistic License. Please see ARTISTIC for more information.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	25.08.2008	Jan Max Meyer	Here was a bad bug that sometimes came up when
+								nonterminals are nullable. An example is the
+								grammar
+								
+								"A" "B";
+								##
+								x: y "B";
+								y: y "A" | ;
+								
+								Now it works... embarrassing bug... ;(
 ----------------------------------------------------------------------------- */
 function first()
 {
 	var	cnt			= 0,
 		old_cnt		= 0;
-	var nullable	= false;
-		
+	var nullable;
+
 	do
 	{
 		old_cnt = cnt;
@@ -50,13 +60,15 @@ function first()
 					{
 						symbols[i].first = union( symbols[i].first, symbols[productions[symbols[i].prods[j]].rhs[k]].first );
 						
-						if( !(symbols[productions[symbols[i].prods[j]].rhs[k]].nullable) )
+						if( !( nullable = symbols[productions[symbols[i].prods[j]].rhs[k]].nullable ) )
 							break;
 					}
 					cnt += symbols[i].first.length;
 					
 					if( k == productions[symbols[i].prods[j]].rhs.length )
-						symbols[i].nullable = true;
+						nullable = true;
+
+					symbols[i].nullable |= nullable;
 				}
 			}
 		}

@@ -5,6 +5,13 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
+JS/CC v0.28 (build Aug 25, 2008)
+-------------------------------------------------------
+[-] Bugfix in FIRST-set computation: Nullable
+	nonterminals produced wrong FIRST-sets in some
+	special cases. Is now solved, for beta.
+
+-------------------------------------------------------
 JS/CC v0.27 (build Aug 22, 2008)
 -------------------------------------------------------
 [-] Bugfix in terminal semantic action codes:
