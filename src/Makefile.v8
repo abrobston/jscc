@@ -1,0 +1,48 @@
+v8sh:
+	cd v8 && \
+		svn checkout http://v8.googlecode.com/svn/trunk/ v8 && \
+		cd v8 && \
+		scons mode=release library=static snapshot=on sample=shell && \
+		cd .. && \
+		g++ -O3 -o v8sh v8sh.cc -I./v8/src -L./v8 -lv8 -lpthread
+
+V8_boot: jscc_parse_V8_BOOTSTRAP.js jscc_regex_V8_BOOTSTRAP.js jscc_V8.js
+	cat jscc_global.js \
+			 jscc_debug.js \
+			 jscc_first.js \
+			 jscc_parse_V8_BOOTSTRAP.js \
+			 jscc_printtab.js \
+			 jscc_tabgen.js \
+			 jscc_util.js \
+			 jscc_bitset.js \
+			 jscc_integrity.js \
+			 jscc_regex_V8_BOOTSTRAP.js \
+			 jscc_lexdfa.js \
+			 jscc_lexdbg.js \
+			 jscc_V8.js \
+			> jscc1.v8.js
+	v8/v8sh jscc1.v8.js -o jscc_parse_V8.js -p jscc -t ../driver_V8.js_ jscc_parse.par
+	v8/v8sh jscc1.v8.js -o jscc_regex_V8.js -p regex -t ../driver_V8.js_ jscc_regex.par
+	mv jscc1.v8.js ../jsccbs.v8.js
+
+V8: jscc_parse_V8.js jscc_regex_V8.js jscc_V8.js
+	cat jscc_global.js \
+			 jscc_debug.js \
+			 jscc_first.js \
+			 jscc_parse_V8.js \
+			 jscc_printtab.js \
+			 jscc_tabgen.js \
+			 jscc_util.js \
+			 jscc_bitset.js \
+			 jscc_integrity.js \
+			 jscc_regex_V8.js \
+			 jscc_lexdfa.js \
+			 jscc_lexdbg.js \
+			 jscc_V8.js \
+			> jscc1.v8.js
+	v8/v8sh jscc1.v8.js -o jscc_parse_V8.js -p jscc -t ../driver_V8.js_ jscc_parse.par
+	v8/v8sh jscc1.v8.js -o jscc_regex_V8.js -p regex -t ../driver_V8.js_ jscc_regex.par
+	mv jscc1.v8.js ../jscc.v8.js
+
+clean:
+	rm -rf v8/v8sh v8/v8 ../jsccbs.v8.js
