@@ -1,4 +1,54 @@
-v8sh:
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Google V8
+#-------------------------------------------------------------------------------
+# HOW TO:
+#
+# JS/CC has been tested to run under Google V8 under Linux and Mac OSX.  No
+# issues should exist for execution under Windows but this has not been tested.
+#
+# Execution under *nix and Mac OSX requires:
+# * The supplied shell in src/v8/v8sh.cc
+# * GCC 4.x (with g++)
+# * Python 2.4 or newer
+# * svn 1.4 or newer
+# * SCons 1.0.0 or newer
+#
+# Execution under Windows XP SP2 or newer, Vista requires:
+# * Visual Studio 2005, Visual Studio 2008, or the free Visual C++ 2008
+#   Express Edition.
+# * A build process that simulates the one in src/Makefile.v8.
+#
+# If your system mets all these requirements, build V8 and JS/CC by typing
+#
+# make -f Makefile.v8
+#-------------------------------------------------------------------------------
+
+PLATFORM		=	v8
+V8			=	v8/v8sh
+JSCC			=	../jscc.js
+
+include sources.inc
+include tools.inc
+
+all: 			$(JSCC) clean
+	@echo
+	@echo --- Compilation succeeded! ---
+
+$(JSCC):	$(V8) $(SRC_FINAL)
+	cat $(SRC_FINAL) >$@
+
+$(V8):		v8/v8sh.cc
+	@echo "---"
+	@echo "If compiling the V8 JavaScript engine on your system fails,"
+	@echo "please check that g++, svn and scons are installed and work"
+	@echo "properly."
+	@echo "---"
 	cd v8 && \
 		svn checkout http://v8.googlecode.com/svn/trunk/ v8 && \
 		cd v8 && \
@@ -6,43 +56,21 @@ v8sh:
 		cd .. && \
 		g++ -O3 -o v8sh v8sh.cc -I./v8/src -L./v8 -lv8 -lpthread
 
-V8_boot: jscc_parse_V8_BOOTSTRAP.js jscc_regex_V8_BOOTSTRAP.js jscc_V8.js
-	cat jscc_global.js \
-			 jscc_debug.js \
-			 jscc_first.js \
-			 jscc_parse_V8_BOOTSTRAP.js \
-			 jscc_printtab.js \
-			 jscc_tabgen.js \
-			 jscc_util.js \
-			 jscc_bitset.js \
-			 jscc_integrity.js \
-			 jscc_regex_V8_BOOTSTRAP.js \
-			 jscc_lexdfa.js \
-			 jscc_lexdbg.js \
-			 jscc_V8.js \
-			> jscc1.v8.js
-	v8/v8sh jscc1.v8.js -o jscc_parse_V8.js -p jscc -t ../driver_V8.js_ jscc_parse.par
-	v8/v8sh jscc1.v8.js -o jscc_regex_V8.js -p regex -t ../driver_V8.js_ jscc_regex.par
-	mv jscc1.v8.js ../jsccbs.v8.js
-
-V8: jscc_parse_V8.js jscc_regex_V8.js jscc_V8.js
-	cat jscc_global.js \
-			 jscc_debug.js \
-			 jscc_first.js \
-			 jscc_parse_V8.js \
-			 jscc_printtab.js \
-			 jscc_tabgen.js \
-			 jscc_util.js \
-			 jscc_bitset.js \
-			 jscc_integrity.js \
-			 jscc_regex_V8.js \
-			 jscc_lexdfa.js \
-			 jscc_lexdbg.js \
-			 jscc_V8.js \
-			> jscc1.v8.js
-	v8/v8sh jscc1.v8.js -o jscc_parse_V8.js -p jscc -t ../driver_V8.js_ jscc_parse.par
-	v8/v8sh jscc1.v8.js -o jscc_regex_V8.js -p regex -t ../driver_V8.js_ jscc_regex.par
-	mv jscc1.v8.js ../jscc.v8.js
+$(SRC_PARSE_JS):$(SRC_PARSE)
+	$(V8) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
+	
+$(SRC_REGEX_JS):$(SRC_REGEX)
+	$(V8) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
 
 clean:
-	rm -rf v8/v8sh v8/v8 ../jsccbs.v8.js
+	-rm $(SRC_PARSE_JS)
+	-rm $(SRC_REGEX_JS)
+
+clean_all:
+	-rm v8/v8sh
+	-rm -rf v8/v8
+
+bootstrap:			all 
+	cp $(JSCC) $(JSCC_BOOTSTRAP)
+	@echo
+	@echo --- Bootstrap replaced ---

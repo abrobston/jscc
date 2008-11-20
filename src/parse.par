@@ -1,0 +1,244 @@
+/~ -PARSER----------------------------------------------------------------------
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+http://www.jmksf.com ++ jscc<-AT->jmksf.com
+
+File:	parse.par
+Author:	Jan Max Meyer
+Usage:	A parser for parsing JS/CC parser definitions; The first verions of
+		JS/CC until v0.14 (had never been released!) worked with a hand-written
+		recursive descent parser.
+		
+You may use, modify and distribute this software under the terms and conditions
+of the Artistic License. Please see ARTISTIC for more information.
+----------------------------------------------------------------------------- ~/
+
+
+[*
+var		first_lhs;
+*]
+
+/~
+	Terminal symbol definitions
+~/
+!	' |\t|\n|\r|/~([^~]/|~[^/]|[^~/])*~/'
+
+	'##'
+	'<'
+	'>'
+	'^'
+	'!'
+	';'
+	':'
+	'\|'
+	'&'
+	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE
+	'\'([^\']|\\\')*\''						STRING_SINGLE
+	'"([^"]|\\")*"'							STRING_DOUBLE
+	'[A-Za-z0-9_-]+'						IDENT
+	;
+	
+##
+
+
+def: 			header_code token_assocs '##' grammar_defs footer_code
+				;
+
+/~ Token definition part ~/
+header_code:	code								[* code_head += %1; *]
+				;
+				
+footer_code:	code								[* code_foot += %1; *]
+				;
+
+token_assocs:	token_assocs token_assoc
+				|
+				;
+
+token_assoc:	'<' token_defs	';'					[*	assoc_level++;
+														for( var i = 0; i < %2.length; i++ )
+														{
+															symbols[ %2[i] ].level = assoc_level;
+															symbols[ %2[i] ].assoc = ASSOC_LEFT;
+														}
+													*]
+				| '>' token_defs ';'				[*	assoc_level++;
+														for( var i = 0; i < %2.length; i++ )
+														{
+															symbols[ %2[i] ].level = assoc_level;
+															symbols[ %2[i] ].assoc = ASSOC_RIGHT;
+														}
+													*]
+				| '^' token_defs ';'				[*	assoc_level++;
+														for( var i = 0; i < %2.length; i++ )
+														{
+															symbols[ %2[i] ].level = assoc_level;
+															symbols[ %2[i] ].assoc = ASSOC_NOASSOC;
+														}
+													*]
+				| token_defs ';'
+				| '!' string						[*	if( whitespace_token == -1 )
+														{
+															var regex = %2.substr( 1, %2.length - 2 );
+															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
+															compile_regex( regex, whitespace_token, 
+																( %2.charAt( 0 ) == '\'' ) ? false : true );
+														}
+														else
+															_error( "Multiple whitespace definition" );
+													*]
+				;
+
+
+token_defs:		token_defs token_def 				[*	%1.push( %2 );
+														%% = %1;
+													*]
+				|									[*	%% = new Array(); 		*]
+				;
+
+token_def:		string identifier code 				[*	%% = create_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL );
+														var regex = %1.substr( 1, %1.length - 2 );
+														symbols[%%].code = %3;
+														
+														compile_regex( regex, symbols[ %% ].id, 
+															( %1.charAt( 0 ) == '\'' ) ? false : true );
+													*]
+				| string code 						[*	var regex = %1.substr( 1, %1.length - 2 );
+														%% = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
+														symbols[%%].code = %2;
+
+														compile_regex( regex, symbols[ %% ].id, 
+															( %1.charAt( 0 ) == '\'' ) ? false : true );
+													*]
+				;
+
+
+/~ Grammar definition part ~/
+
+grammar_defs:	grammar_defs grammar_def
+				|
+				;
+
+grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
+														symbols[nonterm].defined = true;
+														for( var i = 0; i < %3.length; i++ )
+														{
+															productions[ %3[i] ].lhs = nonterm;
+															symbols[nonterm].prods.push( %3[i] );
+														}
+														
+														if( first_lhs )
+														{
+															first_lhs = false;
+															symbols[0].label = symbols[nonterm].label + "\'";
+															productions[0].rhs.push( nonterm );
+														}
+													*]
+				;
+
+productions:	productions '|' rhs					[*	%% = new Array();
+														%% = %%.concat( %1 );
+														%%.push( %3 );
+													*]
+				| rhs								[*	%% = new Array();
+														%%.push( %1 );
+													*]
+				;
+
+rhs:			sequence rhs_prec code				[*	var prod = new PROD();
+														prod.id = productions.length;
+														prod.rhs = %1;
+														prod.level = %2;
+														prod.code = %3;														
+														if( prod.code == "" )
+															prod.code = new String( DEF_PROD_CODE );
+															
+														if( prod.level == 0 )
+														{
+															if( prod.rhs.length > 0 )
+																for( var i = prod.rhs.length-1; i >= 0; i-- )
+																	if( symbols[prod.rhs[i]].kind == SYM_TERM )
+																	{
+																		prod.level = symbols[prod.rhs[i]].level;
+																		break;
+																	}
+														}
+
+														productions.push( prod );
+														%% = prod.id;
+													*]
+				;
+
+rhs_prec:		'&' identifier						[* 	var index;
+														if( ( index = find_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+															%% = symbols[index].level;
+														else
+															_error( "Call to undefined terminal \"" + %2 + "\"" );
+													*]
+				| '&' string						[*	var index;
+														if( ( index = find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ),
+																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+															%% = symbols[index].level;
+														else
+															_error( "Call to undefined terminal \"" + %2 + "\"" );
+													*]
+				|									[*	%% = 0; *]
+				;
+
+sequence:		sequence symbol						[*	%% = new Array();
+														%% = %%.concat( %1 );
+														%%.push( %2 );
+													*]
+				|									[*	%% = new Array(); *]
+				;
+
+symbol:			identifier							[*	var index;
+														if( ( index = find_symbol( %1, SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+															%% = index;
+														else
+															%% = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
+													*]
+				| string							[*	var index;
+														if( ( index = find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ),
+																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+															%% = index;
+														else
+															_error( "Call to undefined terminal \"" + %1 + "\"" );
+													*]
+				;
+
+/~ Universal elements ~/
+code:			code CODE							[*	%% = %1 + %2.substr( 2, %2.length - 4 ); *]
+				|									[*	%% = new String(); *]
+				;
+
+string:			STRING_SINGLE
+				| STRING_DOUBLE
+				;
+				
+identifier:		IDENT
+				;
+				
+[*
+
+function parse_grammar( str, filename )
+{
+	var error_offsets = new Array();
+	var error_expects = new Array();
+	var error_count = 0;
+	
+	first_lhs = true;
+
+	if( ( error_count += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
+	{
+		for( i = 0; i < error_count; i++ )
+			_error( filename + ", line " + ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
+				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ) + 
+					": Parse error near \"" 
+						+ str.substr( error_offsets[i], 30 ) +
+							( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+								"..." : "" ) + "\", expecting \"" + error_expects[i].join() + "\"" );
+	}
+}
+	
+*]

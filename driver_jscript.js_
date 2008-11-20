@@ -1,27 +1,44 @@
-##HEADER##
 /*
-	Default template driver for JS/CC generated parsers running as
-	browser-based JavaScript/ECMAScript applications.
-	
-	WARNING: 	This parser template will not run as console and has lesser
-				features for debugging than the console derivates for the
-				various JavaScript platforms.
+	Default driver template for JS/CC generated parsers for JScript.
+	Platforms JScript.NET and Windows Script Host are supported.
 	
 	Features:
 	- Parser trace messages
+	- Step-by-step parsing
 	- Integrated panic-mode error recovery
+	- Pseudo-graphical parse tree generation
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	
 	This is in the public domain.
 */
 
+@if( @_jscript_version >= 7 )
+import System;
+@end
+
+##HEADER##
+
+var ##PREFIX##_dbg_withparsetree	= false;
 var ##PREFIX##_dbg_withtrace		= false;
-var ##PREFIX##_dbg_string			= new String();
+var ##PREFIX##_dbg_withstepbystep	= false;
 
 function __##PREFIX##dbg_print( text )
 {
-	##PREFIX##_dbg_string += text + "\n";
+@if( @_jscript_version < 7 )
+	WScript.Echo( text );
+@else
+	print( text );
+@end
+}
+
+function __##PREFIX##dbg_wait()
+{
+@if( @_jscript_version < 7 )
+	WScript.StdIn.ReadLine()
+@else
+	Console.ReadLine();
+@end
 }
 
 function __##PREFIX##lex( info )
@@ -83,6 +100,12 @@ function __##PREFIX##parse( src, err_off, err_la )
 	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
 	var		info			= new parseinfo();
 	
+	//Visual parse tree generation
+	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var		treenodes		= new Array();
+	var		tree			= new Array();
+	var		tmptree			= null;
+
 ##TABLES##
 
 ##LABELS##
@@ -100,7 +123,7 @@ function __##PREFIX##parse( src, err_off, err_la )
 	vstack.push( 0 );
 	
 	la = __##PREFIX##lex( info );
-
+			
 	while( true )
 	{
 		act = ##ERROR##;
@@ -113,6 +136,12 @@ function __##PREFIX##parse( src, err_off, err_la )
 			}
 		}
 
+		/*
+		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
+				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
+					" sstack = " + sstack.join() );
+		*/
+		
 		if( ##PREFIX##_dbg_withtrace && sstack.length > 0 )
 		{
 			__##PREFIX##dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
@@ -122,6 +151,9 @@ function __##PREFIX##parse( src, err_off, err_la )
 									"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
+			
+			if( ##PREFIX##_dbg_withstepbystep )
+				__##PREFIX##dbg_wait();
 		}
 		
 			
@@ -206,7 +238,18 @@ function __##PREFIX##parse( src, err_off, err_la )
 		
 		//Shift
 		if( act > 0 )
-		{			
+		{
+			//Parse tree generation
+			if( ##PREFIX##_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ la ];
+				node.att = info.att;
+				node.child = new Array();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
+			
 			if( ##PREFIX##_dbg_withtrace )
 				__##PREFIX##dbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
 		
@@ -232,12 +275,18 @@ function __##PREFIX##parse( src, err_off, err_la )
 				__##PREFIX##dbg_print( "\tPerforming semantic action..." );
 			
 ##ACTIONS##
+			
+			if( ##PREFIX##_dbg_withparsetree )
+				tmptree = new Array();
 
 			if( ##PREFIX##_dbg_withtrace )
 				__##PREFIX##dbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
 				
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
+				if( ##PREFIX##_dbg_withparsetree )
+					tmptree.push( tree.pop() );
+					
 				sstack.pop();
 				vstack.pop();
 			}
@@ -252,6 +301,16 @@ function __##PREFIX##parse( src, err_off, err_la )
 				}
 			}
 			
+			if( ##PREFIX##_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ pop_tab[act][0] ];
+				node.att = new String();
+				node.child = tmptree.reverse();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
+			
 			if( act == 0 )
 				break;
 				
@@ -261,22 +320,45 @@ function __##PREFIX##parse( src, err_off, err_la )
 			sstack.push( go );
 			vstack.push( rval );			
 		}
-		
-		if( ##PREFIX##_dbg_withtrace )
-		{		
-			alert( ##PREFIX##_dbg_string );
-			##PREFIX##_dbg_string = new String();
-		}
 	}
 
 	if( ##PREFIX##_dbg_withtrace )
-	{
 		__##PREFIX##dbg_print( "\nParse complete." );
-		alert( ##PREFIX##_dbg_string );
+
+	if( ##PREFIX##_dbg_withparsetree )
+	{
+		if( err_cnt == 0 )
+		{
+			__##PREFIX##dbg_print( "\n\n--- Parse tree ---" );
+			__##PREFIX##dbg_parsetree( 0, treenodes, tree );
+		}
+		else
+		{
+			__##PREFIX##dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+		}
 	}
 	
 	return err_cnt;
 }
 
+
+function __##PREFIX##dbg_parsetree( indent, nodes, tree )
+{
+	var str = new String();
+	for( var i = 0; i < tree.length; i++ )
+	{
+		str = "";
+		for( var j = indent; j > 0; j-- )
+			str += "\t";
+		
+		str += nodes[ tree[i] ].sym;
+		if( nodes[ tree[i] ].att != "" )
+			str += " >" + nodes[ tree[i] ].att + "<" ;
+			
+		__##PREFIX##dbg_print( str );
+		if( nodes[ tree[i] ].child.length > 0 )
+			__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
+	}
+}
 
 ##FOOTER##

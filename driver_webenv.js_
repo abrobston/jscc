@@ -308,6 +308,9 @@ function __##PREFIX##parse( src, err_off, err_la )
 	
 	if( err_cnt == 0 )
 	{
+		/*
+		document.getElementById( "parsetree" ).innerHTML = __##PREFIX##dbg_parsetree_phpSyntaxTree( treenodes, tree );
+		*/
 		document.getElementById( "parsetree" ).innerHTML =__##PREFIX##dbg_parsetree( 0, 0,
 			__##PREFIX##dbg_get_tree_depth( treenodes, tree, 0 ), treenodes, tree );
 	}
@@ -398,5 +401,32 @@ function __##PREFIX##dbg_parsetree( prev, cnt, depth, nodes, tree )
 	
 	return str;
 }
+
+function __##PREFIX##dbg_parsetree_phpSyntaxTree( nodes, tree )
+{
+	var str = new String();
+	
+	for( var i = 0; i < tree.length; i++ )
+	{
+		str += " [ ";
+
+		str += nodes[ tree[i] ].sym;
+		if( nodes[ tree[i] ].att && nodes[ tree[i] ].att != "" )
+		{
+			var attr = new String( nodes[ tree[i] ].att );
+			str += ":\"" + attr.replace( / |\t|\r|\n|\[|\]/g, "_" ) + "\"";
+		}
+			
+		str += " ";
+
+		if( nodes[ tree[i] ].child.length > 0 )
+			str += __##PREFIX##dbg_parsetree_phpSyntaxTree( nodes, nodes[ tree[i] ].child );
+
+		str += " ] ";
+	}
+	
+	return str;
+}
+
 
 ##FOOTER##

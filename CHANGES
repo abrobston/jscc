@@ -5,7 +5,37 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
-JS/CC v0.28 (build Aug 25, 2008)
+JS/CC v0.30 (build Nov 19, 2008)
+-------------------------------------------------------
+[-] Bugfix with whitespaces symbol
+[-] Bugfix with nonassociative symbols, it works now!
+[+] Source directory cleaned up
+
+-------------------------------------------------------
+JS/CC v0.29 (build Nov 17, 2008 - not released)
+-------------------------------------------------------
+[+] Support for Google's V8 JavaScript Engine added
+[+] Support for Mozilla/Spidermonkey smjs scripting
+	shell added.
+[+] JS/CC is now maintained and continued under Linux,
+	the Windows version will continue to be supported
+[+] Completely rewritten build-system optimized for
+	GNU make:
+	+ Rhino version under *nix
+	+ Spidermonkey version under *nix
+	+ V8 version under *nix
+	+ WebEnv version, maintained under *nix
+	+ JScript version, both for Windows Script Host and
+	  JScript.NET for Windows
+[+] JS/CC command-line version is now behaving more
+	*nix-like: Lesser output of information; When
+	running successfully, no output is generated to
+	stdout/stderr.
+[+] Several changes in the manual coming with the new
+	build-system, fixed some mistakes
+
+-------------------------------------------------------
+JS/CC v0.28 (build Aug 25, 2008 - not released)
 -------------------------------------------------------
 [-] Bugfix in FIRST-set computation: Nullable
 	nonterminals produced wrong FIRST-sets in some

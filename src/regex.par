@@ -1,0 +1,323 @@
+/~ -PARSER----------------------------------------------------------------------
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+http://www.jmksf.com ++ jscc<-AT->jmksf.com
+
+File:	regex.par
+Author:	Jan Max Meyer
+Usage:	A parser for regular expressions, with NFA construction using the
+		Thompson algorithm. This JS/CC parser module for regular expressions
+		has been implemented using a very early version of JS/CC itself,
+		which generated a pseudo-lexer using the JavaScript build-in RegExp-
+		object.
+		
+You may use, modify and distribute this software under the terms and conditions
+of the Artistic License. Please see ARTISTIC for more information.
+----------------------------------------------------------------------------- ~/
+
+[*
+var first_nfa;
+var last_nfa;
+var created_nfas; //Must always be initialized by compile_regex()...
+
+function create_nfa( where )
+{
+	var pos;
+	var nfa;
+	var i;
+	
+	/*
+		Use an empty item if available,
+		else create a new one...
+	*/
+	for( i = 0; i < where.length; i++ )
+		if( where[i].edge == EDGE_FREE )
+			break;
+	
+	if( i == where.length )
+	{
+		nfa = new NFA()			
+		where.push( nfa );
+	}
+	
+	where[i].edge = EDGE_EPSILON;
+	where[i].ccl = bitset_create( MAX_CHAR );
+	where[i].accept = -1;
+	where[i].follow = -1;
+	where[i].follow2 = -1;
+	where[i].weight = -1;
+	
+	created_nfas.push( i );
+	
+	return i;
+}
+
+*]
+
+
+	'\|'
+	'\*'
+	'\+'
+	'\?'
+	'\('
+	'\)'
+	'\['
+	'\]'
+	'\.'		ANY_CHAR
+	'\\[0-9]+'	ASCII_CODE
+	'\\.'		ESCAPED_CHAR
+	'.'			ANY
+	;
+
+
+##
+
+
+RegEx:			Expression						[*	%% = new PARAM();
+													nfa_states[ first_nfa ].follow = %1.start;
+													last_nfa = %1.end;
+												*]
+				;
+
+Expression:		Expression '|' Catenation		[*	%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = create_nfa( nfa_states );
+													nfa_states[%%.start].follow = %1.start;
+													nfa_states[%%.start].follow2 = %3.start;
+													
+													nfa_states[%1.end].follow = %%.end;
+													nfa_states[%3.end].follow = %%.end;
+												*]
+				| Catenation
+				;
+				
+Catenation:		Catenation Factor				[*	/*
+														(As a C-junkie, I miss memcpy() here ;P)
+													*/
+													nfa_states[%1.end].edge		= nfa_states[%2.start].edge;
+													nfa_states[%1.end].ccl		= nfa_states[%2.start].ccl;
+													nfa_states[%1.end].follow	= nfa_states[%2.start].follow;
+													nfa_states[%1.end].follow2	= nfa_states[%2.start].follow2;
+													nfa_states[%1.end].accept	= nfa_states[%2.start].accept;
+													
+													nfa_states[%2.start].edge = EDGE_FREE;
+													
+													%1.end = %2.end;
+													
+													%% = %1;
+												*]
+				| Factor
+				;
+				
+Factor:			Term '*'						[*
+													%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = create_nfa( nfa_states );
+													
+													nfa_states[%%.start].follow = %1.start;
+													nfa_states[%1.end].follow = %%.end;
+
+													nfa_states[%%.start].follow2 = %%.end;
+													nfa_states[%1.end].follow2 = %1.start;
+												*]
+				| Term '+'						[* 	%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = create_nfa( nfa_states );
+													
+													nfa_states[%%.start].follow = %1.start;
+													nfa_states[%1.end].follow = %%.end;
+
+													nfa_states[%1.end].follow2 = %1.start;													
+												*]
+				| Term '?'						[* 	%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = create_nfa( nfa_states );
+													nfa_states[%%.start].follow = %1.start;
+													nfa_states[%%.start].follow2 = %%.end;
+													nfa_states[%1.end].follow = %%.end;
+												*]
+				| Term
+				;
+
+Term:			Character						[*	%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = nfa_states[%%.start].follow
+														= create_nfa( nfa_states );
+													nfa_states[%%.start].edge = EDGE_CHAR;
+													
+													//_print( "SINGLE: >" + %1 + "<" );
+													
+													bitset_set( nfa_states[%%.start].ccl,
+															%1.charCodeAt( 0 ), 1 );
+												*]
+				| CharacterSet
+				| '(' Expression ')'			[*	%% = %2; *]
+				;
+
+CharacterSet:	'[' CharClass ']'				[*	var negate = false;
+													var i = 0, j, start;
+													
+													//_print( "CHARCLASS: >" + %2 + "<" );
+													
+													%% = new PARAM();
+													%%.start = create_nfa( nfa_states );
+													%%.end = nfa_states[%%.start].follow
+														= create_nfa( nfa_states );
+													nfa_states[%%.start].edge = EDGE_CHAR;
+													
+													if( %2.charAt( i ) == '^' )
+													{
+														negate = true;
+														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
+															bitset_set( nfa_states[%%.start].ccl, j, 1 );
+														i++;
+													}
+
+													for( ; i < %2.length; i++ )
+													{
+														if( %2.charAt( i+1 ) == '-'
+															&& i+2 < %2.length )
+														{
+															i++;
+															for( j = %2.charCodeAt( i-1 );
+																	j < %2.charCodeAt( i+1 );
+																		j++ )		
+																bitset_set( nfa_states[%%.start].ccl,
+																	j, negate ? 0 : 1 );
+														}
+														else
+															bitset_set( nfa_states[%%.start].ccl,
+																%2.charCodeAt( i ), negate ? 0 : 1 );
+													}
+												*]
+				| ANY_CHAR							[*	%% = new PARAM();
+				
+													//_print( "ANYCHAR: >" + %1 + "<" );
+													
+													%%.start = create_nfa( nfa_states );
+													%%.end = nfa_states[%%.start].follow
+														= create_nfa( nfa_states );
+													nfa_states[%%.start].edge = EDGE_CHAR;
+													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
+														bitset_set( nfa_states[%%.start].ccl, i, 1 );
+												*]
+				;
+												
+CharClass:		CharClass Character				[*	%% = new String( %1 + %2 ); *]
+				|								[*	%% = new String(); *]
+				;
+
+
+Character:		ASCII_CODE						[*	%% = String.fromCharCode( %1.substr( 1 ) ); *]
+				| ESCAPED_CHAR					[*	switch( %1.substr( 1 ) )
+													{
+														case 'n':
+															%% = '\n';
+															break;
+														case 'r':
+															%% = '\r';
+															break;
+														case 't':
+															%% = '\t';
+															break;
+														case 'a':
+															%% = '\a';
+															break;
+														default:
+															%% = %1.substr( 1 );
+															break;
+													}
+												*]
+				| ANY							[*	%% = %1; *]
+				;
+
+[*
+
+function compile_regex( str, accept, case_insensitive )
+{
+	var i, j;
+	var weight = 0;
+	var true_edges = 0;
+	var error_offsets = new Array();
+	var error_expects = new Array();
+	var error_count = 0;
+	
+	if( str == "" )
+		return;
+	
+	//_print( "str = >" + str + "< " + case_insensitive );
+	
+	created_nfas = new Array();
+	
+	first_nfa = create_nfa( nfa_states );
+	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 )
+	{
+		//If the symbol should be case-insensitive, manipulate the
+		//character sets on the newly created items.
+		if( case_insensitive )
+		{
+			for( i = 0; i < created_nfas.length; i++ )
+			{
+				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR )
+				{
+					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
+					{
+						if( bitset_get( nfa_states[ created_nfas[i] ].ccl, j ) )
+						{
+							bitset_set( nfa_states[ created_nfas[i] ].ccl,
+								String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), 1 );
+							bitset_set( nfa_states[ created_nfas[i] ].ccl,
+								String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), 1 );
+						}
+					}
+				}
+			}
+		}
+
+		/* 
+			2008-5-9	Radim Cebis:
+			
+			I think that computing weight of the nfa_states is weird,
+			IMHO nfa_state which accepts a symbol, should have
+			weight according to the order...
+		*/
+		nfa_states[ last_nfa ].accept = accept;   
+		nfa_states[ last_nfa ].weight = regex_weight++;
+
+		if( first_nfa > 0 )
+		{
+			i = 0;
+			while( nfa_states[i].follow2 != -1 )
+				i = nfa_states[i].follow2;
+
+			nfa_states[i].follow2 = first_nfa;
+		}
+	}
+	else
+	{
+		for( i = 0; i < error_count; i++ )
+		{
+			var spaces = new String();
+			for( j = 0; j < error_offsets[i]; j++ )
+				spaces += " ";
+			
+			_error( "Regular expression \"" + str + "\"\n" +
+			 "                           " + spaces + "^\n" +
+			 "       expecting \"" + error_expects[i].join() + "\"" );
+		}
+	}
+}
+
+
+//TESTING AREA ;)
+//compile_regex( "[A-Z][A-Z0-9]*", 0 );
+//compile_regex( "ab|c", 1 );
+//compile_regex( "[0-9]+", 1 );
+//print_nfa();
+//var d = create_subset( nfa_states );
+//print_dfa( d );
+//d = minimize_dfa( d );
+//print_dfa( d );
+
+*]
+

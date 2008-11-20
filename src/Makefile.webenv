@@ -1,0 +1,70 @@
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Uses Mozilla/Rhino and Mozilla/Spidermonkey to build the
+# 					platform-independent Web-Environment of JS/CC
+#-------------------------------------------------------------------------------
+# HOW TO:
+#
+# The web environment of JS/CC should only be generated under Linux. The
+# resulting web-site can be executed with any web browser.
+#
+# This Makefile uses Mozilla/Rhino to build the web-environment parsers and
+# Mozilla/Spidermonkey to build the parser templates which are used by the
+# Web Environment in turn to build working parsers.
+#
+# To build all necessary files in ../webenv, type
+#
+# make -f Makefile.webenv
+#
+# These files are
+#
+# jscc.js       - Parser generator core
+# driver.js     - Parser template for the code output
+# webdriver.js  - Parser template used for the integrated parser execution and
+#                 parse tree generator.
+#-------------------------------------------------------------------------------
+
+PLATFORM		=	webenv
+RHINO			=	rhino
+JSCC			=	../webenv/jscc.js
+BUILDIN_DRIVER	=	../webenv/driver.js
+BUILDIN_VDRIVER	=	../webenv/webdriver.js
+
+include sources.inc
+include tools.inc
+
+all: 			$(JSCC) $(BUILDIN_DRIVER) $(BUILDIN_VDRIVER) clean
+	@echo
+	@echo --- Compilation succeeded! ---
+
+$(JSCC):		$(SRC_FINAL)
+	cat $(SRC_FINAL) >$@
+
+$(SRC_PARSE_JS):$(SRC_PARSE)
+	$(RHINO) $(BOOTSTRAP)$(RHINO).js -v -o $@ -p jscc -t ../driver_web.js_ $?
+	
+$(SRC_REGEX_JS):$(SRC_REGEX)
+	$(RHINO) $(BOOTSTRAP)$(RHINO).js -v -o $@ -p regex -t ../driver_web.js_ $?
+
+$(BUILDIN_DRIVER):	../driver_web.js_
+	./js2str.js driver_t "`cat $?`" > $@
+
+$(BUILDIN_VDRIVER):	../driver_webenv.js_
+	./js2str.js webdriver_t "`cat $?`" > $@
+
+clean:
+	-rm $(SRC_PARSE_JS)
+	-rm $(SRC_REGEX_JS)
+
+clean_all:
+	-rm $(JSCC)
+	-rm $(BUILDIN_DRIVER)
+	-rm $(BUILDIN_VDRIVER)
+
+bootstrap:			all 
+	@echo Sorry, there is no bootstrapper for Webenv!

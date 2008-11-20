@@ -1,0 +1,86 @@
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Windows Script Host / JScript.NET
+#-------------------------------------------------------------------------------
+# HOW TO:
+#
+# The first releases of JS/CC up to 0.27 used Microsoft JScript as main target
+# system for the console build. This is now obsolete, and the core development
+# is done under Linux now.
+#
+# Anyway, the build for Microsoft systems will be entirely supported for this
+# and future versions.
+#
+# There had been some testing with the Mono version of JScript, called mjs,
+# but unfortunatelly this version of a JScript.NET compiler is not capable to
+# compile JS/CC, nor report any significant error messages. We hope to even
+# build JS/CC with mjs in future. The JScript.NET compile of JS/CC runs fine
+# with Mono and Wine.
+#
+# Requirements:
+# *  Microsoft Windows 2000 or higher
+# *  Microsoft Windows Script Host (is included since Win 98)
+# *  Microsoft Nmake Utility (comes with several releases of Visual C++,
+#    even Freeware ones)
+#
+# If you want to build the JScript.NET standalone executable version, you
+# additionally need
+# *  Microsoft .NET SDK featuring the jsc JScript.NET compile
+#
+# To build JS/CC, type
+#
+# nmake /F Makefile.jscript
+#
+# on a prompt. First, the Windows Script Host version (jscc.js) and then the
+# JScript.NET version (jscc.exe) will be created.
+#
+# Type
+#
+# cscript //Nologo jscc.js <args>
+#
+# to invoke the Windows Script Host version. jscc.exe runs stand-alone on any
+# system with .NET runtime.
+#-------------------------------------------------------------------------------
+
+PLATFORM		=	jscript
+CSCRIPT			=	cscript //Nologo
+JSCC_WSH		=	..\\jscc.js
+JSCC			=	..\\jscc.exe
+
+include sources.inc
+include tools.inc
+
+all: 			$(JSCC) clean
+	@echo
+	@echo --- Compilation succeeded! ---
+
+$(JSCC):		$(JSCC_WSH)
+	jsc /out:$@ /t:exe $(JSCC_WSH)
+	@echo
+	@echo --- JScript.NET version succeeded! ---
+
+$(JSCC_WSH):	$(SRC_FINAL)
+	type $(SRC_FINAL) >jscc.BUILD
+	move jscc.BUILD $@
+	@echo
+	@echo --- JScript.WSH version succeeded! ---
+
+$(SRC_PARSE_JS):$(SRC_PARSE)
+	$(CSCRIPT) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ..\\driver_$(PLATFORM).js_ $?
+	
+$(SRC_REGEX_JS):$(SRC_REGEX)
+	$(CSCRIPT) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ..\\driver_$(PLATFORM).js_ $?
+
+clean:
+	-del $(SRC_PARSE_JS)
+	-del $(SRC_REGEX_JS)
+
+bootstrap:		all 
+	copy $(JSCC_WSH) $(JSCC_BOOTSTRAP)
+	@echo
+	@echo --- Bootstrap replaced! ---
