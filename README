@@ -1,0 +1,68 @@
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+~~~ README AND INFORMATION ~~~
+
+INTRODUCION:
+
+JS/CC is the first available parser development system for JavaScript
+and ECMAScript-derivates. It has been developed, both, with the
+intention of building a productive compiler development system and
+with the intention of creating an easy-to-use academic environment for
+people interested in how parse table generation is done general in
+bottom-up parsing.
+
+JS/CC brings a lex/yacc-like toolchain into the world of ECMAScript.
+
+LICENSE:
+
+JS/CC is written by Jan Max Meyer (J.M.K S.F. Software Technologies) with
+contributions by Louis P. Santillan <lpsantil@gmail.com>.  JS/CC is
+released under the terms and conditions of the Artistic License.  The file
+src/v8/v8sh.cc is based on Google's V8 shell.cc and is released under the
+terms and conditions of the New BSD License (see file header for details).
+
+REQUIREMENTS:
+
+To use JS/CC, you need either Mozilla/Rhino, Mozilla/Spidermonkey, Microsoft
+Windows Script Host, Microsoft JScript.NET, Google V8, or an ordinary
+ECMAScript compatible web browser!
+
+Both the Mozilla implementations under Linux are now the assumed default
+platforms.
+
+To get additional help and howtos on the various platforms and how to build
+JS/CC there, look into the Makefile.<platform> file within the src directory.
+
+A list of the supported platforms and their namings.
+
+	rhino       - Mozilla/Rhino
+	sm          - Mozilla/Spidermonkey
+	jscript     - Microsoft JScript
+	v8          - Google V8
+	webenv      - Platform-independent, browser-based web environment
+
+_boot_<platform>.js in the src directory is a bootstrap version of JS/CC to
+build JS/CC using itself as parser generator. You can replace these boot-
+strappers by using "bootstrap" as make target in the according Makefile. 
+
+ABOUT:
+
+JS/CC is a platform-independent software that unions both: A regular
+expression-based lexical analyzer generator matching individual tokens from
+the input character stream and a LALR(1) parser generator, computing the parse
+tables for a given context-free grammar specification to build a stand-alone,
+working parser. The context-free grammar fed to JS/CC is defined in a
+Backus-Naur-Form-based meta language, and allows the insertion of individual
+semantic code to be evaluated on a rule's reduction. JS/CC itself has been
+entirely written in JavaScript so it can be executed in many different ways:
+as platform-independent, browser-based JavaScript embedded on a Website, as
+a Windows Script Host Application, as a compiled JScript.NET executable,
+as a Mozilla/Rhino or Mozilla/Spidermonkey interpreted application, or a
+V8 shell script on Windows, *nix, Linux and Mac OSX. However, for productive
+execution, it is recommended to use the command-line versions.
+These versions are capable of assembling a complete compiler from a JS/CC
+parser specification, which is then stored to a .js JavaScript source file.
+
+To use JS/CC and for understanding its internals and behavior, some knowledge
+of context-free grammars, bottom-up parsing techniques and compiler
+construction theory, in general, is assumed.
+

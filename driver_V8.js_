@@ -1,9 +1,6 @@
 /*
 	Default driver template for JS/CC generated parsers for V8
 	
-	WARNING: Do not use for parsers that should run as browser-based JavaScript!
-			 Use driver_web.js_ instead!
-	
 	Features:
 	- Parser trace messages
 	- Step-by-step parsing
@@ -11,7 +8,8 @@
 	- Pseudo-graphical parse tree generation
 	
 	Written 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies
-        Modified 2008 from driver.js_ to support V8 by Louis P.Santillan <lpsantil@gmail.com>
+        Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
+			<lpsantil@gmail.com>
 	
 	This is in the public domain.
 */

@@ -1,0 +1,76 @@
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Mozilla/Spidermonkey msjs scripting shell
+#-------------------------------------------------------------------------------
+# HOW TO:
+#
+# JS/CC can even be executed via console using the Mozilla/Spidermonkey msjs
+# scripting shell. For this, JS/CC uses a different console interface than the
+# Rhino and JScript versions, which is caused that Spidermonkey is not capable
+# of reading and writing files.
+#
+# *   Install the msjs shell on your *nix system using
+#
+#     sudo apt-get install spidermonkey-bin
+#
+#     or build in from core.
+#
+# **  To run JS/CC with Spidermonkey smjs, type
+#
+#     jscc.js <options> "`cat <parser-file>`" 
+#
+#     The latter cat-command feds JS/CC with the input-file to be compiled,
+#     just via command-line parameters.
+#
+# *** To build JS/CC for Mozilla/Spidermonkey msjs script shell, change to src
+#     directory and type
+#
+#	  make -f Makefile.sm
+#
+#	  JS/CC can then be invoked by simply running jscc.js from the upper
+#	  directory.
+#-------------------------------------------------------------------------------
+
+PLATFORM		=	sm
+JSCC			=	../jscc.js
+
+include sources.inc
+include tools.inc
+
+#we have to re-define this here, Spidermonkey is a speciality.
+SRC_FINAL		=	$(SRC_GLOBAL) \
+					$(SRC_MODULES) \
+					$(SRC_PARSE_JS) \
+					$(SRC_REGEX_JS) \
+					io_$(PLATFORM).js \
+					main_$(PLATFORM).js
+
+all: 			$(JSCC) clean
+	@echo
+	@echo --- Compilation succeeded! ---
+
+$(JSCC):		$(SRC_FINAL)
+	echo "#!/usr/bin/js" >$@
+	./js2str.js driver "`cat ../driver_$(PLATFORM).js_`" >>$@
+	cat $(SRC_FINAL) >>$@
+	chmod 755 $@
+
+$(SRC_PARSE_JS):$(SRC_PARSE)
+	./_boot_$(PLATFORM).js -p jscc "`cat $?`" > $@
+	
+$(SRC_REGEX_JS):$(SRC_REGEX)
+	./_boot_$(PLATFORM).js -p regex "`cat $?`" > $@
+
+clean:
+	-rm $(SRC_PARSE_JS)
+	-rm $(SRC_REGEX_JS)
+
+bootstrap:			all 
+	cp $(JSCC) $(JSCC_BOOTSTRAP)
+	@echo
+	@echo --- Bootstrap replaced ---

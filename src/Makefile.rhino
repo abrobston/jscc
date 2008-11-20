@@ -1,44 +1,72 @@
-rhino_boot: jscc_parse_RHINO_BOOTSTRAP.js jscc_regex_RHINO_BOOTSTRAP.js jscc_RHINO.js
-	cat jscc_global.js \
-			 jscc_debug.js \
-			 jscc_first.js \
-			 jscc_parse_RHINO_BOOTSTRAP.js \
-			 jscc_printtab.js \
-			 jscc_tabgen.js \
-			 jscc_util.js \
-			 jscc_bitset.js \
-			 jscc_integrity.js \
-			 jscc_regex_RHINO_BOOTSTRAP.js \
-			 jscc_lexdfa.js \
-			 jscc_lexdbg.js \
-			 jscc_RHINO.js \
-			> jscc1r.js
-	@echo ==================================================================
-	@echo == Following assumes you have Rhino\'s js.jar in your CLASSPATH ==
-	@echo ==================================================================
-	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_parse_RHINO.js -p jscc -t ../driver_rhino.js_ jscc_parse.par
-	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_regex_RHINO.js -p regex -t ../driver_rhino.js_ jscc_regex.par
-	mv jscc1r.js ../jsccrbs.js
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Mozilla/Rhino
+#-------------------------------------------------------------------------------
+# HOW TO:
+#
+# JS/CC has been tested with Rhino 1.6R7 and newer on Windows, Mac OSX,
+# and Linux.
+#
+# Follow the following setup instructions:
+# *   Place js.jar from Rhino in your CLASSPATH or add it to your CLASSPATH.
+# **  On *nix systems, you would do something like this:
+#
+#     sudo cp js.jar /usr/lib/
+#     export CLASSPATH=/usr/lib/js.jar:$CLASSPATH
+#     alias rhino='java org.mozilla.javascript.tools.shell.Main'
+#
+#
+#     Possibly your Linux distribution allows even for something like
+#
+#     sudo apt-get install rhino
+#
+#     to setup Rhino. Simply type
+#
+#     rhino
+#
+#     to find out if its in your PATH then.
+#
+# **  On Windows, you would do something like this:
+#
+#     copy js.jar C:\path\to\your\JDK\Install\lib
+#     set CLASSPATH=C:\path\to\your\JDK\Install\lib\js.js;%CLASSPATH%
+#     REM *** Need a Windows way to alias Rhino ***
+# 
+# *** To build JS/CC for Mozilla/Rhino, change to src directory and type
+#
+#     make -f Makefile.rhino
+#-------------------------------------------------------------------------------
 
-rhino: jscc_parse_RHINO.js jscc_regex_RHINO.js jscc_RHINO.js
-	cat jscc_global.js \
-			 jscc_debug.js \
-			 jscc_first.js \
-			 jscc_parse_RHINO.js \
-			 jscc_printtab.js \
-			 jscc_tabgen.js \
-			 jscc_util.js \
-			 jscc_bitset.js \
-			 jscc_integrity.js \
-			 jscc_regex_RHINO.js \
-			 jscc_lexdfa.js \
-			 jscc_lexdbg.js \
-			 jscc_RHINO.js \
-			> jscc1r.js
-	@echo ==================================================================
-	@echo == Following assumes you have Rhino\'s js.jar in your CLASSPATH ==
-	@echo ==================================================================
-	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_parse_RHINO.js -p jscc -t ../driver_rhino.js_ jscc_parse.par
-	java org.mozilla.javascript.tools.shell.Main jscc1r.js -o jscc_regex_RHINO.js -p regex -t ../driver_rhino.js_ jscc_regex.par
-	mv jscc1r.js ../jsccr.js
+PLATFORM		=	rhino
+RHINO			=	rhino
+JSCC			=	../jscc.js
 
+include sources.inc
+include tools.inc
+
+all: 			$(JSCC) clean
+	@echo
+	@echo --- Compilation succeeded! ---
+
+$(JSCC):		$(SRC_FINAL)
+	cat $(SRC_FINAL) >$@
+
+$(SRC_PARSE_JS):$(SRC_PARSE)
+	$(RHINO) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
+	
+$(SRC_REGEX_JS):$(SRC_REGEX)
+	$(RHINO) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
+
+clean:
+	-rm $(SRC_PARSE_JS)
+	-rm $(SRC_REGEX_JS)
+
+bootstrap:			all 
+	cp $(JSCC) $(JSCC_BOOTSTRAP)
+	@echo
+	@echo --- Bootstrap replaced ---
