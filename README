@@ -7,7 +7,7 @@ JS/CC is the first available parser development system for JavaScript
 and ECMAScript-derivates. It has been developed, both, with the
 intention of building a productive compiler development system and
 with the intention of creating an easy-to-use academic environment for
-people interested in how parse table generation is done general in
+people interested in how parse table generation is done generally in
 bottom-up parsing.
 
 JS/CC brings a lex/yacc-like toolchain into the world of ECMAScript.
@@ -40,9 +40,12 @@ A list of the supported platforms and their namings.
 	v8          - Google V8
 	webenv      - Platform-independent, browser-based web environment
 
-_boot_<platform>.js in the src directory is a bootstrap version of JS/CC to
+_jscc_<platform>.js in the src directory is a bootstrap version of JS/CC to
 build JS/CC using itself as parser generator. You can replace these boot-
-strappers by using "bootstrap" as make target in the according Makefile. 
+strappers by using "bootstrap" as make target in the according Makefile.
+These bootstrap versions are useful for making changes to the internals of
+JS/CC for the same or another platform and then having your local JS/CC
+rebuild that new JS/CC.
 
 ABOUT:
 
@@ -66,3 +69,24 @@ To use JS/CC and for understanding its internals and behavior, some knowledge
 of context-free grammars, bottom-up parsing techniques and compiler
 construction theory, in general, is assumed.
 
+BUILDING:
+
+The makefiles in src/ support 3 targets for a given platform.  So, for the
+rhino platform, you would issue the following commands:
+
+To build JS/CC:
+	make -f Makefile.rhino
+
+To rebuild JS/CC from the bootstrap files:
+	make -f Makefile.rhino bootstrap
+
+To clean up the JS/CC before issuing one of the above:
+	make -f Makefile.rhino clean
+
+USAGE:
+
+In general, using JS/CC uses the following command line:
+<js engine> jscc.js -v -o <output.file.js> -p <prefix> -t driver_<platform>.js_ <input.js.par>
+
+For example, when using rhino, issue the following:
+rhino jscc.js -v -o rhino_out.js -p rhino -t driver_rhino.js_ rhino_input.js.par
