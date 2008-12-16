@@ -78,8 +78,13 @@ function reset_all( mode )
 	dfa_states = new Array();
 	lex = new Array();
 	
+	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
 	symbols[0].defined = true;
+	
+	//Error synchronization token
+	create_symbol( "ERROR_RESYNC", SYM_TERM, SPECIAL_ERROR );
+	symbols[1].defined = true;
 	
 	p = new PROD();
 	p.lhs = 0;
@@ -96,7 +101,7 @@ function reset_all( mode )
 	line = 1;
 	lookahead = void(0);
 	*/
-	
+	file = new String();
 	errors = 0;
 	show_errors = true;
 	warnings = 0;

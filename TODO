@@ -10,13 +10,23 @@ Priority        Description
                 of JS/CC, v0.24, which is over one year
                 ago!
 
+3				Improving the Web Environment; It is
+				currently only optimized for a screen
+				resoltion of 2048x1024 pixels. There
+				need also be found some ways of re-
+				positioning the different debug- and
+				output areas in a more simpler and
+				space-saving manner.
+
+2               JS/CC Web Environment improovements:
+                - XHTML/CSS validation required
+                - Support for Opera, Safari and
+                  Konqueror
+
 2               Command-line improvements, e.g.
                 making command-line parameters more
                 easier to use, e.g. platform option
                 instead of template file.
-
-2               The current error reporting is a stub;
-                This must be improved soon!
 
 2               Improvements on the grammar definition
                 language to be more yacc-compliant
@@ -25,13 +35,8 @@ Priority        Description
 2               Launching a derivative of JS/CC
                 featuring a full-compatible lex and
                 yacc-styled toolchain for ECMAScript
-                platforms.
+                platforms, based on JS/CC.
 
-2               JS/CC Web Environment improovements:
-                - XHTML/CSS validation required
-                - Support for Opera, Safari and
-                  Konqueror
-				  
 1               Syntax-highlighting in Web Environment
                 (there is a project which allows this,
                 but it's GNU GPL, and can't be combined

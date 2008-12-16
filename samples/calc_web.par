@@ -1,8 +1,5 @@
 /~
 	Expression calculator written in JS/CC (browser-based JavaScript Version)
-
-	This is a WSH-script implementation; For JScript.NET or even JavaScript
-	on the web, use the according functions to interact with the user.
 ~/
 
 [*
@@ -16,11 +13,11 @@
 /~
 	--- These are the token definitions ---
 ~/
-!	' |\t' ;		/~ Characters to be ignored... ~/
+!	' |\t' 		/~ Characters to be ignored... ~/
 
 	'\('			/~ Non-associative tokens ~/
 	'\)'
-	'[0-9]+'			INT			[* %match = parseInt( %match );	*]
+	'[0-9]+'		INT			[* %match = parseInt( %match );	*]
 	;
 
 <	'\+'			/~ Left-associative tokens, lowest precedence ~/
@@ -65,7 +62,9 @@ var error_count = 0;
 
 var str = prompt( "Please enter an expression:", "" );
 
-##PREFIX##_dbg_withtrace = true;
+/* Switching one of these variables on will enable debug facilities
+	of the various parser drivers */
+//##PREFIX##_dbg_withtrace = true;
 
 if( ( error_count = __##PREFIX##parse( str,
 	error_offsets, error_lookaheads ) ) > 0 )

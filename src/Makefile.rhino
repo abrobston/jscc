@@ -57,7 +57,7 @@ $(JSCC):		$(SRC_FINAL)
 	cat $(SRC_FINAL) >$@
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
-	$(RHINO) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
+	$(RHINO) $(JSCC_BOOTSTRAP) -w -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
 	
 $(SRC_REGEX_JS):$(SRC_REGEX)
 	$(RHINO) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?

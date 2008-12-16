@@ -37,6 +37,7 @@ A list of the supported platforms and their namings.
 	rhino       - Mozilla/Rhino
 	sm          - Mozilla/Spidermonkey
 	jscript     - Microsoft JScript
+	              (both for Windows Script Host and .NET platform)
 	v8          - Google V8
 	webenv      - Platform-independent, browser-based web environment
 

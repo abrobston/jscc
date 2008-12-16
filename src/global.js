@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.30";
+var JSCC_VERSION			= "0.31";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -26,6 +26,7 @@ var SYM_TERM				= 1;
 var SPECIAL_NO_SPECIAL		= 0;
 var SPECIAL_EOF				= 1;
 var SPECIAL_WHITESPACE		= 2;
+var SPECIAL_ERROR			= 3;
 
 //Symbol associativity
 var ASSOC_NONE				= 0;
@@ -82,10 +83,13 @@ function SYMBOL()
 	
 	var code;			//Code to be executed at token recognition (SYM_TERM only)
 	var special;		//Special symbol
-
-	/* --- Flags --- */
+	
+	/* --- Flags & Information --- */
 	var nullable;		//Nullable-flag
 	var defined;		//Defined flag
+	
+	var defined_at;		//Line of definition
+	var used_at;		//Line of use
 }
 
 function PROD()
@@ -161,6 +165,7 @@ var whitespace_token;
 var code_head;
 var code_foot;
 
+var file;
 var errors;
 var show_errors;
 var warnings;

@@ -121,7 +121,8 @@ if( src != "" )
 				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
 				driver = driver.replace( /##FOOTER##/gi, code_foot );
 				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				driver = driver.replace( /##ERROR##/gi, get_error_symbol_id() );
+				driver = driver.replace( /##ERROR##/gi, get_error_state() );
+				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
 
