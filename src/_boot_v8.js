@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.30";
+var JSCC_VERSION			= "0.31";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -26,6 +26,7 @@ var SYM_TERM				= 1;
 var SPECIAL_NO_SPECIAL		= 0;
 var SPECIAL_EOF				= 1;
 var SPECIAL_WHITESPACE		= 2;
+var SPECIAL_ERROR			= 3;
 
 //Symbol associativity
 var ASSOC_NONE				= 0;
@@ -82,10 +83,13 @@ function SYMBOL()
 	
 	var code;			//Code to be executed at token recognition (SYM_TERM only)
 	var special;		//Special symbol
-
-	/* --- Flags --- */
+	
+	/* --- Flags & Information --- */
 	var nullable;		//Nullable-flag
 	var defined;		//Defined flag
+	
+	var defined_at;		//Line of definition
+	var used_at;		//Line of use
 }
 
 function PROD()
@@ -161,6 +165,7 @@ var whitespace_token;
 var code_head;
 var code_foot;
 
+var file;
 var errors;
 var show_errors;
 var warnings;
@@ -842,10 +847,10 @@ function print_dfa_table( dfa_states )
 						code += " || ";
 					
 					if( grp_start == k - 1 )
-						code += "info.src.charCodeAt( pos ) == " + grp_start;
+						code += "chr == " + grp_start;
 					else					
-						code += "( info.src.charCodeAt( pos ) >= " + grp_start +
-									" && info.src.charCodeAt( pos ) <= " + (k-1) + " )";
+						code += "( chr >= " + grp_start +
+									" && chr <= " + (k-1) + " )";
 					grp_start = -1;
 					k--;
 				}
@@ -938,25 +943,29 @@ function print_symbol_labels()
 								terminal, now it's the correct value; %source,
 								which was documented in the manual since v0.24
 								was not implemented.
+	10.12.2008	Jan Max Meyer	Removed the switch...case structure and replaced
+								it with if...else, because of new possibilities
+								with the lexical analyzer (more lex-like beha-
+								vior). continue can now be used in semantic
+								actions, or break, which is automatically done
+								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
 	var code = new String();
 	var re = new RegExp( "%match|%offset|%source" );
 	var i, j, k;	
-	var matches = 0;
 	var semcode;
 	var strmatch;
 	
-	code += "switch( match )\n"
-	code += "{\n";
 	for( i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_TERM
 			&& symbols[i].code != "" )
-		{
-			code += "	case " + i + ":\n";
-			code += "		{\n";
+		{			
+			code += "	" + ( code != "" ? "else " : "" ) +
+						"if( match == " + i + " )\n";
+			code += "	{\n";
 			
 			semcode = new String();
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
@@ -981,15 +990,10 @@ function print_term_actions()
 			code += "		" + semcode + "\n";
 			
 			code += "		}\n";
-			code += "		break;\n\n";
-			
-			matches++;
 		}
 	}
-	
-	code += "}\n\n";
 
-	return ( matches == 0 ) ? (new String()) : code;
+	return code;
 }
 
 	
@@ -1094,7 +1098,6 @@ function get_eof_symbol_id()
 	return eof_id;
 }
 
-
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_symbol_id()
 	
@@ -1104,16 +1107,30 @@ function get_eof_symbol_id()
 					
 	Parameters:	
 		
-	Returns:		length					The length of the symbol array.
+	Returns:		eof_id					The id of the EOF-symbol.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id()
 {
-	return states.length + 1;
-}
+	var error_id = -1;
+	
+	//Find out which symbol is for EOF!	
+	for( var i = 0; i < symbols.length; i++ )
+	{
+		if( symbols[i].special == SPECIAL_ERROR )
+		{
+			error_id = i;
+			break;
+		}
+	}
 
+	if( error_id == -1 )
+		_error( "No ERROR-symbol defined - This might not be possible (bug!)" );
+	
+	return error_id;
+}
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_whitespace_symbol_id()
@@ -1134,6 +1151,24 @@ function get_whitespace_symbol_id()
 	return whitespace_token;
 }
 
+/* -FUNCTION--------------------------------------------------------------------
+	Function:		get_error_state()
+	
+	Author:			Jan Max Meyer
+	
+	Usage:			Returns the ID of a non-existing state.
+					
+	Parameters:	
+		
+	Returns:		length					The length of the states array.
+  
+	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Date:		Author:			Note:
+----------------------------------------------------------------------------- */
+function get_error_state()
+{
+	return states.length + 1;
+}
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -1903,8 +1938,13 @@ function reset_all( mode )
 	dfa_states = new Array();
 	lex = new Array();
 	
+	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
 	symbols[0].defined = true;
+	
+	//Error synchronization token
+	create_symbol( "ERROR_RESYNC", SYM_TERM, SPECIAL_ERROR );
+	symbols[1].defined = true;
 	
 	p = new PROD();
 	p.lhs = 0;
@@ -1921,7 +1961,7 @@ function reset_all( mode )
 	line = 1;
 	lookahead = void(0);
 	*/
-	
+	file = new String();
 	errors = 0;
 	show_errors = true;
 	warnings = 0;
@@ -2031,8 +2071,10 @@ function undef()
 	{
 		if( symbols[i].kind == SYM_NONTERM
 			&& symbols[i].defined == false )
+		{
 			_error( "Call to undefined non-terminal \"" +
 						symbols[i].label + "\"" );
+		}
 	}
 }
 
@@ -2622,10 +2664,10 @@ function print_dfa( dfa_states )
 	Features:
 	- Parser trace messages
 	- Step-by-step parsing
-	- Integrated panic-mode error recovery
+	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
 	
-	Written 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies
+	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
 			<lpsantil@gmail.com>
 	
@@ -2633,6 +2675,14 @@ function print_dfa( dfa_states )
 */
 
 var		first_lhs;
+var		cur_line;
+
+//Wrapper for semantic errors
+function line_error( line, txt )
+{
+	_error( "line " + line + ", " + txt );
+}
+
 
 
 var jscc_dbg_withparsetree	= false;
@@ -2651,277 +2701,341 @@ function __jsccdbg_wait()
 
 function __jscclex( info )
 {
-	var state		= 0;
-	var match		= -1;
+	var state;
+	var match;
 	var match_pos	= 0;
 	var start		= 0;
-	var pos			= info.offset + 1;
+	var pos;
+	var chr;
 
-	do
+	while( 1 )
 	{
-		pos--;
 		state = 0;
-		match = -2;
-		start = pos;
-
-		if( info.src.length <= start )
-			return 32;
+		match = -1;
+		match_pos = 0;
+		start = 0;
+		pos = info.offset + 1 + ( match_pos - start );
 
 		do
 		{
-
+			pos--;
+			state = 0;
+			match = -2;
+			start = pos;
+	
+			if( info.src.length <= start )
+				return 38;
+	
+			do
+			{
+				chr = info.src.charCodeAt( pos );
 switch( state )
 {
 	case 0:
-		if( ( info.src.charCodeAt( pos ) >= 9 && info.src.charCodeAt( pos ) <= 10 ) || info.src.charCodeAt( pos ) == 13 || info.src.charCodeAt( pos ) == 32 ) state = 1;
-		else if( info.src.charCodeAt( pos ) == 33 ) state = 2;
-		else if( info.src.charCodeAt( pos ) == 38 ) state = 3;
-		else if( info.src.charCodeAt( pos ) == 45 || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 57 ) || ( info.src.charCodeAt( pos ) >= 65 && info.src.charCodeAt( pos ) <= 90 ) || info.src.charCodeAt( pos ) == 95 || ( info.src.charCodeAt( pos ) >= 97 && info.src.charCodeAt( pos ) <= 122 ) ) state = 4;
-		else if( info.src.charCodeAt( pos ) == 58 ) state = 5;
-		else if( info.src.charCodeAt( pos ) == 59 ) state = 6;
-		else if( info.src.charCodeAt( pos ) == 60 ) state = 7;
-		else if( info.src.charCodeAt( pos ) == 62 ) state = 8;
-		else if( info.src.charCodeAt( pos ) == 94 ) state = 9;
-		else if( info.src.charCodeAt( pos ) == 124 ) state = 10;
-		else if( info.src.charCodeAt( pos ) == 34 ) state = 15;
-		else if( info.src.charCodeAt( pos ) == 35 ) state = 18;
-		else if( info.src.charCodeAt( pos ) == 39 ) state = 19;
-		else if( info.src.charCodeAt( pos ) == 47 ) state = 20;
-		else if( info.src.charCodeAt( pos ) == 91 ) state = 21;
+		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
+		else if( chr == 10 ) state = 2;
+		else if( chr == 33 ) state = 3;
+		else if( chr == 38 ) state = 4;
+		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
+		else if( chr == 58 ) state = 6;
+		else if( chr == 59 ) state = 7;
+		else if( chr == 60 ) state = 8;
+		else if( chr == 62 ) state = 9;
+		else if( chr == 94 ) state = 10;
+		else if( chr == 124 ) state = 11;
+		else if( chr == 126 ) state = 12;
+		else if( chr == 34 ) state = 18;
+		else if( chr == 35 ) state = 21;
+		else if( chr == 39 ) state = 22;
+		else if( chr == 47 ) state = 23;
+		else if( chr == 91 ) state = 24;
 		else state = -1;
 		break;
 
 	case 1:
-		state = -1;
-		match = 1;
+		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
+		else state = -1;
+		match = 18;
 		match_pos = pos;
 		break;
 
 	case 2:
 		state = -1;
-		match = 6;
+		match = 16;
 		match_pos = pos;
 		break;
 
 	case 3:
 		state = -1;
-		match = 10;
+		match = 6;
 		match_pos = pos;
 		break;
 
 	case 4:
-		if( info.src.charCodeAt( pos ) == 45 || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 57 ) || ( info.src.charCodeAt( pos ) >= 65 && info.src.charCodeAt( pos ) <= 90 ) || info.src.charCodeAt( pos ) == 95 || ( info.src.charCodeAt( pos ) >= 97 && info.src.charCodeAt( pos ) <= 122 ) ) state = 4;
-		else state = -1;
-		match = 14;
+		state = -1;
+		match = 10;
 		match_pos = pos;
 		break;
 
 	case 5:
-		state = -1;
-		match = 8;
+		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
+		else state = -1;
+		match = 15;
 		match_pos = pos;
 		break;
 
 	case 6:
 		state = -1;
-		match = 7;
+		match = 8;
 		match_pos = pos;
 		break;
 
 	case 7:
 		state = -1;
-		match = 3;
+		match = 7;
 		match_pos = pos;
 		break;
 
 	case 8:
 		state = -1;
-		match = 4;
+		match = 3;
 		match_pos = pos;
 		break;
 
 	case 9:
 		state = -1;
-		match = 5;
+		match = 4;
 		match_pos = pos;
 		break;
 
 	case 10:
 		state = -1;
-		match = 9;
+		match = 5;
 		match_pos = pos;
 		break;
 
 	case 11:
 		state = -1;
-		match = 13;
+		match = 9;
 		match_pos = pos;
 		break;
 
 	case 12:
 		state = -1;
-		match = 2;
+		match = 11;
 		match_pos = pos;
 		break;
 
 	case 13:
 		state = -1;
-		match = 12;
+		match = 14;
 		match_pos = pos;
 		break;
 
 	case 14:
 		state = -1;
-		match = 11;
+		match = 2;
 		match_pos = pos;
 		break;
 
 	case 15:
-		if( info.src.charCodeAt( pos ) == 34 ) state = 11;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 33 ) || ( info.src.charCodeAt( pos ) >= 35 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 15;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 22;
-		else state = -1;
-		break;
-
-	case 16:
-		if( info.src.charCodeAt( pos ) == 34 ) state = 11;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 33 ) || ( info.src.charCodeAt( pos ) >= 35 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 15;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 22;
-		else state = -1;
+		state = -1;
 		match = 13;
 		match_pos = pos;
 		break;
 
+	case 16:
+		state = -1;
+		match = 17;
+		match_pos = pos;
+		break;
+
 	case 17:
-		if( info.src.charCodeAt( pos ) == 39 ) state = 13;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 38 ) || ( info.src.charCodeAt( pos ) >= 40 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 19;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 23;
-		else state = -1;
+		state = -1;
 		match = 12;
 		match_pos = pos;
 		break;
 
 	case 18:
-		if( info.src.charCodeAt( pos ) == 35 ) state = 12;
+		if( chr == 34 ) state = 13;
+		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
+		else if( chr == 92 ) state = 25;
 		else state = -1;
 		break;
 
 	case 19:
-		if( info.src.charCodeAt( pos ) == 39 ) state = 13;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 38 ) || ( info.src.charCodeAt( pos ) >= 40 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 19;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 23;
+		if( chr == 34 ) state = 13;
+		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
+		else if( chr == 92 ) state = 25;
 		else state = -1;
+		match = 14;
+		match_pos = pos;
 		break;
 
 	case 20:
-		if( info.src.charCodeAt( pos ) == 126 ) state = 24;
+		if( chr == 39 ) state = 15;
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
+		else if( chr == 92 ) state = 26;
 		else state = -1;
+		match = 13;
+		match_pos = pos;
 		break;
 
 	case 21:
-		if( info.src.charCodeAt( pos ) == 42 ) state = 32;
+		if( chr == 35 ) state = 14;
 		else state = -1;
 		break;
 
 	case 22:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 33 ) || ( info.src.charCodeAt( pos ) >= 35 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 15;
-		else if( info.src.charCodeAt( pos ) == 34 ) state = 16;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 22;
+		if( chr == 39 ) state = 15;
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
+		else if( chr == 92 ) state = 26;
 		else state = -1;
 		break;
 
 	case 23:
-		if( info.src.charCodeAt( pos ) == 39 ) state = 17;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 38 ) || ( info.src.charCodeAt( pos ) >= 40 && info.src.charCodeAt( pos ) <= 91 ) || ( info.src.charCodeAt( pos ) >= 93 && info.src.charCodeAt( pos ) <= 254 ) ) state = 19;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 23;
+		if( chr == 126 ) state = 27;
 		else state = -1;
 		break;
 
 	case 24:
-		if( info.src.charCodeAt( pos ) == 47 ) state = 25;
-		else if( info.src.charCodeAt( pos ) == 126 ) state = 26;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 46 ) || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 125 ) || ( info.src.charCodeAt( pos ) >= 127 && info.src.charCodeAt( pos ) <= 254 ) ) state = 33;
+		if( chr == 42 ) state = 35;
 		else state = -1;
 		break;
 
 	case 25:
-		if( info.src.charCodeAt( pos ) == 47 ) state = 24;
+		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
+		else if( chr == 34 ) state = 19;
+		else if( chr == 92 ) state = 25;
 		else state = -1;
 		break;
 
 	case 26:
-		if( info.src.charCodeAt( pos ) == 47 ) state = 1;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 46 ) || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 254 ) ) state = 24;
+		if( chr == 39 ) state = 20;
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
+		else if( chr == 92 ) state = 26;
 		else state = -1;
 		break;
 
 	case 27:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 41 ) || ( info.src.charCodeAt( pos ) >= 43 && info.src.charCodeAt( pos ) <= 254 ) ) state = 27;
-		else if( info.src.charCodeAt( pos ) == 42 ) state = 28;
+		if( chr == 47 ) state = 28;
+		else if( chr == 126 ) state = 29;
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
 		else state = -1;
 		break;
 
 	case 28:
-		if( info.src.charCodeAt( pos ) == 93 ) state = 14;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 92 ) || ( info.src.charCodeAt( pos ) >= 94 && info.src.charCodeAt( pos ) <= 254 ) ) state = 31;
+		if( chr == 47 ) state = 27;
 		else state = -1;
 		break;
 
 	case 29:
-		if( info.src.charCodeAt( pos ) == 93 ) state = 31;
+		if( chr == 47 ) state = 16;
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) state = 27;
 		else state = -1;
 		break;
 
 	case 30:
-		if( info.src.charCodeAt( pos ) == 126 ) state = 26;
-		else if( info.src.charCodeAt( pos ) == 47 ) state = 30;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 46 ) || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 125 ) || ( info.src.charCodeAt( pos ) >= 127 && info.src.charCodeAt( pos ) <= 254 ) ) state = 33;
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) state = 30;
+		else if( chr == 42 ) state = 31;
 		else state = -1;
 		break;
 
 	case 31:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 41 ) || ( info.src.charCodeAt( pos ) >= 43 && info.src.charCodeAt( pos ) <= 92 ) || ( info.src.charCodeAt( pos ) >= 94 && info.src.charCodeAt( pos ) <= 254 ) ) state = 27;
-		else if( info.src.charCodeAt( pos ) == 42 ) state = 28;
-		else if( info.src.charCodeAt( pos ) == 93 ) state = 29;
+		if( chr == 93 ) state = 17;
+		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 34;
 		else state = -1;
 		break;
 
 	case 32:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 41 ) || ( info.src.charCodeAt( pos ) >= 43 && info.src.charCodeAt( pos ) <= 92 ) || ( info.src.charCodeAt( pos ) >= 94 && info.src.charCodeAt( pos ) <= 254 ) ) state = 27;
-		else if( info.src.charCodeAt( pos ) == 42 ) state = 28;
-		else if( info.src.charCodeAt( pos ) == 93 ) state = 29;
+		if( chr == 93 ) state = 34;
 		else state = -1;
 		break;
 
 	case 33:
-		if( info.src.charCodeAt( pos ) == 126 ) state = 26;
-		else if( info.src.charCodeAt( pos ) == 47 ) state = 30;
-		else if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 46 ) || ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 125 ) || ( info.src.charCodeAt( pos ) >= 127 && info.src.charCodeAt( pos ) <= 254 ) ) state = 33;
+		if( chr == 126 ) state = 29;
+		else if( chr == 47 ) state = 33;
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
+		else state = -1;
+		break;
+
+	case 34:
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
+		else if( chr == 42 ) state = 31;
+		else if( chr == 93 ) state = 32;
+		else state = -1;
+		break;
+
+	case 35:
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
+		else if( chr == 42 ) state = 31;
+		else if( chr == 93 ) state = 32;
+		else state = -1;
+		break;
+
+	case 36:
+		if( chr == 126 ) state = 29;
+		else if( chr == 47 ) state = 33;
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
 		else state = -1;
 		break;
 
 }
 
 
-			pos++;
+				pos++;
+	
+			}
+			while( state > -1 );
+	
+		}
+		while( -1 > -1 && match == -1 );
+	
+		if( match > -1 )
+		{
+			info.att = info.src.substr( start, match_pos - start );
+			info.offset = match_pos;
+			
+	if( match == 12 )
+	{
+			//We have to count the lines!
+																for( var i = 0; i < info.att.length; i++ )
+																	if( info.att.charAt( i ) == "\n" )
+																		cur_line++;
+																		
+																info.att = info.att.substr( 2, info.att.length - 4 );
+															
+		}
+	else if( match == 16 )
+	{
+		 	//We have to count the lines!
+												cur_line++;
+												
+												continue;
+											
+		}
+	else if( match == 17 )
+	{
+			//We have to count the lines!
+												for( var i = 0; i < info.att.length; i++ )
+													if( info.att.charAt( i ) == "\n" )
+															cur_line++;
+												continue;
+											
+		}
+	else if( match == 18 )
+	{
+			continue;	
+		}
 
 		}
-		while( state > -1 );
-
-	}
-	while( 1 > -1 && match == 1 );
-
-	if( match > -1 )
-	{
-		info.att = info.src.substr( start, match_pos - start );
-		info.offset = match_pos;
+		else
+		{
+			info.att = new String();
+			match = -1;
+		}
 		
-
-	}
-	else
-	{
-		info.att = new String();
-		match = -1;
+		break;
 	}
 
 	return match;
@@ -2945,148 +3059,175 @@ function __jsccparse( src, err_off, err_la )
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
+	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
 	new Array( 0/* def' */, 1 ),
-	new Array( 19/* def */, 5 ),
-	new Array( 15/* header_code */, 1 ),
-	new Array( 18/* footer_code */, 1 ),
-	new Array( 16/* token_assocs */, 2 ),
-	new Array( 16/* token_assocs */, 0 ),
-	new Array( 21/* token_assoc */, 3 ),
-	new Array( 21/* token_assoc */, 3 ),
-	new Array( 21/* token_assoc */, 3 ),
-	new Array( 21/* token_assoc */, 2 ),
-	new Array( 21/* token_assoc */, 2 ),
-	new Array( 22/* token_defs */, 2 ),
-	new Array( 22/* token_defs */, 0 ),
-	new Array( 24/* token_def */, 3 ),
-	new Array( 24/* token_def */, 2 ),
-	new Array( 17/* grammar_defs */, 2 ),
-	new Array( 17/* grammar_defs */, 0 ),
-	new Array( 26/* grammar_def */, 4 ),
-	new Array( 27/* productions */, 3 ),
-	new Array( 27/* productions */, 1 ),
-	new Array( 28/* rhs */, 3 ),
-	new Array( 30/* rhs_prec */, 2 ),
-	new Array( 30/* rhs_prec */, 2 ),
-	new Array( 30/* rhs_prec */, 0 ),
-	new Array( 29/* sequence */, 2 ),
-	new Array( 29/* sequence */, 0 ),
-	new Array( 31/* symbol */, 1 ),
-	new Array( 31/* symbol */, 1 ),
-	new Array( 20/* code */, 2 ),
-	new Array( 20/* code */, 0 ),
-	new Array( 23/* string */, 1 ),
-	new Array( 23/* string */, 1 ),
-	new Array( 25/* identifier */, 1 )
+	new Array( 23/* def */, 5 ),
+	new Array( 19/* header_code */, 1 ),
+	new Array( 22/* footer_code */, 1 ),
+	new Array( 20/* token_assocs */, 2 ),
+	new Array( 20/* token_assocs */, 1 ),
+	new Array( 25/* token_assoc */, 3 ),
+	new Array( 25/* token_assoc */, 3 ),
+	new Array( 25/* token_assoc */, 3 ),
+	new Array( 25/* token_assoc */, 2 ),
+	new Array( 25/* token_assoc */, 2 ),
+	new Array( 26/* token_defs */, 2 ),
+	new Array( 26/* token_defs */, 1 ),
+	new Array( 28/* token_def */, 3 ),
+	new Array( 28/* token_def */, 2 ),
+	new Array( 21/* grammar_defs */, 2 ),
+	new Array( 21/* grammar_defs */, 1 ),
+	new Array( 30/* grammar_def */, 4 ),
+	new Array( 30/* grammar_def */, 2 ),
+	new Array( 31/* productions */, 3 ),
+	new Array( 31/* productions */, 1 ),
+	new Array( 32/* rhs */, 3 ),
+	new Array( 34/* rhs_prec */, 2 ),
+	new Array( 34/* rhs_prec */, 2 ),
+	new Array( 34/* rhs_prec */, 0 ),
+	new Array( 33/* sequence_opt */, 1 ),
+	new Array( 33/* sequence_opt */, 0 ),
+	new Array( 35/* sequence */, 2 ),
+	new Array( 35/* sequence */, 1 ),
+	new Array( 36/* symbol */, 1 ),
+	new Array( 36/* symbol */, 1 ),
+	new Array( 36/* symbol */, 1 ),
+	new Array( 24/* code_opt */, 1 ),
+	new Array( 24/* code_opt */, 0 ),
+	new Array( 37/* code */, 2 ),
+	new Array( 37/* code */, 1 ),
+	new Array( 27/* string */, 1 ),
+	new Array( 27/* string */, 1 ),
+	new Array( 29/* identifier */, 1 )
 );
 
 /* Action-Table */
 var act_tab = new Array(
-	/* State 0 */ new Array( 3/* "<" */,-29 , 4/* ">" */,-29 , 5/* "^" */,-29 , 6/* "!" */,-29 , 7/* ";" */,-29 , 12/* "STRING_SINGLE" */,-29 , 13/* "STRING_DOUBLE" */,-29 , 2/* "##" */,-29 , 11/* "CODE" */,-29 ),
-	/* State 1 */ new Array( 32/* "$" */,0 ),
-	/* State 2 */ new Array( 2/* "##" */,-5 , 3/* "<" */,-5 , 4/* ">" */,-5 , 5/* "^" */,-5 , 6/* "!" */,-5 , 7/* ";" */,-5 , 12/* "STRING_SINGLE" */,-5 , 13/* "STRING_DOUBLE" */,-5 ),
-	/* State 3 */ new Array( 11/* "CODE" */,5 , 3/* "<" */,-2 , 4/* ">" */,-2 , 5/* "^" */,-2 , 6/* "!" */,-2 , 7/* ";" */,-2 , 12/* "STRING_SINGLE" */,-2 , 13/* "STRING_DOUBLE" */,-2 , 2/* "##" */,-2 ),
-	/* State 4 */ new Array( 2/* "##" */,7 , 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 7/* ";" */,-12 , 12/* "STRING_SINGLE" */,-12 , 13/* "STRING_DOUBLE" */,-12 ),
-	/* State 5 */ new Array( 3/* "<" */,-28 , 4/* ">" */,-28 , 5/* "^" */,-28 , 6/* "!" */,-28 , 7/* ";" */,-28 , 12/* "STRING_SINGLE" */,-28 , 13/* "STRING_DOUBLE" */,-28 , 2/* "##" */,-28 , 11/* "CODE" */,-28 , 32/* "$" */,-28 , 9/* "|" */,-28 ),
-	/* State 6 */ new Array( 2/* "##" */,-4 , 3/* "<" */,-4 , 4/* ">" */,-4 , 5/* "^" */,-4 , 6/* "!" */,-4 , 7/* ";" */,-4 , 12/* "STRING_SINGLE" */,-4 , 13/* "STRING_DOUBLE" */,-4 ),
-	/* State 7 */ new Array( 11/* "CODE" */,-16 , 32/* "$" */,-16 , 14/* "IDENT" */,-16 ),
-	/* State 8 */ new Array( 7/* ";" */,-12 , 12/* "STRING_SINGLE" */,-12 , 13/* "STRING_DOUBLE" */,-12 ),
-	/* State 9 */ new Array( 7/* ";" */,-12 , 12/* "STRING_SINGLE" */,-12 , 13/* "STRING_DOUBLE" */,-12 ),
-	/* State 10 */ new Array( 7/* ";" */,-12 , 12/* "STRING_SINGLE" */,-12 , 13/* "STRING_DOUBLE" */,-12 ),
-	/* State 11 */ new Array( 7/* ";" */,18 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 12 */ new Array( 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 13 */ new Array( 14/* "IDENT" */,27 , 32/* "$" */,-29 , 11/* "CODE" */,-29 ),
-	/* State 14 */ new Array( 7/* ";" */,28 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 15 */ new Array( 7/* ";" */,29 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 16 */ new Array( 7/* ";" */,30 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 17 */ new Array( 7/* ";" */,-11 , 12/* "STRING_SINGLE" */,-11 , 13/* "STRING_DOUBLE" */,-11 ),
-	/* State 18 */ new Array( 2/* "##" */,-9 , 3/* "<" */,-9 , 4/* ">" */,-9 , 5/* "^" */,-9 , 6/* "!" */,-9 , 7/* ";" */,-9 , 12/* "STRING_SINGLE" */,-9 , 13/* "STRING_DOUBLE" */,-9 ),
-	/* State 19 */ new Array( 14/* "IDENT" */,27 , 7/* ";" */,-29 , 12/* "STRING_SINGLE" */,-29 , 13/* "STRING_DOUBLE" */,-29 , 11/* "CODE" */,-29 ),
-	/* State 20 */ new Array( 14/* "IDENT" */,-30 , 11/* "CODE" */,-30 , 7/* ";" */,-30 , 12/* "STRING_SINGLE" */,-30 , 13/* "STRING_DOUBLE" */,-30 , 2/* "##" */,-30 , 3/* "<" */,-30 , 4/* ">" */,-30 , 5/* "^" */,-30 , 6/* "!" */,-30 , 10/* "&" */,-30 , 9/* "|" */,-30 ),
-	/* State 21 */ new Array( 14/* "IDENT" */,-31 , 11/* "CODE" */,-31 , 7/* ";" */,-31 , 12/* "STRING_SINGLE" */,-31 , 13/* "STRING_DOUBLE" */,-31 , 2/* "##" */,-31 , 3/* "<" */,-31 , 4/* ">" */,-31 , 5/* "^" */,-31 , 6/* "!" */,-31 , 10/* "&" */,-31 , 9/* "|" */,-31 ),
-	/* State 22 */ new Array( 2/* "##" */,-10 , 3/* "<" */,-10 , 4/* ">" */,-10 , 5/* "^" */,-10 , 6/* "!" */,-10 , 7/* ";" */,-10 , 12/* "STRING_SINGLE" */,-10 , 13/* "STRING_DOUBLE" */,-10 ),
-	/* State 23 */ new Array( 11/* "CODE" */,-15 , 32/* "$" */,-15 , 14/* "IDENT" */,-15 ),
-	/* State 24 */ new Array( 32/* "$" */,-1 ),
-	/* State 25 */ new Array( 11/* "CODE" */,5 , 32/* "$" */,-3 ),
-	/* State 26 */ new Array( 8/* ":" */,33 ),
-	/* State 27 */ new Array( 8/* ":" */,-32 , 11/* "CODE" */,-32 , 7/* ";" */,-32 , 12/* "STRING_SINGLE" */,-32 , 13/* "STRING_DOUBLE" */,-32 , 10/* "&" */,-32 , 9/* "|" */,-32 , 14/* "IDENT" */,-32 ),
-	/* State 28 */ new Array( 2/* "##" */,-6 , 3/* "<" */,-6 , 4/* ">" */,-6 , 5/* "^" */,-6 , 6/* "!" */,-6 , 7/* ";" */,-6 , 12/* "STRING_SINGLE" */,-6 , 13/* "STRING_DOUBLE" */,-6 ),
-	/* State 29 */ new Array( 2/* "##" */,-7 , 3/* "<" */,-7 , 4/* ">" */,-7 , 5/* "^" */,-7 , 6/* "!" */,-7 , 7/* ";" */,-7 , 12/* "STRING_SINGLE" */,-7 , 13/* "STRING_DOUBLE" */,-7 ),
-	/* State 30 */ new Array( 2/* "##" */,-8 , 3/* "<" */,-8 , 4/* ">" */,-8 , 5/* "^" */,-8 , 6/* "!" */,-8 , 7/* ";" */,-8 , 12/* "STRING_SINGLE" */,-8 , 13/* "STRING_DOUBLE" */,-8 ),
-	/* State 31 */ new Array( 11/* "CODE" */,5 , 7/* ";" */,-14 , 12/* "STRING_SINGLE" */,-14 , 13/* "STRING_DOUBLE" */,-14 ),
-	/* State 32 */ new Array( 7/* ";" */,-29 , 12/* "STRING_SINGLE" */,-29 , 13/* "STRING_DOUBLE" */,-29 , 11/* "CODE" */,-29 ),
-	/* State 33 */ new Array( 10/* "&" */,-25 , 11/* "CODE" */,-25 , 7/* ";" */,-25 , 9/* "|" */,-25 , 14/* "IDENT" */,-25 , 12/* "STRING_SINGLE" */,-25 , 13/* "STRING_DOUBLE" */,-25 ),
-	/* State 34 */ new Array( 11/* "CODE" */,5 , 7/* ";" */,-13 , 12/* "STRING_SINGLE" */,-13 , 13/* "STRING_DOUBLE" */,-13 ),
-	/* State 35 */ new Array( 9/* "|" */,38 , 7/* ";" */,39 ),
-	/* State 36 */ new Array( 7/* ";" */,-19 , 9/* "|" */,-19 ),
-	/* State 37 */ new Array( 10/* "&" */,42 , 14/* "IDENT" */,27 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 , 11/* "CODE" */,-23 , 7/* ";" */,-23 , 9/* "|" */,-23 ),
-	/* State 38 */ new Array( 10/* "&" */,-25 , 11/* "CODE" */,-25 , 7/* ";" */,-25 , 9/* "|" */,-25 , 14/* "IDENT" */,-25 , 12/* "STRING_SINGLE" */,-25 , 13/* "STRING_DOUBLE" */,-25 ),
-	/* State 39 */ new Array( 11/* "CODE" */,-17 , 32/* "$" */,-17 , 14/* "IDENT" */,-17 ),
-	/* State 40 */ new Array( 10/* "&" */,-24 , 11/* "CODE" */,-24 , 7/* ";" */,-24 , 9/* "|" */,-24 , 14/* "IDENT" */,-24 , 12/* "STRING_SINGLE" */,-24 , 13/* "STRING_DOUBLE" */,-24 ),
-	/* State 41 */ new Array( 7/* ";" */,-29 , 9/* "|" */,-29 , 11/* "CODE" */,-29 ),
-	/* State 42 */ new Array( 14/* "IDENT" */,27 , 12/* "STRING_SINGLE" */,20 , 13/* "STRING_DOUBLE" */,21 ),
-	/* State 43 */ new Array( 10/* "&" */,-26 , 11/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 , 14/* "IDENT" */,-26 , 12/* "STRING_SINGLE" */,-26 , 13/* "STRING_DOUBLE" */,-26 ),
-	/* State 44 */ new Array( 10/* "&" */,-27 , 11/* "CODE" */,-27 , 7/* ";" */,-27 , 9/* "|" */,-27 , 14/* "IDENT" */,-27 , 12/* "STRING_SINGLE" */,-27 , 13/* "STRING_DOUBLE" */,-27 ),
-	/* State 45 */ new Array( 7/* ";" */,-18 , 9/* "|" */,-18 ),
-	/* State 46 */ new Array( 11/* "CODE" */,5 , 7/* ";" */,-20 , 9/* "|" */,-20 ),
-	/* State 47 */ new Array( 11/* "CODE" */,-22 , 7/* ";" */,-22 , 9/* "|" */,-22 ),
-	/* State 48 */ new Array( 11/* "CODE" */,-21 , 7/* ";" */,-21 , 9/* "|" */,-21 )
+	/* State 0 */ new Array( 12/* "CODE" */,5 , 3/* "<" */,-33 , 4/* ">" */,-33 , 5/* "^" */,-33 , 6/* "!" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
+	/* State 1 */ new Array( 38/* "" */,0 ),
+	/* State 2 */ new Array( 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 3 */ new Array( 3/* "<" */,-2 , 4/* ">" */,-2 , 5/* "^" */,-2 , 6/* "!" */,-2 , 13/* "STRING_SINGLE" */,-2 , 14/* "STRING_DOUBLE" */,-2 ),
+	/* State 4 */ new Array( 12/* "CODE" */,17 , 3/* "<" */,-32 , 4/* ">" */,-32 , 5/* "^" */,-32 , 6/* "!" */,-32 , 13/* "STRING_SINGLE" */,-32 , 14/* "STRING_DOUBLE" */,-32 , 7/* ";" */,-32 , 38/* "" */,-32 , 9/* "|" */,-32 ),
+	/* State 5 */ new Array( 3/* "<" */,-35 , 4/* ">" */,-35 , 5/* "^" */,-35 , 6/* "!" */,-35 , 13/* "STRING_SINGLE" */,-35 , 14/* "STRING_DOUBLE" */,-35 , 12/* "CODE" */,-35 , 7/* ";" */,-35 , 38/* "" */,-35 , 9/* "|" */,-35 ),
+	/* State 6 */ new Array( 2/* "##" */,19 , 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 7 */ new Array( 2/* "##" */,-5 , 3/* "<" */,-5 , 4/* ">" */,-5 , 5/* "^" */,-5 , 6/* "!" */,-5 , 13/* "STRING_SINGLE" */,-5 , 14/* "STRING_DOUBLE" */,-5 ),
+	/* State 8 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 9 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 10 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 11 */ new Array( 7/* ";" */,24 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 12 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 13 */ new Array( 7/* ";" */,-12 , 13/* "STRING_SINGLE" */,-12 , 14/* "STRING_DOUBLE" */,-12 ),
+	/* State 14 */ new Array( 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
+	/* State 15 */ new Array( 15/* "IDENT" */,-36 , 12/* "CODE" */,-36 , 7/* ";" */,-36 , 13/* "STRING_SINGLE" */,-36 , 14/* "STRING_DOUBLE" */,-36 , 2/* "##" */,-36 , 3/* "<" */,-36 , 4/* ">" */,-36 , 5/* "^" */,-36 , 6/* "!" */,-36 , 10/* "&" */,-36 , 9/* "|" */,-36 , 11/* "~" */,-36 ),
+	/* State 16 */ new Array( 15/* "IDENT" */,-37 , 12/* "CODE" */,-37 , 7/* ";" */,-37 , 13/* "STRING_SINGLE" */,-37 , 14/* "STRING_DOUBLE" */,-37 , 2/* "##" */,-37 , 3/* "<" */,-37 , 4/* ">" */,-37 , 5/* "^" */,-37 , 6/* "!" */,-37 , 10/* "&" */,-37 , 9/* "|" */,-37 , 11/* "~" */,-37 ),
+	/* State 17 */ new Array( 3/* "<" */,-34 , 4/* ">" */,-34 , 5/* "^" */,-34 , 6/* "!" */,-34 , 13/* "STRING_SINGLE" */,-34 , 14/* "STRING_DOUBLE" */,-34 , 12/* "CODE" */,-34 , 7/* ";" */,-34 , 38/* "" */,-34 , 9/* "|" */,-34 ),
+	/* State 18 */ new Array( 2/* "##" */,-4 , 3/* "<" */,-4 , 4/* ">" */,-4 , 5/* "^" */,-4 , 6/* "!" */,-4 , 13/* "STRING_SINGLE" */,-4 , 14/* "STRING_DOUBLE" */,-4 ),
+	/* State 19 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 ),
+	/* State 20 */ new Array( 7/* ";" */,33 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 21 */ new Array( 7/* ";" */,34 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 22 */ new Array( 7/* ";" */,35 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 23 */ new Array( 7/* ";" */,-11 , 13/* "STRING_SINGLE" */,-11 , 14/* "STRING_DOUBLE" */,-11 ),
+	/* State 24 */ new Array( 2/* "##" */,-9 , 3/* "<" */,-9 , 4/* ">" */,-9 , 5/* "^" */,-9 , 6/* "!" */,-9 , 13/* "STRING_SINGLE" */,-9 , 14/* "STRING_DOUBLE" */,-9 ),
+	/* State 25 */ new Array( 2/* "##" */,-10 , 3/* "<" */,-10 , 4/* ">" */,-10 , 5/* "^" */,-10 , 6/* "!" */,-10 , 13/* "STRING_SINGLE" */,-10 , 14/* "STRING_DOUBLE" */,-10 ),
+	/* State 26 */ new Array( 7/* ";" */,-14 , 13/* "STRING_SINGLE" */,-14 , 14/* "STRING_DOUBLE" */,-14 ),
+	/* State 27 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
+	/* State 28 */ new Array( 12/* "CODE" */,-38 , 7/* ";" */,-38 , 13/* "STRING_SINGLE" */,-38 , 14/* "STRING_DOUBLE" */,-38 , 8/* ":" */,-38 , 10/* "&" */,-38 , 9/* "|" */,-38 , 15/* "IDENT" */,-38 , 11/* "~" */,-38 ),
+	/* State 29 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 38/* "" */,-33 ),
+	/* State 30 */ new Array( 12/* "CODE" */,-16 , 38/* "" */,-16 , 15/* "IDENT" */,-16 , 1/* "ERROR_RESYNC" */,-16 ),
+	/* State 31 */ new Array( 8/* ":" */,40 ),
+	/* State 32 */ new Array( 7/* ";" */,41 ),
+	/* State 33 */ new Array( 2/* "##" */,-6 , 3/* "<" */,-6 , 4/* ">" */,-6 , 5/* "^" */,-6 , 6/* "!" */,-6 , 13/* "STRING_SINGLE" */,-6 , 14/* "STRING_DOUBLE" */,-6 ),
+	/* State 34 */ new Array( 2/* "##" */,-7 , 3/* "<" */,-7 , 4/* ">" */,-7 , 5/* "^" */,-7 , 6/* "!" */,-7 , 13/* "STRING_SINGLE" */,-7 , 14/* "STRING_DOUBLE" */,-7 ),
+	/* State 35 */ new Array( 2/* "##" */,-8 , 3/* "<" */,-8 , 4/* ">" */,-8 , 5/* "^" */,-8 , 6/* "!" */,-8 , 13/* "STRING_SINGLE" */,-8 , 14/* "STRING_DOUBLE" */,-8 ),
+	/* State 36 */ new Array( 7/* ";" */,-13 , 13/* "STRING_SINGLE" */,-13 , 14/* "STRING_DOUBLE" */,-13 ),
+	/* State 37 */ new Array( 12/* "CODE" */,-15 , 38/* "" */,-15 , 15/* "IDENT" */,-15 , 1/* "ERROR_RESYNC" */,-15 ),
+	/* State 38 */ new Array( 38/* "" */,-1 ),
+	/* State 39 */ new Array( 38/* "" */,-3 ),
+	/* State 40 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
+	/* State 41 */ new Array( 12/* "CODE" */,-18 , 38/* "" */,-18 , 15/* "IDENT" */,-18 , 1/* "ERROR_RESYNC" */,-18 ),
+	/* State 42 */ new Array( 9/* "|" */,50 , 7/* ";" */,51 ),
+	/* State 43 */ new Array( 7/* ";" */,-20 , 9/* "|" */,-20 ),
+	/* State 44 */ new Array( 10/* "&" */,53 , 12/* "CODE" */,-24 , 7/* ";" */,-24 , 9/* "|" */,-24 ),
+	/* State 45 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-25 , 12/* "CODE" */,-25 , 7/* ";" */,-25 , 9/* "|" */,-25 ),
+	/* State 46 */ new Array( 10/* "&" */,-28 , 12/* "CODE" */,-28 , 7/* ";" */,-28 , 9/* "|" */,-28 , 15/* "IDENT" */,-28 , 13/* "STRING_SINGLE" */,-28 , 14/* "STRING_DOUBLE" */,-28 , 11/* "~" */,-28 ),
+	/* State 47 */ new Array( 10/* "&" */,-29 , 12/* "CODE" */,-29 , 7/* ";" */,-29 , 9/* "|" */,-29 , 15/* "IDENT" */,-29 , 13/* "STRING_SINGLE" */,-29 , 14/* "STRING_DOUBLE" */,-29 , 11/* "~" */,-29 ),
+	/* State 48 */ new Array( 10/* "&" */,-30 , 12/* "CODE" */,-30 , 7/* ";" */,-30 , 9/* "|" */,-30 , 15/* "IDENT" */,-30 , 13/* "STRING_SINGLE" */,-30 , 14/* "STRING_DOUBLE" */,-30 , 11/* "~" */,-30 ),
+	/* State 49 */ new Array( 10/* "&" */,-31 , 12/* "CODE" */,-31 , 7/* ";" */,-31 , 9/* "|" */,-31 , 15/* "IDENT" */,-31 , 13/* "STRING_SINGLE" */,-31 , 14/* "STRING_DOUBLE" */,-31 , 11/* "~" */,-31 ),
+	/* State 50 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
+	/* State 51 */ new Array( 12/* "CODE" */,-17 , 38/* "" */,-17 , 15/* "IDENT" */,-17 , 1/* "ERROR_RESYNC" */,-17 ),
+	/* State 52 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 9/* "|" */,-33 ),
+	/* State 53 */ new Array( 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
+	/* State 54 */ new Array( 10/* "&" */,-27 , 12/* "CODE" */,-27 , 7/* ";" */,-27 , 9/* "|" */,-27 , 15/* "IDENT" */,-27 , 13/* "STRING_SINGLE" */,-27 , 14/* "STRING_DOUBLE" */,-27 , 11/* "~" */,-27 ),
+	/* State 55 */ new Array( 7/* ";" */,-19 , 9/* "|" */,-19 ),
+	/* State 56 */ new Array( 7/* ";" */,-21 , 9/* "|" */,-21 ),
+	/* State 57 */ new Array( 12/* "CODE" */,-23 , 7/* ";" */,-23 , 9/* "|" */,-23 ),
+	/* State 58 */ new Array( 12/* "CODE" */,-22 , 7/* ";" */,-22 , 9/* "|" */,-22 )
 );
 
 /* Goto-Table */
 var goto_tab = new Array(
-	/* State 0 */ new Array( 19/* def */,1 , 15/* header_code */,2 , 20/* code */,3 ),
+	/* State 0 */ new Array( 23/* def */,1 , 19/* header_code */,2 , 24/* code_opt */,3 , 37/* code */,4 ),
 	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array( 16/* token_assocs */,4 ),
+	/* State 2 */ new Array( 20/* token_assocs */,6 , 25/* token_assoc */,7 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
 	/* State 3 */ new Array(  ),
-	/* State 4 */ new Array( 21/* token_assoc */,6 , 22/* token_defs */,11 ),
+	/* State 4 */ new Array(  ),
 	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array(  ),
-	/* State 7 */ new Array( 17/* grammar_defs */,13 ),
-	/* State 8 */ new Array( 22/* token_defs */,14 ),
-	/* State 9 */ new Array( 22/* token_defs */,15 ),
-	/* State 10 */ new Array( 22/* token_defs */,16 ),
-	/* State 11 */ new Array( 24/* token_def */,17 , 23/* string */,19 ),
-	/* State 12 */ new Array( 23/* string */,22 ),
-	/* State 13 */ new Array( 26/* grammar_def */,23 , 18/* footer_code */,24 , 20/* code */,25 , 25/* identifier */,26 ),
-	/* State 14 */ new Array( 24/* token_def */,17 , 23/* string */,19 ),
-	/* State 15 */ new Array( 24/* token_def */,17 , 23/* string */,19 ),
-	/* State 16 */ new Array( 24/* token_def */,17 , 23/* string */,19 ),
+	/* State 6 */ new Array( 25/* token_assoc */,18 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
+	/* State 7 */ new Array(  ),
+	/* State 8 */ new Array( 26/* token_defs */,20 , 28/* token_def */,13 , 27/* string */,14 ),
+	/* State 9 */ new Array( 26/* token_defs */,21 , 28/* token_def */,13 , 27/* string */,14 ),
+	/* State 10 */ new Array( 26/* token_defs */,22 , 28/* token_def */,13 , 27/* string */,14 ),
+	/* State 11 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
+	/* State 12 */ new Array( 27/* string */,25 ),
+	/* State 13 */ new Array(  ),
+	/* State 14 */ new Array( 24/* code_opt */,26 , 29/* identifier */,27 , 37/* code */,4 ),
+	/* State 15 */ new Array(  ),
+	/* State 16 */ new Array(  ),
 	/* State 17 */ new Array(  ),
 	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array( 20/* code */,31 , 25/* identifier */,32 ),
-	/* State 20 */ new Array(  ),
-	/* State 21 */ new Array(  ),
-	/* State 22 */ new Array(  ),
+	/* State 19 */ new Array( 21/* grammar_defs */,29 , 30/* grammar_def */,30 , 29/* identifier */,31 ),
+	/* State 20 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
+	/* State 21 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
+	/* State 22 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
 	/* State 23 */ new Array(  ),
 	/* State 24 */ new Array(  ),
 	/* State 25 */ new Array(  ),
 	/* State 26 */ new Array(  ),
-	/* State 27 */ new Array(  ),
+	/* State 27 */ new Array( 24/* code_opt */,36 , 37/* code */,4 ),
 	/* State 28 */ new Array(  ),
-	/* State 29 */ new Array(  ),
+	/* State 29 */ new Array( 30/* grammar_def */,37 , 22/* footer_code */,38 , 24/* code_opt */,39 , 29/* identifier */,31 , 37/* code */,4 ),
 	/* State 30 */ new Array(  ),
 	/* State 31 */ new Array(  ),
-	/* State 32 */ new Array( 20/* code */,34 ),
-	/* State 33 */ new Array( 27/* productions */,35 , 28/* rhs */,36 , 29/* sequence */,37 ),
+	/* State 32 */ new Array(  ),
+	/* State 33 */ new Array(  ),
 	/* State 34 */ new Array(  ),
 	/* State 35 */ new Array(  ),
 	/* State 36 */ new Array(  ),
-	/* State 37 */ new Array( 31/* symbol */,40 , 30/* rhs_prec */,41 , 25/* identifier */,43 , 23/* string */,44 ),
-	/* State 38 */ new Array( 28/* rhs */,45 , 29/* sequence */,37 ),
+	/* State 37 */ new Array(  ),
+	/* State 38 */ new Array(  ),
 	/* State 39 */ new Array(  ),
-	/* State 40 */ new Array(  ),
-	/* State 41 */ new Array( 20/* code */,46 ),
-	/* State 42 */ new Array( 23/* string */,47 , 25/* identifier */,48 ),
+	/* State 40 */ new Array( 31/* productions */,42 , 32/* rhs */,43 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
+	/* State 41 */ new Array(  ),
+	/* State 42 */ new Array(  ),
 	/* State 43 */ new Array(  ),
-	/* State 44 */ new Array(  ),
-	/* State 45 */ new Array(  ),
+	/* State 44 */ new Array( 34/* rhs_prec */,52 ),
+	/* State 45 */ new Array( 36/* symbol */,54 , 29/* identifier */,47 , 27/* string */,48 ),
 	/* State 46 */ new Array(  ),
 	/* State 47 */ new Array(  ),
-	/* State 48 */ new Array(  )
+	/* State 48 */ new Array(  ),
+	/* State 49 */ new Array(  ),
+	/* State 50 */ new Array( 32/* rhs */,55 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
+	/* State 51 */ new Array(  ),
+	/* State 52 */ new Array( 24/* code_opt */,56 , 37/* code */,4 ),
+	/* State 53 */ new Array( 27/* string */,57 , 29/* identifier */,58 ),
+	/* State 54 */ new Array(  ),
+	/* State 55 */ new Array(  ),
+	/* State 56 */ new Array(  ),
+	/* State 57 */ new Array(  ),
+	/* State 58 */ new Array(  )
 );
 
 
@@ -3094,7 +3235,7 @@ var goto_tab = new Array(
 /* Symbol labels */
 var labels = new Array(
 	"def'" /* Non-terminal symbol */,
-	"WHITESPACE" /* Terminal symbol */,
+	"ERROR_RESYNC" /* Terminal symbol */,
 	"##" /* Terminal symbol */,
 	"<" /* Terminal symbol */,
 	">" /* Terminal symbol */,
@@ -3104,16 +3245,20 @@ var labels = new Array(
 	":" /* Terminal symbol */,
 	"|" /* Terminal symbol */,
 	"&" /* Terminal symbol */,
+	"~" /* Terminal symbol */,
 	"CODE" /* Terminal symbol */,
 	"STRING_SINGLE" /* Terminal symbol */,
 	"STRING_DOUBLE" /* Terminal symbol */,
 	"IDENT" /* Terminal symbol */,
+	"n" /* Terminal symbol */,
+	"/~([^~]/|~[^/]|[^~/])*~/" /* Terminal symbol */,
+	"[tr ]+" /* Terminal symbol */,
 	"header_code" /* Non-terminal symbol */,
 	"token_assocs" /* Non-terminal symbol */,
 	"grammar_defs" /* Non-terminal symbol */,
 	"footer_code" /* Non-terminal symbol */,
 	"def" /* Non-terminal symbol */,
-	"code" /* Non-terminal symbol */,
+	"code_opt" /* Non-terminal symbol */,
 	"token_assoc" /* Non-terminal symbol */,
 	"token_defs" /* Non-terminal symbol */,
 	"string" /* Non-terminal symbol */,
@@ -3122,10 +3267,12 @@ var labels = new Array(
 	"grammar_def" /* Non-terminal symbol */,
 	"productions" /* Non-terminal symbol */,
 	"rhs" /* Non-terminal symbol */,
-	"sequence" /* Non-terminal symbol */,
+	"sequence_opt" /* Non-terminal symbol */,
 	"rhs_prec" /* Non-terminal symbol */,
+	"sequence" /* Non-terminal symbol */,
 	"symbol" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
+	"code" /* Non-terminal symbol */,
+	"" /* Terminal symbol */
 );
 
 
@@ -3137,7 +3284,7 @@ var labels = new Array(
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
-	err_la = new Array();
+		err_la = new Array();
 	
 	sstack.push( 0 );
 	vstack.push( 0 );
@@ -3146,7 +3293,7 @@ var labels = new Array(
 			
 	while( true )
 	{
-		act = 50;
+		act = 60;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
 			if( act_tab[sstack[sstack.length-1]][i] == la )
@@ -3178,44 +3325,51 @@ var labels = new Array(
 		
 			
 		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 50 )
+		if( act == 60 )
 		{
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
 			
-			err_cnt++;
-			err_off.push( info.offset - info.att.length );			
-			err_la.push( new Array() );
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			
-			//Remember the original stack!
-			var rsstack = new Array();
-			var rvstack = new Array();
-			for( var i = 0; i < sstack.length; i++ )
+			//Report errors only when error_step is 0, and this is not a
+			//subsequent error from a previous parse
+			if( error_step == 0 )
 			{
-				rsstack[i] = sstack[i];
-				rvstack[i] = vstack[i];
+				err_cnt++;
+				err_off.push( info.offset - info.att.length );			
+				err_la.push( new Array() );
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
-			while( act == 50 && la != 32 )
+			//Perform error recovery			
+			while( sstack.length > 1 && act == 60 )
 			{
-				if( jscc_dbg_withtrace )
-					__jsccdbg_print( "\tError recovery\n" +
-									"Current lookahead: " + labels[la] + " (" + info.att + ")\n" +
-									"Action: " + act + "\n\n" );
-				if( la == -1 )
-					info.offset++;
-					
-				while( act == 50 && sstack.length > 0 )
+				sstack.pop();
+				vstack.pop();
+				
+				//Try to shift on error token
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				{
-					sstack.pop();
-					vstack.pop();
-					
-					if( sstack.length == 0 )
-						break;
+					if( act_tab[sstack[sstack.length-1]][i] == 1 )
+					{
+						act = act_tab[sstack[sstack.length-1]][i+1];
 						
-					act = 50;
+						sstack.push( act );
+						vstack.push( new String() );
+
+						break;
+					}
+				}
+			}
+			
+			//Is it better to leave the parser now?
+			if( sstack.length > 1 && act != 60 )
+			{
+				//Ok, now try to shift on the next tokens
+				while( la != 38 )
+				{
+					act = 60;
+					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == la )
@@ -3224,38 +3378,30 @@ var labels = new Array(
 							break;
 						}
 					}
+					
+					if( act != 60 )
+						break;
+					
+					while( ( la = __jscclex( info ) ) < 0 )
+						info.offset++;
 				}
-				
-				if( act != 50 )
-					break;
-				
-				for( var i = 0; i < rsstack.length; i++ )
-				{
-					sstack.push( rsstack[i] );
-					vstack.push( rvstack[i] );
-				}
-				
-				la = __jscclex( info );
+				while( la != 38 && act == 60 );
 			}
 			
-			if( act == 50 )
+			if( act == 60 )
 			{
 				if( jscc_dbg_withtrace )
 					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
 				break;
 			}
 
-
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tError recovery succeeded, continuing" );
+			
+			//Try to parse the next three tokens successfully...
+			error_step = 3;
 		}
-		
-		/*
-		if( act == 50 )
-			break;
-		*/
-		
-		
+
 		//Shift
 		if( act > 0 )
 		{
@@ -3280,6 +3426,10 @@ var labels = new Array(
 			
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				
+			//Successfull shift and right beyond error recovery?
+			if( error_step > 0 )
+				error_step--;
 		}
 		//Reduce
 		else
@@ -3323,7 +3473,7 @@ switch( act )
 	break;
 	case 5:
 	{
-		rval = vstack[ vstack.length - 0 ];
+		rval = vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 6:
@@ -3374,7 +3524,7 @@ switch( act )
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
-															_error( "Multiple whitespace definition" );
+															line_error( cur_line, "Multiple whitespace definition" );
 													
 	}
 	break;
@@ -3387,7 +3537,9 @@ switch( act )
 	break;
 	case 12:
 	{
-			rval = new Array(); 		
+			rval = new Array();
+														rval.push( vstack[ vstack.length - 1 ] );
+													
 	}
 	break;
 	case 13:
@@ -3395,7 +3547,7 @@ switch( act )
 			rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
 														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
-														
+
 														compile_regex( regex, symbols[ rval ].id, 
 															( vstack[ vstack.length - 3 ].charAt( 0 ) == '\'' ) ? false : true );
 													
@@ -3419,7 +3571,7 @@ switch( act )
 	break;
 	case 16:
 	{
-		rval = vstack[ vstack.length - 0 ];
+		rval = vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 17:
@@ -3443,20 +3595,25 @@ switch( act )
 	break;
 	case 18:
 	{
+		rval = vstack[ vstack.length - 2 ];
+	}
+	break;
+	case 19:
+	{
 			rval = new Array();
 														rval = rval.concat( vstack[ vstack.length - 3 ] );
 														rval.push( vstack[ vstack.length - 1 ] );
 													
 	}
 	break;
-	case 19:
+	case 20:
 	{
 			rval = new Array();
 														rval.push( vstack[ vstack.length - 1 ] );
 													
 	}
 	break;
-	case 20:
+	case 21:
 	{
 			var prod = new PROD();
 														prod.id = productions.length;
@@ -3465,12 +3622,15 @@ switch( act )
 														prod.code = vstack[ vstack.length - 1 ];														
 														if( prod.code == "" )
 															prod.code = new String( DEF_PROD_CODE );
-															
+														
+														//Get level of the leftmost terminal
+														//as production level.
 														if( prod.level == 0 )
 														{
 															if( prod.rhs.length > 0 )
 																for( var i = prod.rhs.length-1; i >= 0; i-- )
-																	if( symbols[prod.rhs[i]].kind == SYM_TERM )
+																	if( symbols[prod.rhs[i]] &&
+																		symbols[prod.rhs[i]].kind == SYM_TERM )
 																	{
 																		prod.level = symbols[prod.rhs[i]].level;
 																		break;
@@ -3482,33 +3642,43 @@ switch( act )
 													
 	}
 	break;
-	case 21:
+	case 22:
 	{
 		 	var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
-	case 22:
+	case 23:
 	{
 			var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
-	case 23:
+	case 24:
 	{
 			rval = 0; 
 	}
 	break;
-	case 24:
+	case 25:
+	{
+		rval = vstack[ vstack.length - 1 ];
+	}
+	break;
+	case 26:
+	{
+			rval = new Array(); 
+	}
+	break;
+	case 27:
 	{
 			rval = new Array();
 														rval = rval.concat( vstack[ vstack.length - 2 ] );
@@ -3516,12 +3686,14 @@ switch( act )
 													
 	}
 	break;
-	case 25:
+	case 28:
 	{
-			rval = new Array(); 
+			rval = new Array();
+														rval.push( vstack[ vstack.length - 1 ] );
+													
 	}
 	break;
-	case 26:
+	case 29:
 	{
 			var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
@@ -3531,38 +3703,55 @@ switch( act )
 													
 	}
 	break;
-	case 27:
+	case 30:
 	{
 			var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
 																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = index;
 														else
-															_error( "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( cur_line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
 													
-	}
-	break;
-	case 28:
-	{
-			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ].substr( 2, vstack[ vstack.length - 1 ].length - 4 ); 
-	}
-	break;
-	case 29:
-	{
-			rval = new String(); 
-	}
-	break;
-	case 30:
-	{
-		rval = vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 31:
 	{
-		rval = vstack[ vstack.length - 1 ];
+			rval = find_symbol( "ERROR_RESYNC", SYM_TERM,
+																			SPECIAL_ERROR );
+													
 	}
 	break;
 	case 32:
+	{
+		rval = vstack[ vstack.length - 1 ];
+	}
+	break;
+	case 33:
+	{
+			rval = new String(); 
+	}
+	break;
+	case 34:
+	{
+			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+	}
+	break;
+	case 35:
+	{
+		rval = vstack[ vstack.length - 1 ];
+	}
+	break;
+	case 36:
+	{
+		rval = vstack[ vstack.length - 1 ];
+	}
+	break;
+	case 37:
+	{
+		rval = vstack[ vstack.length - 1 ];
+	}
+	break;
+	case 38:
 	{
 		rval = vstack[ vstack.length - 1 ];
 	}
@@ -3606,6 +3795,7 @@ switch( act )
 				treenodes.push( node );
 			}
 			
+			//Goal symbol match?
 			if( act == 0 )
 				break;
 				
@@ -3662,20 +3852,28 @@ function parse_grammar( str, filename )
 {
 	var error_offsets = new Array();
 	var error_expects = new Array();
-	var error_count = 0;
+	var parse_error = 0;
+
+	cur_line = 1;
+	cur_error = 0;
+	cur_filename = filename;
 	
 	first_lhs = true;
+	
+	//jscc_dbg_withstepbystep = true;
+	//jscc_dbg_withtrace = true;
 
-	if( ( error_count += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
+	if( ( parse_error += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
 	{
-		for( i = 0; i < error_count; i++ )
-			_error( filename + ", line " + ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
-				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ) + 
-					": Parse error near \"" 
-						+ str.substr( error_offsets[i], 30 ) +
-							( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-								"..." : "" ) + "\", expecting \"" + error_expects[i].join() + "\"" );
+		for( i = 0; i < parse_error; i++ )
+			line_error( ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
+				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ),
+					"Parse error near\n\t"  + str.substr( error_offsets[i], 30 ) +
+						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
+
+	return cur_error + parse_error;
 }
 	
 
@@ -3685,10 +3883,10 @@ function parse_grammar( str, filename )
 	Features:
 	- Parser trace messages
 	- Step-by-step parsing
-	- Integrated panic-mode error recovery
+	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
 	
-	Written 2007 by Jan Max Meyer, J.M.K S.F. Software Technologies
+	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
 			<lpsantil@gmail.com>
 	
@@ -3749,145 +3947,157 @@ function __regexdbg_wait()
 
 function __regexlex( info )
 {
-	var state		= 0;
-	var match		= -1;
+	var state;
+	var match;
 	var match_pos	= 0;
 	var start		= 0;
-	var pos			= info.offset + 1;
+	var pos;
+	var chr;
 
-	do
+	while( 1 )
 	{
-		pos--;
 		state = 0;
-		match = -2;
-		start = pos;
-
-		if( info.src.length <= start )
-			return 21;
+		match = -1;
+		match_pos = 0;
+		start = 0;
+		pos = info.offset + 1 + ( match_pos - start );
 
 		do
 		{
-
+			pos--;
+			state = 0;
+			match = -2;
+			start = pos;
+	
+			if( info.src.length <= start )
+				return 22;
+	
+			do
+			{
+				chr = info.src.charCodeAt( pos );
 switch( state )
 {
 	case 0:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 39 ) || ( info.src.charCodeAt( pos ) >= 44 && info.src.charCodeAt( pos ) <= 45 ) || ( info.src.charCodeAt( pos ) >= 47 && info.src.charCodeAt( pos ) <= 62 ) || ( info.src.charCodeAt( pos ) >= 64 && info.src.charCodeAt( pos ) <= 90 ) || ( info.src.charCodeAt( pos ) >= 94 && info.src.charCodeAt( pos ) <= 123 ) || ( info.src.charCodeAt( pos ) >= 125 && info.src.charCodeAt( pos ) <= 254 ) ) state = 1;
-		else if( info.src.charCodeAt( pos ) == 40 ) state = 2;
-		else if( info.src.charCodeAt( pos ) == 41 ) state = 3;
-		else if( info.src.charCodeAt( pos ) == 42 ) state = 4;
-		else if( info.src.charCodeAt( pos ) == 43 ) state = 5;
-		else if( info.src.charCodeAt( pos ) == 46 ) state = 6;
-		else if( info.src.charCodeAt( pos ) == 63 ) state = 7;
-		else if( info.src.charCodeAt( pos ) == 91 ) state = 8;
-		else if( info.src.charCodeAt( pos ) == 93 ) state = 9;
-		else if( info.src.charCodeAt( pos ) == 124 ) state = 10;
-		else if( info.src.charCodeAt( pos ) == 92 ) state = 13;
+		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) state = 1;
+		else if( chr == 40 ) state = 2;
+		else if( chr == 41 ) state = 3;
+		else if( chr == 42 ) state = 4;
+		else if( chr == 43 ) state = 5;
+		else if( chr == 46 ) state = 6;
+		else if( chr == 63 ) state = 7;
+		else if( chr == 91 ) state = 8;
+		else if( chr == 93 ) state = 9;
+		else if( chr == 124 ) state = 10;
+		else if( chr == 92 ) state = 13;
 		else state = -1;
 		break;
 
 	case 1:
 		state = -1;
-		match = 12;
+		match = 13;
 		match_pos = pos;
 		break;
 
 	case 2:
 		state = -1;
-		match = 5;
+		match = 6;
 		match_pos = pos;
 		break;
 
 	case 3:
 		state = -1;
-		match = 6;
+		match = 7;
 		match_pos = pos;
 		break;
 
 	case 4:
 		state = -1;
-		match = 2;
+		match = 3;
 		match_pos = pos;
 		break;
 
 	case 5:
 		state = -1;
-		match = 3;
+		match = 4;
 		match_pos = pos;
 		break;
 
 	case 6:
 		state = -1;
-		match = 9;
+		match = 10;
 		match_pos = pos;
 		break;
 
 	case 7:
 		state = -1;
-		match = 4;
+		match = 5;
 		match_pos = pos;
 		break;
 
 	case 8:
 		state = -1;
-		match = 7;
+		match = 8;
 		match_pos = pos;
 		break;
 
 	case 9:
 		state = -1;
-		match = 8;
+		match = 9;
 		match_pos = pos;
 		break;
 
 	case 10:
 		state = -1;
-		match = 1;
+		match = 2;
 		match_pos = pos;
 		break;
 
 	case 11:
 		state = -1;
-		match = 11;
+		match = 12;
 		match_pos = pos;
 		break;
 
 	case 12:
-		if( ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 57 ) ) state = 12;
+		if( ( chr >= 48 && chr <= 57 ) ) state = 12;
 		else state = -1;
-		match = 10;
+		match = 11;
 		match_pos = pos;
 		break;
 
 	case 13:
-		if( ( info.src.charCodeAt( pos ) >= 0 && info.src.charCodeAt( pos ) <= 47 ) || ( info.src.charCodeAt( pos ) >= 58 && info.src.charCodeAt( pos ) <= 254 ) ) state = 11;
-		else if( ( info.src.charCodeAt( pos ) >= 48 && info.src.charCodeAt( pos ) <= 57 ) ) state = 12;
+		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) state = 11;
+		else if( ( chr >= 48 && chr <= 57 ) ) state = 12;
 		else state = -1;
-		match = 12;
+		match = 13;
 		match_pos = pos;
 		break;
 
 }
 
 
-			pos++;
+				pos++;
+	
+			}
+			while( state > -1 );
+	
+		}
+		while( -1 > -1 && match == -1 );
+	
+		if( match > -1 )
+		{
+			info.att = info.src.substr( start, match_pos - start );
+			info.offset = match_pos;
+			
 
 		}
-		while( state > -1 );
-
-	}
-	while( -1 > -1 && match == -1 );
-
-	if( match > -1 )
-	{
-		info.att = info.src.substr( start, match_pos - start );
-		info.offset = match_pos;
+		else
+		{
+			info.att = new String();
+			match = -1;
+		}
 		
-
-	}
-	else
-	{
-		info.att = new String();
-		match = -1;
+		break;
 	}
 
 	return match;
@@ -3911,84 +4121,85 @@ function __regexparse( src, err_off, err_la )
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
+	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
 	new Array( 0/* RegEx' */, 1 ),
-	new Array( 14/* RegEx */, 1 ),
-	new Array( 13/* Expression */, 3 ),
-	new Array( 13/* Expression */, 1 ),
-	new Array( 15/* Catenation */, 2 ),
-	new Array( 15/* Catenation */, 1 ),
-	new Array( 16/* Factor */, 2 ),
-	new Array( 16/* Factor */, 2 ),
-	new Array( 16/* Factor */, 2 ),
-	new Array( 16/* Factor */, 1 ),
-	new Array( 17/* Term */, 1 ),
-	new Array( 17/* Term */, 1 ),
-	new Array( 17/* Term */, 3 ),
-	new Array( 19/* CharacterSet */, 3 ),
-	new Array( 19/* CharacterSet */, 1 ),
-	new Array( 20/* CharClass */, 2 ),
-	new Array( 20/* CharClass */, 0 ),
-	new Array( 18/* Character */, 1 ),
-	new Array( 18/* Character */, 1 ),
-	new Array( 18/* Character */, 1 )
+	new Array( 15/* RegEx */, 1 ),
+	new Array( 14/* Expression */, 3 ),
+	new Array( 14/* Expression */, 1 ),
+	new Array( 16/* Catenation */, 2 ),
+	new Array( 16/* Catenation */, 1 ),
+	new Array( 17/* Factor */, 2 ),
+	new Array( 17/* Factor */, 2 ),
+	new Array( 17/* Factor */, 2 ),
+	new Array( 17/* Factor */, 1 ),
+	new Array( 18/* Term */, 1 ),
+	new Array( 18/* Term */, 1 ),
+	new Array( 18/* Term */, 3 ),
+	new Array( 20/* CharacterSet */, 3 ),
+	new Array( 20/* CharacterSet */, 1 ),
+	new Array( 21/* CharClass */, 2 ),
+	new Array( 21/* CharClass */, 0 ),
+	new Array( 19/* Character */, 1 ),
+	new Array( 19/* Character */, 1 ),
+	new Array( 19/* Character */, 1 )
 );
 
 /* Action-Table */
 var act_tab = new Array(
-	/* State 0 */ new Array( 5/* "(" */,8 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 , 7/* "[" */,12 , 9/* "ANY_CHAR" */,13 ),
-	/* State 1 */ new Array( 21/* "$" */,0 ),
-	/* State 2 */ new Array( 1/* "|" */,14 , 21/* "$" */,-1 ),
-	/* State 3 */ new Array( 5/* "(" */,8 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 , 7/* "[" */,12 , 9/* "ANY_CHAR" */,13 , 21/* "$" */,-3 , 1/* "|" */,-3 , 6/* ")" */,-3 ),
-	/* State 4 */ new Array( 21/* "$" */,-5 , 1/* "|" */,-5 , 5/* "(" */,-5 , 10/* "ASCII_CODE" */,-5 , 11/* "ESCAPED_CHAR" */,-5 , 12/* "ANY" */,-5 , 7/* "[" */,-5 , 9/* "ANY_CHAR" */,-5 , 6/* ")" */,-5 ),
-	/* State 5 */ new Array( 4/* "?" */,16 , 3/* "+" */,17 , 2/* "*" */,18 , 21/* "$" */,-9 , 1/* "|" */,-9 , 5/* "(" */,-9 , 10/* "ASCII_CODE" */,-9 , 11/* "ESCAPED_CHAR" */,-9 , 12/* "ANY" */,-9 , 7/* "[" */,-9 , 9/* "ANY_CHAR" */,-9 , 6/* ")" */,-9 ),
-	/* State 6 */ new Array( 2/* "*" */,-10 , 3/* "+" */,-10 , 4/* "?" */,-10 , 21/* "$" */,-10 , 1/* "|" */,-10 , 5/* "(" */,-10 , 10/* "ASCII_CODE" */,-10 , 11/* "ESCAPED_CHAR" */,-10 , 12/* "ANY" */,-10 , 7/* "[" */,-10 , 9/* "ANY_CHAR" */,-10 , 6/* ")" */,-10 ),
-	/* State 7 */ new Array( 2/* "*" */,-11 , 3/* "+" */,-11 , 4/* "?" */,-11 , 21/* "$" */,-11 , 1/* "|" */,-11 , 5/* "(" */,-11 , 10/* "ASCII_CODE" */,-11 , 11/* "ESCAPED_CHAR" */,-11 , 12/* "ANY" */,-11 , 7/* "[" */,-11 , 9/* "ANY_CHAR" */,-11 , 6/* ")" */,-11 ),
-	/* State 8 */ new Array( 5/* "(" */,8 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 , 7/* "[" */,12 , 9/* "ANY_CHAR" */,13 ),
-	/* State 9 */ new Array( 2/* "*" */,-17 , 3/* "+" */,-17 , 4/* "?" */,-17 , 21/* "$" */,-17 , 1/* "|" */,-17 , 5/* "(" */,-17 , 10/* "ASCII_CODE" */,-17 , 11/* "ESCAPED_CHAR" */,-17 , 12/* "ANY" */,-17 , 7/* "[" */,-17 , 9/* "ANY_CHAR" */,-17 , 6/* ")" */,-17 , 8/* "]" */,-17 ),
-	/* State 10 */ new Array( 2/* "*" */,-18 , 3/* "+" */,-18 , 4/* "?" */,-18 , 21/* "$" */,-18 , 1/* "|" */,-18 , 5/* "(" */,-18 , 10/* "ASCII_CODE" */,-18 , 11/* "ESCAPED_CHAR" */,-18 , 12/* "ANY" */,-18 , 7/* "[" */,-18 , 9/* "ANY_CHAR" */,-18 , 6/* ")" */,-18 , 8/* "]" */,-18 ),
-	/* State 11 */ new Array( 2/* "*" */,-19 , 3/* "+" */,-19 , 4/* "?" */,-19 , 21/* "$" */,-19 , 1/* "|" */,-19 , 5/* "(" */,-19 , 10/* "ASCII_CODE" */,-19 , 11/* "ESCAPED_CHAR" */,-19 , 12/* "ANY" */,-19 , 7/* "[" */,-19 , 9/* "ANY_CHAR" */,-19 , 6/* ")" */,-19 , 8/* "]" */,-19 ),
-	/* State 12 */ new Array( 8/* "]" */,-16 , 10/* "ASCII_CODE" */,-16 , 11/* "ESCAPED_CHAR" */,-16 , 12/* "ANY" */,-16 ),
-	/* State 13 */ new Array( 2/* "*" */,-14 , 3/* "+" */,-14 , 4/* "?" */,-14 , 21/* "$" */,-14 , 1/* "|" */,-14 , 5/* "(" */,-14 , 10/* "ASCII_CODE" */,-14 , 11/* "ESCAPED_CHAR" */,-14 , 12/* "ANY" */,-14 , 7/* "[" */,-14 , 9/* "ANY_CHAR" */,-14 , 6/* ")" */,-14 ),
-	/* State 14 */ new Array( 5/* "(" */,8 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 , 7/* "[" */,12 , 9/* "ANY_CHAR" */,13 ),
-	/* State 15 */ new Array( 21/* "$" */,-4 , 1/* "|" */,-4 , 5/* "(" */,-4 , 10/* "ASCII_CODE" */,-4 , 11/* "ESCAPED_CHAR" */,-4 , 12/* "ANY" */,-4 , 7/* "[" */,-4 , 9/* "ANY_CHAR" */,-4 , 6/* ")" */,-4 ),
-	/* State 16 */ new Array( 21/* "$" */,-8 , 1/* "|" */,-8 , 5/* "(" */,-8 , 10/* "ASCII_CODE" */,-8 , 11/* "ESCAPED_CHAR" */,-8 , 12/* "ANY" */,-8 , 7/* "[" */,-8 , 9/* "ANY_CHAR" */,-8 , 6/* ")" */,-8 ),
-	/* State 17 */ new Array( 21/* "$" */,-7 , 1/* "|" */,-7 , 5/* "(" */,-7 , 10/* "ASCII_CODE" */,-7 , 11/* "ESCAPED_CHAR" */,-7 , 12/* "ANY" */,-7 , 7/* "[" */,-7 , 9/* "ANY_CHAR" */,-7 , 6/* ")" */,-7 ),
-	/* State 18 */ new Array( 21/* "$" */,-6 , 1/* "|" */,-6 , 5/* "(" */,-6 , 10/* "ASCII_CODE" */,-6 , 11/* "ESCAPED_CHAR" */,-6 , 12/* "ANY" */,-6 , 7/* "[" */,-6 , 9/* "ANY_CHAR" */,-6 , 6/* ")" */,-6 ),
-	/* State 19 */ new Array( 1/* "|" */,14 , 6/* ")" */,22 ),
-	/* State 20 */ new Array( 8/* "]" */,24 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 ),
-	/* State 21 */ new Array( 5/* "(" */,8 , 10/* "ASCII_CODE" */,9 , 11/* "ESCAPED_CHAR" */,10 , 12/* "ANY" */,11 , 7/* "[" */,12 , 9/* "ANY_CHAR" */,13 , 21/* "$" */,-2 , 1/* "|" */,-2 , 6/* ")" */,-2 ),
-	/* State 22 */ new Array( 2/* "*" */,-12 , 3/* "+" */,-12 , 4/* "?" */,-12 , 21/* "$" */,-12 , 1/* "|" */,-12 , 5/* "(" */,-12 , 10/* "ASCII_CODE" */,-12 , 11/* "ESCAPED_CHAR" */,-12 , 12/* "ANY" */,-12 , 7/* "[" */,-12 , 9/* "ANY_CHAR" */,-12 , 6/* ")" */,-12 ),
-	/* State 23 */ new Array( 8/* "]" */,-15 , 10/* "ASCII_CODE" */,-15 , 11/* "ESCAPED_CHAR" */,-15 , 12/* "ANY" */,-15 ),
-	/* State 24 */ new Array( 2/* "*" */,-13 , 3/* "+" */,-13 , 4/* "?" */,-13 , 21/* "$" */,-13 , 1/* "|" */,-13 , 5/* "(" */,-13 , 10/* "ASCII_CODE" */,-13 , 11/* "ESCAPED_CHAR" */,-13 , 12/* "ANY" */,-13 , 7/* "[" */,-13 , 9/* "ANY_CHAR" */,-13 , 6/* ")" */,-13 )
+	/* State 0 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
+	/* State 1 */ new Array( 22/* "" */,0 ),
+	/* State 2 */ new Array( 2/* "|" */,14 , 22/* "" */,-1 ),
+	/* State 3 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "" */,-3 , 2/* "|" */,-3 , 7/* ")" */,-3 ),
+	/* State 4 */ new Array( 22/* "" */,-5 , 2/* "|" */,-5 , 6/* "(" */,-5 , 11/* "ASCII_CODE" */,-5 , 12/* "ESCAPED_CHAR" */,-5 , 13/* "ANY" */,-5 , 8/* "[" */,-5 , 10/* "ANY_CHAR" */,-5 , 7/* ")" */,-5 ),
+	/* State 5 */ new Array( 5/* "?" */,16 , 4/* "+" */,17 , 3/* "*" */,18 , 22/* "" */,-9 , 2/* "|" */,-9 , 6/* "(" */,-9 , 11/* "ASCII_CODE" */,-9 , 12/* "ESCAPED_CHAR" */,-9 , 13/* "ANY" */,-9 , 8/* "[" */,-9 , 10/* "ANY_CHAR" */,-9 , 7/* ")" */,-9 ),
+	/* State 6 */ new Array( 3/* "*" */,-10 , 4/* "+" */,-10 , 5/* "?" */,-10 , 22/* "" */,-10 , 2/* "|" */,-10 , 6/* "(" */,-10 , 11/* "ASCII_CODE" */,-10 , 12/* "ESCAPED_CHAR" */,-10 , 13/* "ANY" */,-10 , 8/* "[" */,-10 , 10/* "ANY_CHAR" */,-10 , 7/* ")" */,-10 ),
+	/* State 7 */ new Array( 3/* "*" */,-11 , 4/* "+" */,-11 , 5/* "?" */,-11 , 22/* "" */,-11 , 2/* "|" */,-11 , 6/* "(" */,-11 , 11/* "ASCII_CODE" */,-11 , 12/* "ESCAPED_CHAR" */,-11 , 13/* "ANY" */,-11 , 8/* "[" */,-11 , 10/* "ANY_CHAR" */,-11 , 7/* ")" */,-11 ),
+	/* State 8 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
+	/* State 9 */ new Array( 3/* "*" */,-17 , 4/* "+" */,-17 , 5/* "?" */,-17 , 22/* "" */,-17 , 2/* "|" */,-17 , 6/* "(" */,-17 , 11/* "ASCII_CODE" */,-17 , 12/* "ESCAPED_CHAR" */,-17 , 13/* "ANY" */,-17 , 8/* "[" */,-17 , 10/* "ANY_CHAR" */,-17 , 7/* ")" */,-17 , 9/* "]" */,-17 ),
+	/* State 10 */ new Array( 3/* "*" */,-18 , 4/* "+" */,-18 , 5/* "?" */,-18 , 22/* "" */,-18 , 2/* "|" */,-18 , 6/* "(" */,-18 , 11/* "ASCII_CODE" */,-18 , 12/* "ESCAPED_CHAR" */,-18 , 13/* "ANY" */,-18 , 8/* "[" */,-18 , 10/* "ANY_CHAR" */,-18 , 7/* ")" */,-18 , 9/* "]" */,-18 ),
+	/* State 11 */ new Array( 3/* "*" */,-19 , 4/* "+" */,-19 , 5/* "?" */,-19 , 22/* "" */,-19 , 2/* "|" */,-19 , 6/* "(" */,-19 , 11/* "ASCII_CODE" */,-19 , 12/* "ESCAPED_CHAR" */,-19 , 13/* "ANY" */,-19 , 8/* "[" */,-19 , 10/* "ANY_CHAR" */,-19 , 7/* ")" */,-19 , 9/* "]" */,-19 ),
+	/* State 12 */ new Array( 9/* "]" */,-16 , 11/* "ASCII_CODE" */,-16 , 12/* "ESCAPED_CHAR" */,-16 , 13/* "ANY" */,-16 ),
+	/* State 13 */ new Array( 3/* "*" */,-14 , 4/* "+" */,-14 , 5/* "?" */,-14 , 22/* "" */,-14 , 2/* "|" */,-14 , 6/* "(" */,-14 , 11/* "ASCII_CODE" */,-14 , 12/* "ESCAPED_CHAR" */,-14 , 13/* "ANY" */,-14 , 8/* "[" */,-14 , 10/* "ANY_CHAR" */,-14 , 7/* ")" */,-14 ),
+	/* State 14 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
+	/* State 15 */ new Array( 22/* "" */,-4 , 2/* "|" */,-4 , 6/* "(" */,-4 , 11/* "ASCII_CODE" */,-4 , 12/* "ESCAPED_CHAR" */,-4 , 13/* "ANY" */,-4 , 8/* "[" */,-4 , 10/* "ANY_CHAR" */,-4 , 7/* ")" */,-4 ),
+	/* State 16 */ new Array( 22/* "" */,-8 , 2/* "|" */,-8 , 6/* "(" */,-8 , 11/* "ASCII_CODE" */,-8 , 12/* "ESCAPED_CHAR" */,-8 , 13/* "ANY" */,-8 , 8/* "[" */,-8 , 10/* "ANY_CHAR" */,-8 , 7/* ")" */,-8 ),
+	/* State 17 */ new Array( 22/* "" */,-7 , 2/* "|" */,-7 , 6/* "(" */,-7 , 11/* "ASCII_CODE" */,-7 , 12/* "ESCAPED_CHAR" */,-7 , 13/* "ANY" */,-7 , 8/* "[" */,-7 , 10/* "ANY_CHAR" */,-7 , 7/* ")" */,-7 ),
+	/* State 18 */ new Array( 22/* "" */,-6 , 2/* "|" */,-6 , 6/* "(" */,-6 , 11/* "ASCII_CODE" */,-6 , 12/* "ESCAPED_CHAR" */,-6 , 13/* "ANY" */,-6 , 8/* "[" */,-6 , 10/* "ANY_CHAR" */,-6 , 7/* ")" */,-6 ),
+	/* State 19 */ new Array( 2/* "|" */,14 , 7/* ")" */,22 ),
+	/* State 20 */ new Array( 9/* "]" */,24 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 ),
+	/* State 21 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "" */,-2 , 2/* "|" */,-2 , 7/* ")" */,-2 ),
+	/* State 22 */ new Array( 3/* "*" */,-12 , 4/* "+" */,-12 , 5/* "?" */,-12 , 22/* "" */,-12 , 2/* "|" */,-12 , 6/* "(" */,-12 , 11/* "ASCII_CODE" */,-12 , 12/* "ESCAPED_CHAR" */,-12 , 13/* "ANY" */,-12 , 8/* "[" */,-12 , 10/* "ANY_CHAR" */,-12 , 7/* ")" */,-12 ),
+	/* State 23 */ new Array( 9/* "]" */,-15 , 11/* "ASCII_CODE" */,-15 , 12/* "ESCAPED_CHAR" */,-15 , 13/* "ANY" */,-15 ),
+	/* State 24 */ new Array( 3/* "*" */,-13 , 4/* "+" */,-13 , 5/* "?" */,-13 , 22/* "" */,-13 , 2/* "|" */,-13 , 6/* "(" */,-13 , 11/* "ASCII_CODE" */,-13 , 12/* "ESCAPED_CHAR" */,-13 , 13/* "ANY" */,-13 , 8/* "[" */,-13 , 10/* "ANY_CHAR" */,-13 , 7/* ")" */,-13 )
 );
 
 /* Goto-Table */
 var goto_tab = new Array(
-	/* State 0 */ new Array( 14/* RegEx */,1 , 13/* Expression */,2 , 15/* Catenation */,3 , 16/* Factor */,4 , 17/* Term */,5 , 18/* Character */,6 , 19/* CharacterSet */,7 ),
+	/* State 0 */ new Array( 15/* RegEx */,1 , 14/* Expression */,2 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
 	/* State 1 */ new Array(  ),
 	/* State 2 */ new Array(  ),
-	/* State 3 */ new Array( 16/* Factor */,15 , 17/* Term */,5 , 18/* Character */,6 , 19/* CharacterSet */,7 ),
+	/* State 3 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
 	/* State 4 */ new Array(  ),
 	/* State 5 */ new Array(  ),
 	/* State 6 */ new Array(  ),
 	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 13/* Expression */,19 , 15/* Catenation */,3 , 16/* Factor */,4 , 17/* Term */,5 , 18/* Character */,6 , 19/* CharacterSet */,7 ),
+	/* State 8 */ new Array( 14/* Expression */,19 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
 	/* State 9 */ new Array(  ),
 	/* State 10 */ new Array(  ),
 	/* State 11 */ new Array(  ),
-	/* State 12 */ new Array( 20/* CharClass */,20 ),
+	/* State 12 */ new Array( 21/* CharClass */,20 ),
 	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 15/* Catenation */,21 , 16/* Factor */,4 , 17/* Term */,5 , 18/* Character */,6 , 19/* CharacterSet */,7 ),
+	/* State 14 */ new Array( 16/* Catenation */,21 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
 	/* State 15 */ new Array(  ),
 	/* State 16 */ new Array(  ),
 	/* State 17 */ new Array(  ),
 	/* State 18 */ new Array(  ),
 	/* State 19 */ new Array(  ),
-	/* State 20 */ new Array( 18/* Character */,23 ),
-	/* State 21 */ new Array( 16/* Factor */,15 , 17/* Term */,5 , 18/* Character */,6 , 19/* CharacterSet */,7 ),
+	/* State 20 */ new Array( 19/* Character */,23 ),
+	/* State 21 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
 	/* State 22 */ new Array(  ),
 	/* State 23 */ new Array(  ),
 	/* State 24 */ new Array(  )
@@ -3999,6 +4210,7 @@ var goto_tab = new Array(
 /* Symbol labels */
 var labels = new Array(
 	"RegEx'" /* Non-terminal symbol */,
+	"ERROR_RESYNC" /* Terminal symbol */,
 	"|" /* Terminal symbol */,
 	"*" /* Terminal symbol */,
 	"+" /* Terminal symbol */,
@@ -4019,7 +4231,7 @@ var labels = new Array(
 	"Character" /* Non-terminal symbol */,
 	"CharacterSet" /* Non-terminal symbol */,
 	"CharClass" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
+	"" /* Terminal symbol */
 );
 
 
@@ -4031,7 +4243,7 @@ var labels = new Array(
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
-	err_la = new Array();
+		err_la = new Array();
 	
 	sstack.push( 0 );
 	vstack.push( 0 );
@@ -4077,39 +4289,46 @@ var labels = new Array(
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
 			
-			err_cnt++;
-			err_off.push( info.offset - info.att.length );			
-			err_la.push( new Array() );
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			
-			//Remember the original stack!
-			var rsstack = new Array();
-			var rvstack = new Array();
-			for( var i = 0; i < sstack.length; i++ )
+			//Report errors only when error_step is 0, and this is not a
+			//subsequent error from a previous parse
+			if( error_step == 0 )
 			{
-				rsstack[i] = sstack[i];
-				rvstack[i] = vstack[i];
+				err_cnt++;
+				err_off.push( info.offset - info.att.length );			
+				err_la.push( new Array() );
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
-			while( act == 26 && la != 21 )
+			//Perform error recovery			
+			while( sstack.length > 1 && act == 26 )
 			{
-				if( regex_dbg_withtrace )
-					__regexdbg_print( "\tError recovery\n" +
-									"Current lookahead: " + labels[la] + " (" + info.att + ")\n" +
-									"Action: " + act + "\n\n" );
-				if( la == -1 )
-					info.offset++;
-					
-				while( act == 26 && sstack.length > 0 )
+				sstack.pop();
+				vstack.pop();
+				
+				//Try to shift on error token
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				{
-					sstack.pop();
-					vstack.pop();
-					
-					if( sstack.length == 0 )
-						break;
+					if( act_tab[sstack[sstack.length-1]][i] == 1 )
+					{
+						act = act_tab[sstack[sstack.length-1]][i+1];
 						
+						sstack.push( act );
+						vstack.push( new String() );
+
+						break;
+					}
+				}
+			}
+			
+			//Is it better to leave the parser now?
+			if( sstack.length > 1 && act != 26 )
+			{
+				//Ok, now try to shift on the next tokens
+				while( la != 22 )
+				{
 					act = 26;
+					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == la )
@@ -4118,18 +4337,14 @@ var labels = new Array(
 							break;
 						}
 					}
+					
+					if( act != 26 )
+						break;
+					
+					while( ( la = __regexlex( info ) ) < 0 )
+						info.offset++;
 				}
-				
-				if( act != 26 )
-					break;
-				
-				for( var i = 0; i < rsstack.length; i++ )
-				{
-					sstack.push( rsstack[i] );
-					vstack.push( rvstack[i] );
-				}
-				
-				la = __regexlex( info );
+				while( la != 22 && act == 26 );
 			}
 			
 			if( act == 26 )
@@ -4139,17 +4354,13 @@ var labels = new Array(
 				break;
 			}
 
-
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tError recovery succeeded, continuing" );
+			
+			//Try to parse the next three tokens successfully...
+			error_step = 3;
 		}
-		
-		/*
-		if( act == 26 )
-			break;
-		*/
-		
-		
+
 		//Shift
 		if( act > 0 )
 		{
@@ -4174,6 +4385,10 @@ var labels = new Array(
 			
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				
+			//Successfull shift and right beyond error recovery?
+			if( error_step > 0 )
+				error_step--;
 		}
 		//Reduce
 		else
@@ -4269,7 +4484,7 @@ switch( act )
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;													
+													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
 												
 	}
 	break;
@@ -4451,6 +4666,7 @@ switch( act )
 				treenodes.push( node );
 			}
 			
+			//Goal symbol match?
 			if( act == 0 )
 				break;
 				
@@ -4571,9 +4787,8 @@ function compile_regex( str, accept, case_insensitive )
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
 			
-			_error( "Regular expression \"" + str + "\"\n" +
-			 "                           " + spaces + "^\n" +
-			 "       expecting \"" + error_expects[i].join() + "\"" );
+			line_error( cur_line, "Regular expression:\n\t" + str + "\n\t" +
+			 		spaces + "^ expecting " + error_expects[i].join() );
 		}
 	}
 }
@@ -4611,7 +4826,7 @@ var DEFAULT_DRIVER = "driver_v8.js_";
 function _error( msg )
 {
 	if( show_errors )
-		print( "error: " + msg );
+		print( "error: " + file + ": " + msg );
 	
 	errors++;
 }
@@ -4619,7 +4834,7 @@ function _error( msg )
 function _warning( msg )
 {
 	if( show_warnings )
-		print( "warning: " + msg );
+		print( "warning: " + file + ": "  + msg );
 	
 	warnings++;
 }
@@ -4783,6 +4998,9 @@ for( var i = 0; i < argv.length; i++ )
 		src_file = argv[i];
 }
 
+//file is global source filename
+file = src_file;
+
 if( src_file != "" )
 {
 	var src = read_file( src_file );
@@ -4827,7 +5045,8 @@ if( src_file != "" )
 				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
 				driver = driver.replace( /##FOOTER##/gi, code_foot );
 				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				driver = driver.replace( /##ERROR##/gi, get_error_symbol_id() );
+				driver = driver.replace( /##ERROR##/gi, get_error_state() );
+				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
 

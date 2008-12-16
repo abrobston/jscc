@@ -35,8 +35,10 @@ function undef()
 	{
 		if( symbols[i].kind == SYM_NONTERM
 			&& symbols[i].defined == false )
+		{
 			_error( "Call to undefined non-terminal \"" +
 						symbols[i].label + "\"" );
+		}
 	}
 }
 

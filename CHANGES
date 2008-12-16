@@ -5,6 +5,29 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
+JS/CC v0.31 (build Dec 16, 2008)
+-------------------------------------------------------
+[+] Extended control on lexical analysis; Using the
+	regular expression matching rules, the lexer's
+	behavior can now be modified at recognition time,
+	by simply using a "continue" to continune lexical
+	analysis on the next tokens, or optionally a
+	"break", to stop the lexer and return the currently
+	matched token. 
+	The whitespace-symbol is now declared deprecated
+	with this new possibility.
+[+] Improved error reporting in JS/CC, now with
+	line numbers and filename
+[+] New error resynchronization token, which is simply
+	the tilde-symbol '~'; It can be used to defined
+	error resynchronization rules that are entered
+	when parse errors occur, to continue the parse at
+	a lower level within the grammar
+[+] Rewritten error recovery in all parser drivers,
+	using an error token instead of panic-mode
+	error recovery
+
+-------------------------------------------------------
 JS/CC v0.30 (build Nov 24, 2008)
 -------------------------------------------------------
 [-] Bugfix with whitespaces symbol

@@ -274,10 +274,10 @@ function print_dfa_table( dfa_states )
 						code += " || ";
 					
 					if( grp_start == k - 1 )
-						code += "info.src.charCodeAt( pos ) == " + grp_start;
+						code += "chr == " + grp_start;
 					else					
-						code += "( info.src.charCodeAt( pos ) >= " + grp_start +
-									" && info.src.charCodeAt( pos ) <= " + (k-1) + " )";
+						code += "( chr >= " + grp_start +
+									" && chr <= " + (k-1) + " )";
 					grp_start = -1;
 					k--;
 				}
@@ -370,25 +370,29 @@ function print_symbol_labels()
 								terminal, now it's the correct value; %source,
 								which was documented in the manual since v0.24
 								was not implemented.
+	10.12.2008	Jan Max Meyer	Removed the switch...case structure and replaced
+								it with if...else, because of new possibilities
+								with the lexical analyzer (more lex-like beha-
+								vior). continue can now be used in semantic
+								actions, or break, which is automatically done
+								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
 	var code = new String();
 	var re = new RegExp( "%match|%offset|%source" );
 	var i, j, k;	
-	var matches = 0;
 	var semcode;
 	var strmatch;
 	
-	code += "switch( match )\n"
-	code += "{\n";
 	for( i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_TERM
 			&& symbols[i].code != "" )
-		{
-			code += "	case " + i + ":\n";
-			code += "		{\n";
+		{			
+			code += "	" + ( code != "" ? "else " : "" ) +
+						"if( match == " + i + " )\n";
+			code += "	{\n";
 			
 			semcode = new String();
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
@@ -413,15 +417,10 @@ function print_term_actions()
 			code += "		" + semcode + "\n";
 			
 			code += "		}\n";
-			code += "		break;\n\n";
-			
-			matches++;
 		}
 	}
-	
-	code += "}\n\n";
 
-	return ( matches == 0 ) ? (new String()) : code;
+	return code;
 }
 
 	
@@ -526,7 +525,6 @@ function get_eof_symbol_id()
 	return eof_id;
 }
 
-
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_symbol_id()
 	
@@ -536,16 +534,30 @@ function get_eof_symbol_id()
 					
 	Parameters:	
 		
-	Returns:		length					The length of the symbol array.
+	Returns:		eof_id					The id of the EOF-symbol.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id()
 {
-	return states.length + 1;
-}
+	var error_id = -1;
+	
+	//Find out which symbol is for EOF!	
+	for( var i = 0; i < symbols.length; i++ )
+	{
+		if( symbols[i].special == SPECIAL_ERROR )
+		{
+			error_id = i;
+			break;
+		}
+	}
 
+	if( error_id == -1 )
+		_error( "No ERROR-symbol defined - This might not be possible (bug!)" );
+	
+	return error_id;
+}
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_whitespace_symbol_id()
@@ -566,3 +578,21 @@ function get_whitespace_symbol_id()
 	return whitespace_token;
 }
 
+/* -FUNCTION--------------------------------------------------------------------
+	Function:		get_error_state()
+	
+	Author:			Jan Max Meyer
+	
+	Usage:			Returns the ID of a non-existing state.
+					
+	Parameters:	
+		
+	Returns:		length					The length of the states array.
+  
+	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Date:		Author:			Note:
+----------------------------------------------------------------------------- */
+function get_error_state()
+{
+	return states.length + 1;
+}

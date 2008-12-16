@@ -19,7 +19,7 @@ var DEFAULT_DRIVER = "driver_v8.js_";
 function _error( msg )
 {
 	if( show_errors )
-		print( "error: " + msg );
+		print( "error: " + file + ": " + msg );
 	
 	errors++;
 }
@@ -27,7 +27,7 @@ function _error( msg )
 function _warning( msg )
 {
 	if( show_warnings )
-		print( "warning: " + msg );
+		print( "warning: " + file + ": "  + msg );
 	
 	warnings++;
 }

@@ -138,13 +138,13 @@ function execute( node )
 					while( execute( node.children[1] ) );
 					break;
 				case OP_WRITE:
-					WScript.Echo( execute( node.children[0] ) );
+					print( execute( node.children[0] ) );
 					break;
 				case OP_READ:
-					letvar( node.children[0].toString(), WScript.StdIn.ReadLine() );
+					letvar( node.children[0].toString(), read_string() );
 					break;
 				case OP_SAY:
-					WScript.Echo( node.children[0] );
+					print( node.children[0] );
 					break;
 				case OP_EQU:
 					ret = execute( node.children[0] ) == execute( node.children[1] );
@@ -301,9 +301,32 @@ function open_file( file )
 	return src;
 }
 
-if( WScript.Arguments.length > 0 )
+function read_string()
 {
-	var str = open_file( WScript.Arguments(0) );
+   var kbd = new java.io.BufferedReader(
+   		new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
+
+   return kbd.readLine();
+}
+
+function read_file( file )
+{
+	var src = new String();
+	
+	if( ( new java.io.File( file ).exists() ) )
+		src = readFile( file );
+	else
+	{
+		print( "unable to open file '" + file + "'" );
+		quit();
+	}
+	
+	return src;
+}
+
+if( arguments.length > 0 )
+{
+	var str			= read_file( arguments[0] );
 	var error_cnt 	= 0;
 	var error_off	= new Array();
 	var error_la	= new Array();
@@ -312,12 +335,12 @@ if( WScript.Arguments.length > 0 )
 	{
 		var i;
 		for( i = 0; i < error_cnt; i++ )
-			WScript.Echo( "Parse error near >" 
+			print( "Parse error near >" 
 				+ str.substr( error_off[i], 30 ) + "<, expecting \"" + error_la[i].join() + "\"" );
 	}
 }
 else
 {
-	WScript.Echo( 'usage: xpl.js <filename>' );
+	print( 'usage: xpl.js <filename>' );
 }
 *]

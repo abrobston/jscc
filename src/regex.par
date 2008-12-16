@@ -127,7 +127,7 @@ Factor:			Term '*'						[*
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%1.end].follow = %%.end;
 
-													nfa_states[%1.end].follow2 = %1.start;													
+													nfa_states[%1.end].follow2 = %1.start;
 												*]
 				| Term '?'						[* 	%% = new PARAM();
 													%%.start = create_nfa( nfa_states );
@@ -301,9 +301,8 @@ function compile_regex( str, accept, case_insensitive )
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
 			
-			_error( "Regular expression \"" + str + "\"\n" +
-			 "                           " + spaces + "^\n" +
-			 "       expecting \"" + error_expects[i].join() + "\"" );
+			line_error( cur_line, "Regular expression:\n\t" + str + "\n\t" +
+			 		spaces + "^ expecting " + error_expects[i].join() );
 		}
 	}
 }
