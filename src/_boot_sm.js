@@ -1,5 +1,5 @@
 #!/usr/bin/js
-var driver = "/*\n\tDefault driver template for JS/CC generated parsers for Mozilla/Spidermonkey\n\t\n\tWARNING: Do not use for parsers that should run as browser-based JavaScript!\n\t\t\t Use driver_web.js_ instead!\n\t\n\tFeatures:\n\t- Parser trace messages\n\t- Integrated error recovery\n\t- Pseudo-graphical parse tree generation\n\t\n\tWritten 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies\n\t\n\tThis is in the public domain.\n*/\n##HEADER##\n\nvar ##PREFIX##_dbg_withparsetree\t= false;\nvar ##PREFIX##_dbg_withtrace\t\t= false;\n\nfunction __##PREFIX##dbg_print( text )\n{\n\tprint( text );\n}\n\nfunction __##PREFIX##lex( info )\n{\n\tvar state;\n\tvar match\t\t= -1;\n\tvar match_pos\t= 0;\n\tvar start\t\t= 0;\n\tvar pos;\n\tvar chr;\n\n\twhile( 1 )\n\t{\n\t\tstate = 0;\n\t\tmatch = -1;\n\t\tmatch_pos = 0;\n\t\tstart = 0;\n\t\tpos = info.offset + 1 + ( match_pos - start );\n\n\t\tdo\n\t\t{\n\t\t\tpos--;\n\t\t\tstate = 0;\n\t\t\tmatch = -2;\n\t\t\tstart = pos;\n\t\n\t\t\tif( info.src.length <= start )\n\t\t\t\treturn ##EOF##;\n\t\n\t\t\tdo\n\t\t\t{\n\t\t\t\tchr = info.src.charCodeAt( pos );\n##DFA##\n\t\t\t\tpos++;\n\t\n\t\t\t}\n\t\t\twhile( state > -1 );\n\t\n\t\t}\n\t\twhile( ##WHITESPACE## > -1 && match == ##WHITESPACE## );\n\n\t\tif( match > -1 )\n\t\t{\n\t\t\tinfo.att = info.src.substr( start, match_pos - start );\n\t\t\tinfo.offset = match_pos;\n\t\t\t\n##TERMINAL_ACTIONS##\n\t\t}\n\t\telse\n\t\t{\n\t\t\tinfo.att = new String();\n\t\t\tmatch = -1;\n\t\t}\n\t\t\n\t\tbreak;\n\t}\n\n\treturn match;\n}\n\n\nfunction __##PREFIX##parse( src, err_off, err_la )\n{\n\tvar\t\tsstack\t\t\t= new Array();\n\tvar\t\tvstack\t\t\t= new Array();\n\tvar \terr_cnt\t\t\t= 0;\n\tvar\t\tact;\n\tvar\t\tgo;\n\tvar\t\tla;\n\tvar\t\trval;\n\tvar \tparseinfo\t\t= new Function( \"\", \"var offset; var src; var att;\" );\n\tvar\t\tinfo\t\t\t= new parseinfo();\n\t\n\t//Visual parse tree generation\n\tvar \ttreenode\t\t= new Function( \"\", \"var sym; var att; var child;\" );\n\tvar\t\ttreenodes\t\t= new Array();\n\tvar\t\ttree\t\t\t= new Array();\n\tvar\t\ttmptree\t\t\t= null;\n\tvar\t\terror_step\t\t= 0;\n\n##TABLES##\n\n##LABELS##\n\t\n\tinfo.offset = 0;\n\tinfo.src = src;\n\tinfo.att = new String();\n\t\n\tif( !err_off )\n\t\terr_off\t= new Array();\n\tif( !err_la )\n\t\terr_la = new Array();\n\t\n\tsstack.push( 0 );\n\tvstack.push( 0 );\n\t\n\tla = __##PREFIX##lex( info );\n\t\t\t\n\twhile( true )\n\t{\n\t\tact = ##ERROR##;\n\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t{\n\t\t\tif( act_tab[sstack[sstack.length-1]][i] == la )\n\t\t\t{\n\t\t\t\tact = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\n\t\t/*\n\t\t_print( \"state \" + sstack[sstack.length-1] + \" la = \" + la + \" info.att = >\" +\n\t\t\t\tinfo.att + \"< act = \" + act + \" src = >\" + info.src.substr( info.offset, 30 ) + \"...\" + \"<\" +\n\t\t\t\t\t\" sstack = \" + sstack.join() );\n\t\t*/\n\t\t\n\t\tif( ##PREFIX##_dbg_withtrace && sstack.length > 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\nState \" + sstack[sstack.length-1] + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tLookahead: \" + labels[la] + \" (\\\"\" + info.att + \"\\\")\\n\" +\n\t\t\t\t\t\t\t\"\\tAction: \" + act + \"\\n\" + \n\t\t\t\t\t\t\t\"\\tSource: \\\"\" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?\n\t\t\t\t\t\t\t\t\t\"...\" : \"\" ) + \"\\\"\\n\" +\n\t\t\t\t\t\t\t\"\\tStack: \" + sstack.join() + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tValue stack: \" + vstack.join() + \"\\n\" );\n\t\t}\n\t\t\n\t\t\t\n\t\t//Panic-mode: Try recovery when parse-error occurs!\n\t\tif( act == ##ERROR## )\n\t\t{\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Error detected: There is no reduce or shift on the symbol \" + labels[la] );\n\t\t\t\n\t\t\t//Report errors only when error_step is 0, and this is not a\n\t\t\t//subsequent error from a previous parse\n\t\t\tif( error_step == 0 )\n\t\t\t{\n\t\t\t\terr_cnt++;\n\t\t\t\terr_off.push( info.offset - info.att.length );\t\t\t\n\t\t\t\terr_la.push( new Array() );\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\terr_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );\n\t\t\t}\n\t\t\t\n\t\t\t//Perform error recovery\t\t\t\n\t\t\twhile( sstack.length > 1 && act == ##ERROR## )\n\t\t\t{\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t\t\n\t\t\t\t//Try to shift on error token\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t{\n\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == ##ERROR_TOKEN## )\n\t\t\t\t\t{\n\t\t\t\t\t\tact = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\n\t\t\t\t\t\tsstack.push( act );\n\t\t\t\t\t\tvstack.push( new String() );\n\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\t//Is it better to leave the parser now?\n\t\t\tif( sstack.length > 1 && act != ##ERROR## )\n\t\t\t{\n\t\t\t\t//Ok, now try to shift on the next tokens\n\t\t\t\twhile( la != ##EOF## )\n\t\t\t\t{\n\t\t\t\t\tact = ##ERROR##;\n\t\t\t\t\t\n\t\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == la )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tact = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\tif( act != ##ERROR## )\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\t\twhile( ( la = __##PREFIX##lex( info ) ) < 0 )\n\t\t\t\t\t\tinfo.offset++;\n\t\t\t\t}\n\t\t\t\twhile( la != ##EOF## && act == ##ERROR## );\n\t\t\t}\n\t\t\t\n\t\t\tif( act == ##ERROR## )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery failed, terminating parse process...\" );\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery succeeded, continuing\" );\n\t\t\t\n\t\t\t//Try to parse the next three tokens successfully...\n\t\t\terror_step = 3;\n\t\t}\n\n\t\t//Shift\n\t\tif( act > 0 )\n\t\t{\n\t\t\t//Parse tree generation\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ la ];\n\t\t\t\tnode.att = info.att;\n\t\t\t\tnode.child = new Array();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Shifting symbol: \" + labels[la] + \" (\" + info.att + \")\" );\n\t\t\n\t\t\tsstack.push( act );\n\t\t\tvstack.push( info.att );\n\t\t\t\n\t\t\tla = __##PREFIX##lex( info );\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tNew lookahead symbol: \" + labels[la] + \" (\" + info.att + \")\" );\n\t\t\t\t\n\t\t\t//Successfull shift and right beyond error recovery?\n\t\t\tif( error_step > 0 )\n\t\t\t\terror_step--;\n\t\t}\n\t\t//Reduce\n\t\telse\n\t\t{\t\t\n\t\t\tact *= -1;\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Reducing by producution: \" + act );\n\t\t\t\n\t\t\trval = void(0);\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPerforming semantic action...\" );\n\t\t\t\n##ACTIONS##\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\ttmptree = new Array();\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPopping \" + pop_tab[act][1] + \" off the stack...\" );\n\t\t\t\t\n\t\t\tfor( var i = 0; i < pop_tab[act][1]; i++ )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\t\ttmptree.push( tree.pop() );\n\t\t\t\t\t\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t}\n\t\t\t\t\t\t\t\t\t\n\t\t\tgo = -1;\n\t\t\tfor( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t{\n\t\t\t\tif( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )\n\t\t\t\t{\n\t\t\t\t\tgo = goto_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ pop_tab[act][0] ];\n\t\t\t\tnode.att = new String();\n\t\t\t\tnode.child = tmptree.reverse();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\t//Goal symbol match?\n\t\t\tif( act == 0 )\n\t\t\t\tbreak;\n\t\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPushing non-terminal \" + labels[ pop_tab[act][0] ] );\n\t\t\t\t\n\t\t\tsstack.push( go );\n\t\t\tvstack.push( rval );\t\t\t\n\t\t}\n\t}\n\n\tif( ##PREFIX##_dbg_withtrace )\n\t\t__##PREFIX##dbg_print( \"\\nParse complete.\" );\n\n\tif( ##PREFIX##_dbg_withparsetree )\n\t{\n\t\tif( err_cnt == 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\n--- Parse tree ---\" );\n\t\t\t__##PREFIX##dbg_parsetree( 0, treenodes, tree );\n\t\t}\n\t\telse\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\nParse tree cannot be viewed. There where parse errors.\" );\n\t\t}\n\t}\n\t\n\treturn err_cnt;\n}\n\n\nfunction __##PREFIX##dbg_parsetree( indent, nodes, tree )\n{\n\tvar str = new String();\n\tfor( var i = 0; i < tree.length; i++ )\n\t{\n\t\tstr = \"\";\n\t\tfor( var j = indent; j > 0; j-- )\n\t\t\tstr += \"\\t\";\n\t\t\n\t\tstr += nodes[ tree[i] ].sym;\n\t\tif( nodes[ tree[i] ].att != \"\" )\n\t\t\tstr += \" >\" + nodes[ tree[i] ].att + \"<\" ;\n\t\t\t\n\t\t__##PREFIX##dbg_print( str );\n\t\tif( nodes[ tree[i] ].child.length > 0 )\n\t\t\t__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );\n\t}\n}\n\n##FOOTER##";
+var driver = "/*\n\tDefault driver template for JS/CC generated parsers for Mozilla/Spidermonkey\n\t\n\tFeatures:\n\t- Parser trace messages\n\t- Integrated error recovery\n\t- Pseudo-graphical parse tree generation\n\t- Line and column counter variables\n\t\n\tWritten 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies\n\t\n\tThis is in the public domain.\n*/\n##HEADER##\n\nvar ##PREFIX##_dbg_withparsetree\t= false;\nvar ##PREFIX##_dbg_withtrace\t\t= false;\n\nfunction __##PREFIX##dbg_print( text )\n{\n\tprint( text );\n}\n\nfunction __##PREFIX##lex( PCB )\n{\n\tvar state;\n\tvar match\t\t= -1;\n\tvar match_pos\t= 0;\n\tvar start\t\t= 0;\n\tvar pos;\n\tvar chr;\n\n\twhile( 1 )\n\t{\n\t\tstate = 0;\n\t\tmatch = -1;\n\t\tmatch_pos = 0;\n\t\tstart = 0;\n\t\tpos = PCB.offset + 1 + ( match_pos - start );\n\n\t\tdo\n\t\t{\n\t\t\tpos--;\n\t\t\tstate = 0;\n\t\t\tmatch = -2;\n\t\t\tstart = pos;\n\t\n\t\t\tif( PCB.src.length <= start )\n\t\t\t\treturn ##EOF##;\n\t\n\t\t\tdo\n\t\t\t{\n\t\t\t\tchr = PCB.src.charCodeAt( pos );\n\n##DFA##\n\n\t\t\t\t//Line- and column-counter\n\t\t\t\tif( state > -1 )\n\t\t\t\t{\n\t\t\t\t\tif( chr == 10 )\n\t\t\t\t\t{\n\t\t\t\t\t\tPCB.line++;\n\t\t\t\t\t\tPCB.column = 0;\n\t\t\t\t\t}\n\t\t\t\t\tPCB.column++;\n\t\t\t\t}\n\n\t\t\t\tpos++;\n\t\n\t\t\t}\n\t\t\twhile( state > -1 );\n\t\n\t\t}\n\t\twhile( ##WHITESPACE## > -1 && match == ##WHITESPACE## );\n\t\n\t\tif( match > -1 )\n\t\t{\n\t\t\tPCB.att = PCB.src.substr( start, match_pos - start );\n\t\t\tPCB.offset = match_pos;\n\t\t\t\n##TERMINAL_ACTIONS##\n\t\t}\n\t\telse\n\t\t{\n\t\t\tPCB.att = new String();\n\t\t\tmatch = -1;\n\t\t}\n\t\t\n\t\tbreak;\n\t}\n\n\treturn match;\n}\n\nfunction __##PREFIX##parse( src, err_off, err_la )\n{\n\tvar\t\tsstack\t\t\t= new Array();\n\tvar\t\tvstack\t\t\t= new Array();\n\tvar \terr_cnt\t\t\t= 0;\n\tvar\t\trval;\n\tvar\t\tact;\n\t\n\t//PCB: Parser Control Block\n\tvar \tparsercontrol\t= new Function( \"\",\n\t\t\t\t\t\t\t\t\"var la;\" +\n\t\t\t\t\t\t\t\t\"var act;\" +\n\t\t\t\t\t\t\t\t\"var offset;\" +\n\t\t\t\t\t\t\t\t\"var src;\" +\n\t\t\t\t\t\t\t\t\"var att;\" +\n\t\t\t\t\t\t\t\t\"var line;\" +\n\t\t\t\t\t\t\t\t\"var column;\" +\n\t\t\t\t\t\t\t\t\"var error_step;\" );\n\tvar\t\tPCB\t= new parsercontrol();\n\t\n\t//Visual parse tree generation\n\tvar \ttreenode\t\t= new Function( \"\",\n\t\t\t\t\t\t\t\t\"var sym;\"+\n\t\t\t\t\t\t\t\t\"var att;\"+\n\t\t\t\t\t\t\t\t\"var child;\" );\n\tvar\t\ttreenodes\t\t= new Array();\n\tvar\t\ttree\t\t\t= new Array();\n\tvar\t\ttmptree\t\t\t= null;\n\n##TABLES##\n\n##LABELS##\n\t\n\tPCB.line = 1;\n\tPCB.column = 1;\n\tPCB.offset = 0;\n\tPCB.error_step = 0;\n\tPCB.src = src;\n\tPCB.att = new String();\n\n\tif( !err_off )\n\t\terr_off\t= new Array();\n\tif( !err_la )\n\t\terr_la = new Array();\n\t\n\tsstack.push( 0 );\n\tvstack.push( 0 );\n\t\n\tPCB.la = __##PREFIX##lex( PCB );\n\t\t\t\n\twhile( true )\n\t{\n\t\tPCB.act = ##ERROR##;\n\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t{\n\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t{\n\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\n\t\t/*\n\t\t_print( \"state \" + sstack[sstack.length-1] +\n\t\t\t\t\" la = \" +\n\t\t\t\tPCB.la + \" att = >\" +\n\t\t\t\tPCB.att + \"< act = \" +\n\t\t\t\tPCB.act + \" src = >\" +\n\t\t\t\tPCB.src.substr( PCB.offset, 30 ) + \"...\" + \"<\" +\n\t\t\t\t\" sstack = \" + sstack.join() );\n\t\t*/\n\t\t\n\t\tif( ##PREFIX##_dbg_withtrace && sstack.length > 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\nState \" + sstack[sstack.length-1] + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tLookahead: \" + labels[PCB.la] +\n\t\t\t\t\t\t\t\t\" (\\\"\" + PCB.att + \"\\\")\\n\" +\n\t\t\t\t\t\t\t\"\\tAction: \" + PCB.act + \"\\n\" + \n\t\t\t\t\t\t\t\"\\tSource: \\\"\" + PCB.src.substr( PCB.offset, 30 ) +\n\t\t\t\t\t\t\t\t\t( ( PCB.offset + 30 < PCB.src.length ) ?\n\t\t\t\t\t\t\t\t\t\t\"...\" : \"\" ) + \"\\\"\\n\" +\n\t\t\t\t\t\t\t\"\\tStack: \" + sstack.join() + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tValue stack: \" + vstack.join() + \"\\n\" );\n\t\t}\n\t\t\n\t\t\t\n\t\t//Parse error? Try to recover!\n\t\tif( PCB.act == ##ERROR## )\n\t\t{\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Error detected: There is no reduce or shift on the symbol \" + labels[PCB.la] );\n\t\t\t\n\t\t\t//Report errors only when error_step is 0, and this is not a\n\t\t\t//subsequent error from a previous parse\n\t\t\tif( PCB.error_step == 0 )\n\t\t\t{\n\t\t\t\terr_cnt++;\n\t\t\t\terr_off.push( PCB.offset - PCB.att.length );\n\t\t\t\terr_la.push( new Array() );\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\terr_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );\n\t\t\t}\n\t\t\t\n\t\t\t//Perform error recovery\t\t\t\n\t\t\twhile( sstack.length > 1 && PCB.act == ##ERROR## )\n\t\t\t{\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t\t\n\t\t\t\t//Try to shift on error token\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t{\n\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == ##ERROR_TOKEN## )\n\t\t\t\t\t{\n\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\n\t\t\t\t\t\tsstack.push( PCB.act );\n\t\t\t\t\t\tvstack.push( new String() );\n\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\t//Is it better to leave the parser now?\n\t\t\tif( sstack.length > 1 && PCB.act != ##ERROR## )\n\t\t\t{\n\t\t\t\t//Ok, now try to shift on the next tokens\n\t\t\t\twhile( PCB.la != ##EOF## )\n\t\t\t\t{\n\t\t\t\t\tPCB.act = ##ERROR##;\n\t\t\t\t\t\n\t\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\tif( PCB.act != ##ERROR## )\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\t\twhile( ( PCB.la = __##PREFIX##lex( PCB ) )\n\t\t\t\t\t\t\t\t< 0 )\n\t\t\t\t\t\tPCB.offset++;\n\t\t\t\t}\n\t\t\t\twhile( PCB.la != ##EOF## && PCB.act == ##ERROR## );\n\t\t\t}\n\t\t\t\n\t\t\tif( PCB.act == ##ERROR## || PCB.la == ##EOF## )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery failed, terminating parse process...\" );\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery succeeded, continuing\" );\n\t\t\t\n\t\t\t//Try to parse the next three tokens successfully...\n\t\t\tPCB.error_step = 3;\n\t\t}\n\n\t\t//Shift\n\t\tif( PCB.act > 0 )\n\t\t{\n\t\t\t//Parse tree generation\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ PCB.la ];\n\t\t\t\tnode.att = PCB.att;\n\t\t\t\tnode.child = new Array();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Shifting symbol: \" + labels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\n\t\t\tsstack.push( PCB.act );\n\t\t\tvstack.push( PCB.att );\n\t\t\t\n\t\t\tPCB.la = __##PREFIX##lex( PCB );\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tNew lookahead symbol: \" + labels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\t\t\n\t\t\t//Successfull shift and right beyond error recovery?\n\t\t\tif( PCB.error_step > 0 )\n\t\t\t\tPCB.error_step--;\n\t\t}\n\t\t//Reduce\n\t\telse\n\t\t{\t\t\n\t\t\tact = PCB.act * -1;\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Reducing by production: \" + act );\n\t\t\t\n\t\t\trval = void( 0 );\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPerforming semantic action...\" );\n\t\t\t\n##ACTIONS##\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\ttmptree = new Array();\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPopping \" + pop_tab[act][1] + \" off the stack...\" );\n\t\t\t\t\n\t\t\tfor( var i = 0; i < pop_tab[act][1]; i++ )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\t\ttmptree.push( tree.pop() );\n\t\t\t\t\t\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t}\n\n\t\t\t//Get goto-table entry\n\t\t\tPCB.act = ##ERROR##;\n\t\t\tfor( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t{\n\t\t\t\tif( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )\n\t\t\t\t{\n\t\t\t\t\tPCB.act = goto_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\t//Do some parse tree construction if desired\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ pop_tab[PCB.act][0] ];\n\t\t\t\tnode.att = rval;\n\t\t\t\tnode.child = tmptree.reverse();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\t//Goal symbol match?\n\t\t\tif( act == 0 ) //Don't use PCB.act here!\n\t\t\t\tbreak;\n\t\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPushing non-terminal \" + labels[ pop_tab[act][0] ] );\n\t\t\t\n\t\t\t//...and push it!\n\t\t\tsstack.push( PCB.act );\n\t\t\tvstack.push( rval );\n\t\t}\n\t}\n\n\tif( ##PREFIX##_dbg_withtrace )\n\t\t__##PREFIX##dbg_print( \"\\nParse complete.\" );\n\n\tif( ##PREFIX##_dbg_withparsetree )\n\t{\n\t\tif( err_cnt == 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\n--- Parse tree ---\" );\n\t\t\t__##PREFIX##dbg_parsetree( 0, treenodes, tree );\n\t\t}\n\t\telse\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\nParse tree cannot be viewed. There where parse errors.\" );\n\t\t}\n\t}\n\t\n\treturn err_cnt;\n}\n\n\nfunction __##PREFIX##dbg_parsetree( indent, nodes, tree )\n{\n\tvar str = new String();\n\tfor( var i = 0; i < tree.length; i++ )\n\t{\n\t\tstr = \"\";\n\t\tfor( var j = indent; j > 0; j-- )\n\t\t\tstr += \"\\t\";\n\t\t\n\t\tstr += nodes[ tree[i] ].sym;\n\t\tif( nodes[ tree[i] ].att != \"\" )\n\t\t\tstr += \" >\" + nodes[ tree[i] ].att + \"<\" ;\n\t\t\t\n\t\t__##PREFIX##dbg_print( str );\n\t\tif( nodes[ tree[i] ].child.length > 0 )\n\t\t\t__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );\n\t}\n}\n\n##FOOTER##";
 /* -HEADER----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -18,7 +18,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.31";
+var JSCC_VERSION			= "0.32";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -976,11 +976,11 @@ function print_term_actions()
 				if( strmatch && strmatch.index == 0 )
 				{
 					if( strmatch[0] == "%match" )
-						semcode += "info.att";
+						semcode += "PCB.att";
 					else if( strmatch[0] == "%offset" )
-						semcode += "( info.offset - info.att.length )";
+						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
-						semcode += "info.src";
+						semcode += "PCB.src";
 					
 					j += strmatch[0].length - 1;
 					k = semcode.length;
@@ -2663,13 +2663,11 @@ function print_dfa( dfa_states )
 /*
 	Default driver template for JS/CC generated parsers for Mozilla/Spidermonkey
 	
-	WARNING: Do not use for parsers that should run as browser-based JavaScript!
-			 Use driver_web.js_ instead!
-	
 	Features:
 	- Parser trace messages
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	
@@ -2682,7 +2680,7 @@ var		cur_line;
 //Wrapper for semantic errors
 function line_error( line, txt )
 {
-	_error( "line " + line + ", " + txt );
+	_error( "line " + line + ": " + txt );
 }
 
 
@@ -2695,7 +2693,7 @@ function __jsccdbg_print( text )
 	print( text );
 }
 
-function __jscclex( info )
+function __jscclex( PCB )
 {
 	var state;
 	var match		= -1;
@@ -2710,7 +2708,7 @@ function __jscclex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -2719,12 +2717,21 @@ function __jscclex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 38;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+				
+				//Line- and column-counter
+				if( chr == 10 )
+				{
+					PCB.line++;
+					PCB.column = 0;
+				}
+				PCB.column++;
+
 switch( state )
 {
 	case 0:
@@ -2986,38 +2993,25 @@ switch( state )
 	
 		}
 		while( -1 > -1 && match == -1 );
-
+	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 	if( match == 12 )
 	{
-			//We have to count the lines!
-																for( var i = 0; i < info.att.length; i++ )
-																	if( info.att.charAt( i ) == "\n" )
-																		cur_line++;
-																		
-																info.att = info.att.substr( 2, info.att.length - 4 );
+			PCB.att = PCB.att.substr(
+																	2, PCB.att.length - 4 );
 															
 		}
 	else if( match == 16 )
 	{
-		 	//We have to count the lines!
-												cur_line++;
-												
-												continue;
-											
+		 	continue;	
 		}
 	else if( match == 17 )
 	{
-			//We have to count the lines!
-												for( var i = 0; i < info.att.length; i++ )
-													if( info.att.charAt( i ) == "\n" )
-															cur_line++;
-												continue;
-											
+			continue;	
 		}
 	else if( match == 18 )
 	{
@@ -3027,7 +3021,7 @@ switch( state )
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -3037,25 +3031,34 @@ switch( state )
 	return match;
 }
 
-
 function __jsccparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -3273,10 +3276,13 @@ var labels = new Array(
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -3285,57 +3291,63 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __jscclex( info );
+	PCB.la = __jscclex( PCB );
 			
 	while( true )
 	{
-		act = 60;
+		PCB.act = 60;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( jscc_dbg_withtrace && sstack.length > 0 )
 		{
 			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 60 )
+		//Parse error? Try to recover!
+		if( PCB.act == 60 )
 		{
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 60 )
+			while( sstack.length > 1 && PCB.act == 60 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -3345,9 +3357,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -3356,32 +3368,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 60 )
+			if( sstack.length > 1 && PCB.act != 60 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 38 )
+				while( PCB.la != 38 )
 				{
-					act = 60;
+					PCB.act = 60;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 60 )
+					if( PCB.act != 60 )
 						break;
 					
-					while( ( la = __jscclex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __jscclex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 38 && act == 60 );
+				while( PCB.la != 38 && PCB.act == 60 );
 			}
 			
-			if( act == 60 )
+			if( PCB.act == 60 )
 			{
 				if( jscc_dbg_withtrace )
 					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -3392,47 +3405,47 @@ var labels = new Array(
 				__jsccdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __jscclex( info );
+			PCB.la = __jscclex( PCB );
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "Reducing by producution: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPerforming semantic action..." );
@@ -3517,7 +3530,7 @@ switch( act )
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
-															line_error( cur_line, "Multiple whitespace definition" );
+															line_error( PCB.line, "Multiple whitespace definition" );
 													
 	}
 	break;
@@ -3641,7 +3654,7 @@ switch( act )
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3652,7 +3665,7 @@ switch( act )
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3703,7 +3716,7 @@ switch( act )
 																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = index;
 														else
-															line_error( cur_line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
+															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
 													
 	}
 	break;
@@ -3767,36 +3780,40 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 60;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
+
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[PCB.act][0] ] );
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 
@@ -3846,10 +3863,9 @@ function parse_grammar( str, filename )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var parse_error = 0;
-
-	cur_line = 1;
 	
 	first_lhs = true;
+	cur_line = 1;
 	
 	//jscc_dbg_withstepbystep = true;
 	//jscc_dbg_withtrace = true;
@@ -3863,7 +3879,6 @@ function parse_grammar( str, filename )
 						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
-
 	return parse_error;
 }
 	
@@ -3871,13 +3886,11 @@ function parse_grammar( str, filename )
 /*
 	Default driver template for JS/CC generated parsers for Mozilla/Spidermonkey
 	
-	WARNING: Do not use for parsers that should run as browser-based JavaScript!
-			 Use driver_web.js_ instead!
-	
 	Features:
 	- Parser trace messages
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	
@@ -3930,7 +3943,7 @@ function __regexdbg_print( text )
 	print( text );
 }
 
-function __regexlex( info )
+function __regexlex( PCB )
 {
 	var state;
 	var match		= -1;
@@ -3945,7 +3958,7 @@ function __regexlex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -3954,12 +3967,21 @@ function __regexlex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 22;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+				
+				//Line- and column-counter
+				if( chr == 10 )
+				{
+					PCB.line++;
+					PCB.column = 0;
+				}
+				PCB.column++;
+
 switch( state )
 {
 	case 0:
@@ -4068,17 +4090,17 @@ switch( state )
 	
 		}
 		while( -1 > -1 && match == -1 );
-
+	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -4088,25 +4110,34 @@ switch( state )
 	return match;
 }
 
-
 function __regexparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -4221,10 +4252,13 @@ var labels = new Array(
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -4233,57 +4267,63 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __regexlex( info );
+	PCB.la = __regexlex( PCB );
 			
 	while( true )
 	{
-		act = 26;
+		PCB.act = 26;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( regex_dbg_withtrace && sstack.length > 0 )
 		{
 			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 26 )
+		//Parse error? Try to recover!
+		if( PCB.act == 26 )
 		{
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 26 )
+			while( sstack.length > 1 && PCB.act == 26 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -4293,9 +4333,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -4304,32 +4344,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 26 )
+			if( sstack.length > 1 && PCB.act != 26 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 22 )
+				while( PCB.la != 22 )
 				{
-					act = 26;
+					PCB.act = 26;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 26 )
+					if( PCB.act != 26 )
 						break;
 					
-					while( ( la = __regexlex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __regexlex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 22 && act == 26 );
+				while( PCB.la != 22 && PCB.act == 26 );
 			}
 			
-			if( act == 26 )
+			if( PCB.act == 26 )
 			{
 				if( regex_dbg_withtrace )
 					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -4340,47 +4381,47 @@ var labels = new Array(
 				__regexdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __regexlex( info );
+			PCB.la = __regexlex( PCB );
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "Reducing by producution: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPerforming semantic action..." );
@@ -4627,36 +4668,40 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 26;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
+
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[PCB.act][0] ] );
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 

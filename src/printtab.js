@@ -401,11 +401,11 @@ function print_term_actions()
 				if( strmatch && strmatch.index == 0 )
 				{
 					if( strmatch[0] == "%match" )
-						semcode += "info.att";
+						semcode += "PCB.att";
 					else if( strmatch[0] == "%offset" )
-						semcode += "( info.offset - info.att.length )";
+						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
-						semcode += "info.src";
+						semcode += "PCB.src";
 					
 					j += strmatch[0].length - 1;
 					k = semcode.length;

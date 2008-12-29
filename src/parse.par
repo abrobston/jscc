@@ -21,7 +21,7 @@ var		cur_line;
 //Wrapper for semantic errors
 function line_error( line, txt )
 {
-	_error( "line " + line + ", " + txt );
+	_error( "line " + line + ": " + txt );
 }
 
 *]
@@ -43,29 +43,16 @@ function line_error( line, txt )
 	'~'
 	
 	/~ Lexeme: ~/
-	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	//We have to count the lines!
-																for( var i = 0; i < %match.length; i++ )
-																	if( %match.charAt( i ) == "\n" )
-																		cur_line++;
-																		
-																%match = %match.substr( 2, %match.length - 4 );
+	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(
+																	2, %match.length - 4 );
 															*]
 	'\'([^\']|\\\')*\''						STRING_SINGLE
 	'"([^"]|\\")*"'							STRING_DOUBLE
 	'[A-Za-z0-9_-]+'						IDENT
 	
 	/~ Whitespace: ~/
-	'\n'									[* 	//We have to count the lines!
-												cur_line++;
-												
-												continue;
-											*]
-	'/~([^~]/|~[^/]|[^~/])*~/'				[*	//We have to count the lines!
-												for( var i = 0; i < %match.length; i++ )
-													if( %match.charAt( i ) == "\n" )
-															cur_line++;
-												continue;
-											*]
+	'\n'									[* 	continue;	*]
+	'/~([^~]/|~[^/]|[^~/])*~/'				[*	continue;	*]
 	'[\t\r ]+'								[*	continue;	*]
 	;
 	
@@ -117,7 +104,7 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 																( %2.charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
-															line_error( cur_line, "Multiple whitespace definition" );
+															line_error( PCB.line, "Multiple whitespace definition" );
 													*]
 				;
 
@@ -211,14 +198,14 @@ rhs_prec:		'&' identifier						[* 	var index;
 														if( ( index = find_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															%% = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + %2 + "\"" );
+															line_error( PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
 				| '&' string						[*	var index;
 														if( ( index = find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															%% = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + %2 + "\"" );
+															line_error(  PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
 				|									[*	%% = 0; *]
 				;
@@ -247,7 +234,7 @@ symbol:			identifier							[*	var index;
 																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															%% = index;
 														else
-															line_error( cur_line, "Call to undefined terminal " + %1 );
+															line_error(  PCB.line, "Call to undefined terminal " + %1 );
 													*]
 				| '~'								[*	%% = find_symbol( "ERROR_RESYNC", SYM_TERM,
 																			SPECIAL_ERROR );
@@ -277,10 +264,9 @@ function parse_grammar( str, filename )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var parse_error = 0;
-
-	cur_line = 1;
 	
 	first_lhs = true;
+	cur_line = 1;
 	
 	//##PREFIX##_dbg_withstepbystep = true;
 	//##PREFIX##_dbg_withtrace = true;
@@ -294,7 +280,6 @@ function parse_grammar( str, filename )
 						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
-
 	return parse_error;
 }
 	

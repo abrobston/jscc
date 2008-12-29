@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.31";
+var JSCC_VERSION			= "0.32";
 
 //Symbol types
 var SYM_NONTERM				= 0;

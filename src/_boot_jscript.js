@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.31";
+var JSCC_VERSION			= "0.32";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -974,11 +974,11 @@ function print_term_actions()
 				if( strmatch && strmatch.index == 0 )
 				{
 					if( strmatch[0] == "%match" )
-						semcode += "info.att";
+						semcode += "PCB.att";
 					else if( strmatch[0] == "%offset" )
-						semcode += "( info.offset - info.att.length )";
+						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
-						semcode += "info.src";
+						semcode += "PCB.src";
 					
 					j += strmatch[0].length - 1;
 					k = semcode.length;
@@ -2667,6 +2667,7 @@ function print_dfa( dfa_states )
 	- Step-by-step parsing
 	- Integrated panic-mode error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	
@@ -2684,7 +2685,7 @@ var		cur_line;
 //Wrapper for semantic errors
 function line_error( line, txt )
 {
-	_error( "line " + line + ", " + txt );
+	_error( "line " + line + ": " + txt );
 }
 
 
@@ -2711,10 +2712,10 @@ function __jsccdbg_wait()
 @end
 }
 
-function __jscclex( info )
+function __jscclex( PCB )
 {
 	var state;
-	var match		= 0;
+	var match		= -1;
 	var match_pos	= 0;
 	var start		= 0;
 	var pos;
@@ -2726,7 +2727,7 @@ function __jscclex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -2735,12 +2736,13 @@ function __jscclex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 38;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+
 switch( state )
 {
 	case 0:
@@ -2995,6 +2997,18 @@ switch( state )
 }
 
 
+
+				//Line- and column-counter
+				if( state > -1 )
+				{
+					if( chr == 10 )
+					{
+						PCB.line++;
+						PCB.column = 0;
+					}
+					PCB.column++;
+				}
+
 				pos++;
 	
 			}
@@ -3005,35 +3019,22 @@ switch( state )
 	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 	if( match == 12 )
 	{
-			//We have to count the lines!
-																for( var i = 0; i < info.att.length; i++ )
-																	if( info.att.charAt( i ) == "\n" )
-																		cur_line++;
-																		
-																info.att = info.att.substr( 2, info.att.length - 4 );
+			PCB.att = PCB.att.substr(
+																	2, PCB.att.length - 4 );
 															
 		}
 	else if( match == 16 )
 	{
-		 	//We have to count the lines!
-												cur_line++;
-												
-												continue;
-											
+		 	continue;	
 		}
 	else if( match == 17 )
 	{
-			//We have to count the lines!
-												for( var i = 0; i < info.att.length; i++ )
-													if( info.att.charAt( i ) == "\n" )
-															cur_line++;
-												continue;
-											
+			continue;	
 		}
 	else if( match == 18 )
 	{
@@ -3043,7 +3044,7 @@ switch( state )
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -3053,25 +3054,34 @@ switch( state )
 	return match;
 }
 
-
 function __jsccparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -3289,10 +3299,13 @@ var labels = new Array(
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -3301,33 +3314,39 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __jscclex( info );
+	PCB.la = __jscclex( PCB );
 			
 	while( true )
 	{
-		act = 60;
+		PCB.act = 60;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( jscc_dbg_withtrace && sstack.length > 0 )
 		{
 			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
@@ -3336,25 +3355,25 @@ var labels = new Array(
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 60 )
+		//Parse error? Try to recover!
+		if( PCB.act == 60 )
 		{
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 60 )
+			while( sstack.length > 1 && PCB.act == 60 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -3364,9 +3383,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -3375,32 +3394,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 60 )
+			if( sstack.length > 1 && PCB.act != 60 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 38 )
+				while( PCB.la != 38 )
 				{
-					act = 60;
+					PCB.act = 60;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 60 )
+					if( PCB.act != 60 )
 						break;
 					
-					while( ( la = __jscclex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __jscclex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 38 && act == 60 );
+				while( PCB.la != 38 && PCB.act == 60 );
 			}
 			
-			if( act == 60 )
+			if( PCB.act == 60 || PCB.la == 38 )
 			{
 				if( jscc_dbg_withtrace )
 					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -3411,47 +3431,47 @@ var labels = new Array(
 				__jsccdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __jscclex( info );
+			PCB.la = __jscclex( PCB );
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Reducing by producution: " + act );
+				__jsccdbg_print( "Reducing by production: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPerforming semantic action..." );
@@ -3536,7 +3556,7 @@ switch( act )
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
-															line_error( cur_line, "Multiple whitespace definition" );
+															line_error( PCB.line, "Multiple whitespace definition" );
 													
 	}
 	break;
@@ -3660,7 +3680,7 @@ switch( act )
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3671,7 +3691,7 @@ switch( act )
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3722,7 +3742,7 @@ switch( act )
 																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = index;
 														else
-															line_error( cur_line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
+															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
 													
 	}
 	break;
@@ -3786,36 +3806,39 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 60;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 
@@ -3865,10 +3888,9 @@ function parse_grammar( str, filename )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var parse_error = 0;
-
-	cur_line = 1;
 	
 	first_lhs = true;
+	cur_line = 1;
 	
 	//jscc_dbg_withstepbystep = true;
 	//jscc_dbg_withtrace = true;
@@ -3882,7 +3904,6 @@ function parse_grammar( str, filename )
 						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
-
 	return parse_error;
 }
 	
@@ -3896,6 +3917,7 @@ function parse_grammar( str, filename )
 	- Step-by-step parsing
 	- Integrated panic-mode error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	
@@ -3967,10 +3989,10 @@ function __regexdbg_wait()
 @end
 }
 
-function __regexlex( info )
+function __regexlex( PCB )
 {
 	var state;
-	var match		= 0;
+	var match		= -1;
 	var match_pos	= 0;
 	var start		= 0;
 	var pos;
@@ -3982,7 +4004,7 @@ function __regexlex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -3991,12 +4013,13 @@ function __regexlex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 22;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+
 switch( state )
 {
 	case 0:
@@ -4098,6 +4121,18 @@ switch( state )
 }
 
 
+
+				//Line- and column-counter
+				if( state > -1 )
+				{
+					if( chr == 10 )
+					{
+						PCB.line++;
+						PCB.column = 0;
+					}
+					PCB.column++;
+				}
+
 				pos++;
 	
 			}
@@ -4108,14 +4143,14 @@ switch( state )
 	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -4125,25 +4160,34 @@ switch( state )
 	return match;
 }
 
-
 function __regexparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -4258,10 +4302,13 @@ var labels = new Array(
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -4270,33 +4317,39 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __regexlex( info );
+	PCB.la = __regexlex( PCB );
 			
 	while( true )
 	{
-		act = 26;
+		PCB.act = 26;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( regex_dbg_withtrace && sstack.length > 0 )
 		{
 			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
@@ -4305,25 +4358,25 @@ var labels = new Array(
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 26 )
+		//Parse error? Try to recover!
+		if( PCB.act == 26 )
 		{
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 26 )
+			while( sstack.length > 1 && PCB.act == 26 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -4333,9 +4386,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -4344,32 +4397,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 26 )
+			if( sstack.length > 1 && PCB.act != 26 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 22 )
+				while( PCB.la != 22 )
 				{
-					act = 26;
+					PCB.act = 26;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 26 )
+					if( PCB.act != 26 )
 						break;
 					
-					while( ( la = __regexlex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __regexlex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 22 && act == 26 );
+				while( PCB.la != 22 && PCB.act == 26 );
 			}
 			
-			if( act == 26 )
+			if( PCB.act == 26 || PCB.la == 22 )
 			{
 				if( regex_dbg_withtrace )
 					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -4380,47 +4434,47 @@ var labels = new Array(
 				__regexdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __regexlex( info );
+			PCB.la = __regexlex( PCB );
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Reducing by producution: " + act );
+				__regexdbg_print( "Reducing by production: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPerforming semantic action..." );
@@ -4667,36 +4721,39 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 26;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 
