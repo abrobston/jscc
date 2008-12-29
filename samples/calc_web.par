@@ -13,7 +13,7 @@
 /~
 	--- These are the token definitions ---
 ~/
-!	' |\t' 		/~ Characters to be ignored... ~/
+!	' |\t' ;		/~ Characters to be ignored... ~/
 
 	'\('			/~ Non-associative tokens ~/
 	'\)'

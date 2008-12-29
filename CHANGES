@@ -5,7 +5,20 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
-JS/CC v0.31 (build Dec 16, 2008)
+JS/CC v0.32 (build Dec 29, 2008 - not released)
+-------------------------------------------------------
+[+] Rewritten parser drivers with new Parser Control
+	Block and integrated line- and column-calculation
+	within the lexical analyzer. This is for testing
+	now only!
+
+	Yet tested parser drivers:
+	+ Rhino
+	+ Spidermonkey
+	+ WebEnv
+
+-------------------------------------------------------
+JS/CC v0.31 (build Dec 16, 2008 - not released)
 -------------------------------------------------------
 [+] Extended control on lexical analysis; Using the
 	regular expression matching rules, the lexer's
