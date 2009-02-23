@@ -1,6 +1,6 @@
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	tabgen.js
@@ -101,6 +101,12 @@ function get_undone_state()
 	}
 			
 	return -1;
+}
+
+
+function sort_partition( a, b )
+{
+	return a.prod - b.prod;
 }
 
 
@@ -333,6 +339,8 @@ function close_items( seed, closure )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
+								and caused wrong lookahead computation.
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
@@ -412,9 +420,8 @@ function lalr1_closure( s )
 						
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
-			
-				//_print( productions[closure[i].prod].rhs[closure[i].dot_offset] + " " + partition_sym + "<br />" );
-				if( productions[closure[i].prod].rhs[closure[i].dot_offset] == partition_sym )
+				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
+						== partition_sym )
 				{
 					closure[i].dot_offset++;
 					partition.push( closure[i] );
@@ -424,10 +431,20 @@ function lalr1_closure( s )
 			}
 		}
 		
-		//print_item_set( "partition " + s, partition );
-		
 		if( partition.length > 0 )
 		{
+
+			/*
+				beachcoder Feb 23, 2009:
+				Uhh here was a very exciting bug that only came up on
+				special grammar constellations: If we don't sort the
+				partition set by production here, it may happen that
+				states get wrong lookahead, and unexpected conflicts
+				or failing grammars come up.
+			*/
+			partition.sort( sort_partition );
+			
+			//Now one can check for equality!
 			for( i = 0; i < states.length; i++ )
 			{	
 				if( item_set_equal( states[i].kernel, partition ) )
