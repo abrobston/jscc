@@ -162,6 +162,14 @@ function __##PREFIX##parse( src, err_off, err_la )
 				break;
 			}
 		}
+		
+		if( PCB.act == ##ERROR## )
+		{
+			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				PCB.act = ##ERROR##;
+			else
+				PCB.act *= -1;
+		}
 
 		/*
 		_print( "state " + sstack[sstack.length-1] +
