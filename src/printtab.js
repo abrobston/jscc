@@ -1,6 +1,6 @@
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	printtab.js
@@ -12,6 +12,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
 
+/*
+	15.04.2009	Jan Max Meyer	Removed the HTML-Code generation flag and re-
+								placed it with text output; In WebEnv, this
+								will be placed in <pre>-tags, and we finally
+								can view the parse-tables even on the console.
+*/
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
 	
@@ -32,6 +38,8 @@ of the Artistic License. Please see ARTISTIC for more information.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	New table generator section to build default
+								reduction table on each state.
 ----------------------------------------------------------------------------- */
 function print_parse_tables( mode )
 {
@@ -213,9 +221,53 @@ function print_parse_tables( mode )
 		code += ");\n\n";
 	}
 	
+	/*
+		JMM 16.04.2009:
+		Printing the default action table
+	*/
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+		code += "<tr>";
+		code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+		code += "</tr>";
+		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+		code += "</tr>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += "/* Default-Actions-Table */\n";
+		code += "var defact_tab = new Array(\n";
+	}
+	
+	for( i = 0; i < states.length; i++ )
+	{
+		if( mode == MODE_GEN_HTML )
+		{
+			code += "<tr>";
+			code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+			code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+			code += "</tr>";
+		}
+		else if( mode == MODE_GEN_JS )
+		{
+			code += "\t /* State " + i + " */ " + states[i].def_act + " " +
+						(( i < states.length-1 ) ? ",\n" : "\n");
+		}
+	}
+	
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "</table>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += ");\n\n";
+	}
+	
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()

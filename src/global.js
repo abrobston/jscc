@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.32";
+var JSCC_VERSION			= "0.33";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -111,9 +111,12 @@ function STATE()
 {
 	var kernel;
 	var epsilon;
+
+	var def_act;
+
 	var done;
 	var closed;
-	
+
 	var actionrow;
 	var	gotorow;
 }

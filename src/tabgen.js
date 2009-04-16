@@ -22,6 +22,7 @@ function create_state()
 	state.gotorow = new Array();
 	state.done = false;
 	state.closed = false;
+	state.def_act = 0;
 
 	states.push( state );
 	
@@ -538,102 +539,160 @@ function lalr1_closure( s )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function do_reductions( item_set, s )
+function do_reductions( s )
 {
-	var i, j, ex, act, output_warning;
-	for( i = 0; i < item_set.length; i++ )
+	var n, i, j, ex, act, output_warning, item_set;
+	var reds = new Array();
+	var max = 0, count;
+	
+	for( n = 0; n < 2; n++ )
 	{
-		if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
+		if( !n )
+			item_set = states[ s ].kernel;
+		else
+			item_set = states[ s ].epsilon;
+			
+		// Do the reductions
+		for( i = 0; i < item_set.length; i++ )
 		{
-			for( j = 0; j < item_set[i].lookahead.length; j++ )
+			if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
 			{
-				output_warning = true;
-
-				ex = get_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j] );
-
-				act = ex;
-				if( ex == void(0) )
+				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
-					states[s].actionrow = add_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j], -1 * item_set[i].prod );
-						
-					reduces++;
-				}
-				else
-				{
-					var warning	= new String();
-					if( ex > 0 )
+					output_warning = true;
+	
+					ex = get_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j] );
+	
+					act = ex;
+					if( ex == void(0) )
 					{
-						//Shift-reduce conflict
+						act = -1 * item_set[i].prod;
 
-						//Is there any level specified?
-						if( symbols[item_set[i].lookahead[j]].level > 0
-							|| productions[ item_set[i].prod ].level > 0 )
-						{
-							//Is the level the same?
-							if( symbols[item_set[i].lookahead[j]].level ==
-								productions[ item_set[i].prod ].level )
-							{
-								//In case of left-associativity, reduce
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_LEFT )
-								{
-									//Reduce
-									act = -1 * item_set[i].prod;
-								}
-								//else, if nonassociativity is set,
-								//remove table entry.
-								else
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_NOASSOC )
-								{
-									remove_table_entry( states[s].actionrow,
-											item_set[i].lookahead[j] );
-
-									_warning(
-										"Removing nonassociative symbol '"
-										 + symbols[item_set[i].lookahead[j]].label + "' in state " + s );
-
-									output_warning = false;
-								}
-							}
-							else
-							{
-								//If symbol precedence is lower production's
-								//precedence, reduce
-								if( symbols[item_set[i].lookahead[j]].level <
-										productions[ item_set[i].prod ].level )
-									//Reduce
-									act = -1 * item_set[i].prod;
-							}
-						}
-						
-						warning = "Shift";
+						states[s].actionrow = add_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j], act );
+							
+						reduces++;
 					}
 					else
 					{
-						//Reduce-reduce conflict
-						act = ( ( act * -1 < item_set[i].prod ) ?
-									act : -1 * item_set[i].prod );
-						
-						warning = "Reduce";
+						var warning	= new String();
+						if( ex > 0 )
+						{
+							//Shift-reduce conflict
+	
+							//Is there any level specified?
+							if( symbols[item_set[i].lookahead[j]].level > 0
+								|| productions[ item_set[i].prod ].level > 0 )
+							{
+								//Is the level the same?
+								if( symbols[item_set[i].lookahead[j]].level ==
+									productions[ item_set[i].prod ].level )
+								{
+									//In case of left-associativity, reduce
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_LEFT )
+									{
+										//Reduce
+										act = -1 * item_set[i].prod;
+									}
+									//else, if nonassociativity is set,
+									//remove table entry.
+									else
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_NOASSOC )
+									{
+										remove_table_entry( states[s].actionrow,
+												item_set[i].lookahead[j] );
+	
+										_warning(
+											"Removing nonassociative symbol '" +
+											symbols[item_set[i].lookahead[j]].label +
+												"' in state " + s );
+	
+										output_warning = false;
+									}
+								}
+								else
+								{
+									//If symbol precedence is lower production's
+									//precedence, reduce
+									if( symbols[item_set[i].lookahead[j]].level <
+											productions[ item_set[i].prod ].level )
+										//Reduce
+										act = -1 * item_set[i].prod;
+								}
+							}
+							
+							warning = "Shift";
+						}
+						else
+						{
+							//Reduce-reduce conflict
+							act = ( ( act * -1 < item_set[i].prod ) ?
+										act : -1 * item_set[i].prod );
+							
+							warning = "Reduce";
+						}
+	
+						warning += "-reduce conflict on symbol '" +
+							symbols[item_set[i].lookahead[j]].label +
+								"' in state " + s;
+						warning += "\n         Conflict resolved by " +
+							( ( act <= 0 ) ? "reducing with production" :
+								"shifting to state" ) + " " +
+							( ( act <= 0 ) ? act * -1 : act );
+	
+						if( output_warning )
+							_warning( warning );
+	
+						if( act != ex )
+							update_table_entry( states[s].actionrow,
+								item_set[i].lookahead[j], act );
 					}
-
-					warning += "-reduce conflict on symbol '" + symbols[item_set[i].lookahead[j]].label + "' in state " + s;
-					warning += "\n         Conflict resolved by " +
-								( ( act <= 0 ) ? "reducing with production" : "shifting to state" )
-									+ " " + ( ( act <= 0 ) ? act * -1 : act );
-
-					if( output_warning )
-						_warning( warning );
-
-					if( act != ex )
-						update_table_entry( states[s].actionrow,
-							item_set[i].lookahead[j], act );
-				}				
+					
+					//Remember this reduction, if there is any
+					if( act <= 0 )
+						reds.push( act * -1 );
+				}
 			}
 		}
+	}
+	
+	/*
+		JMM 16.04.2009
+		Find most common reduction
+	*/
+	states[ s ].def_act = -1; //Define no default action
+	
+	//Are there any reductions? Then select the best of them!
+	for( i = 0; i < reds.length; i++ )
+	{
+		for( j = 0, count = 0; j < reds.length; j++ )
+		{
+			if( reds[j] == reds[i] )
+				count++;
+		}
+		
+		if( max < count )
+		{
+			max = count;
+			states[ s ].def_act = reds[ i ];
+		}
+	}
+	
+	//Remove all default reduce action reductions, if they exist.
+	if( states[s].def_act >= 0 )
+	{
+		do
+		{
+			count = states[s].actionrow.length;
+
+			for( i = 0; i < states[s].actionrow.length; i++ )
+				if( states[s].actionrow[i][1] == states[s].def_act * -1 )
+					states[s].actionrow.splice( i, 1 );
+		}
+		while( count != states[s].actionrow.length );
 	}
 }
 
@@ -662,6 +721,10 @@ function do_reductions( item_set, s )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
+								most common production will be defined as the
+								default, and all entries referencing this rule
+								are removed.
 ----------------------------------------------------------------------------- */
 function lalr1_parse_table( debug )
 {
@@ -683,11 +746,8 @@ function lalr1_parse_table( debug )
 	}
 	
 	for( i = 0; i < states.length; i++ )
-	{
-		do_reductions( states[i].kernel, i );
-		do_reductions( states[i].epsilon, i );
-	}
-	
+		do_reductions( i );
+
 	if( debug )
 	{		
 		for( i = 0; i < states.length; i++ )

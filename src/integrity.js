@@ -126,12 +126,14 @@ function unreachable()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Fixed bug with new default-production
+								recognition
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
 	var i;
 	for( i = 0; i < states.length; i++ )
-		if( states[i].actionrow.length == 0 )
+		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );
 }
