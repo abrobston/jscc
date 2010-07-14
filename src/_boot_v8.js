@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.31";
+var JSCC_VERSION			= "0.33";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -111,9 +111,12 @@ function STATE()
 {
 	var kernel;
 	var epsilon;
+
+	var def_act;
+
 	var done;
 	var closed;
-	
+
 	var actionrow;
 	var	gotorow;
 }
@@ -573,7 +576,7 @@ function rhs_first( item, p, begin )
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	printtab.js
@@ -585,6 +588,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
 
+/*
+	15.04.2009	Jan Max Meyer	Removed the HTML-Code generation flag and re-
+								placed it with text output; In WebEnv, this
+								will be placed in <pre>-tags, and we finally
+								can view the parse-tables even on the console.
+*/
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
 	
@@ -605,6 +614,8 @@ of the Artistic License. Please see ARTISTIC for more information.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	New table generator section to build default
+								reduction table on each state.
 ----------------------------------------------------------------------------- */
 function print_parse_tables( mode )
 {
@@ -786,9 +797,53 @@ function print_parse_tables( mode )
 		code += ");\n\n";
 	}
 	
+	/*
+		JMM 16.04.2009:
+		Printing the default action table
+	*/
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+		code += "<tr>";
+		code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+		code += "</tr>";
+		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+		code += "</tr>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += "/* Default-Actions-Table */\n";
+		code += "var defact_tab = new Array(\n";
+	}
+	
+	for( i = 0; i < states.length; i++ )
+	{
+		if( mode == MODE_GEN_HTML )
+		{
+			code += "<tr>";
+			code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+			code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+			code += "</tr>";
+		}
+		else if( mode == MODE_GEN_JS )
+		{
+			code += "\t /* State " + i + " */ " + states[i].def_act + " " +
+						(( i < states.length-1 ) ? ",\n" : "\n");
+		}
+	}
+	
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "</table>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += ");\n\n";
+	}
+	
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
@@ -974,11 +1029,11 @@ function print_term_actions()
 				if( strmatch && strmatch.index == 0 )
 				{
 					if( strmatch[0] == "%match" )
-						semcode += "info.att";
+						semcode += "PCB.att";
 					else if( strmatch[0] == "%offset" )
-						semcode += "( info.offset - info.att.length )";
+						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
-						semcode += "info.src";
+						semcode += "PCB.src";
 					
 					j += strmatch[0].length - 1;
 					k = semcode.length;
@@ -1171,7 +1226,7 @@ function get_error_state()
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	tabgen.js
@@ -1193,6 +1248,7 @@ function create_state()
 	state.gotorow = new Array();
 	state.done = false;
 	state.closed = false;
+	state.def_act = 0;
 
 	states.push( state );
 	
@@ -1272,6 +1328,12 @@ function get_undone_state()
 	}
 			
 	return -1;
+}
+
+
+function sort_partition( a, b )
+{
+	return a.prod - b.prod;
 }
 
 
@@ -1504,6 +1566,8 @@ function close_items( seed, closure )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
+								and caused wrong lookahead computation.
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
@@ -1583,9 +1647,8 @@ function lalr1_closure( s )
 						
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
-			
-				//_print( productions[closure[i].prod].rhs[closure[i].dot_offset] + " " + partition_sym + "<br />" );
-				if( productions[closure[i].prod].rhs[closure[i].dot_offset] == partition_sym )
+				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
+						== partition_sym )
 				{
 					closure[i].dot_offset++;
 					partition.push( closure[i] );
@@ -1595,10 +1658,20 @@ function lalr1_closure( s )
 			}
 		}
 		
-		//print_item_set( "partition " + s, partition );
-		
 		if( partition.length > 0 )
 		{
+
+			/*
+				beachcoder Feb 23, 2009:
+				Uhh here was a very exciting bug that only came up on
+				special grammar constellations: If we don't sort the
+				partition set by production here, it may happen that
+				states get wrong lookahead, and unexpected conflicts
+				or failing grammars come up.
+			*/
+			partition.sort( sort_partition );
+			
+			//Now one can check for equality!
 			for( i = 0; i < states.length; i++ )
 			{	
 				if( item_set_equal( states[i].kernel, partition ) )
@@ -1692,102 +1765,160 @@ function lalr1_closure( s )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function do_reductions( item_set, s )
+function do_reductions( s )
 {
-	var i, j, ex, act, output_warning;
-	for( i = 0; i < item_set.length; i++ )
+	var n, i, j, ex, act, output_warning, item_set;
+	var reds = new Array();
+	var max = 0, count;
+	
+	for( n = 0; n < 2; n++ )
 	{
-		if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
+		if( !n )
+			item_set = states[ s ].kernel;
+		else
+			item_set = states[ s ].epsilon;
+			
+		// Do the reductions
+		for( i = 0; i < item_set.length; i++ )
 		{
-			for( j = 0; j < item_set[i].lookahead.length; j++ )
+			if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
 			{
-				output_warning = true;
-
-				ex = get_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j] );
-
-				act = ex;
-				if( ex == void(0) )
+				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
-					states[s].actionrow = add_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j], -1 * item_set[i].prod );
-						
-					reduces++;
-				}
-				else
-				{
-					var warning	= new String();
-					if( ex > 0 )
+					output_warning = true;
+	
+					ex = get_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j] );
+	
+					act = ex;
+					if( ex == void(0) )
 					{
-						//Shift-reduce conflict
+						act = -1 * item_set[i].prod;
 
-						//Is there any level specified?
-						if( symbols[item_set[i].lookahead[j]].level > 0
-							|| productions[ item_set[i].prod ].level > 0 )
-						{
-							//Is the level the same?
-							if( symbols[item_set[i].lookahead[j]].level ==
-								productions[ item_set[i].prod ].level )
-							{
-								//In case of left-associativity, reduce
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_LEFT )
-								{
-									//Reduce
-									act = -1 * item_set[i].prod;
-								}
-								//else, if nonassociativity is set,
-								//remove table entry.
-								else
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_NOASSOC )
-								{
-									remove_table_entry( states[s].actionrow,
-											item_set[i].lookahead[j] );
-
-									_warning(
-										"Removing nonassociative symbol '"
-										 + symbols[item_set[i].lookahead[j]].label + "' in state " + s );
-
-									output_warning = false;
-								}
-							}
-							else
-							{
-								//If symbol precedence is lower production's
-								//precedence, reduce
-								if( symbols[item_set[i].lookahead[j]].level <
-										productions[ item_set[i].prod ].level )
-									//Reduce
-									act = -1 * item_set[i].prod;
-							}
-						}
-						
-						warning = "Shift";
+						states[s].actionrow = add_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j], act );
+							
+						reduces++;
 					}
 					else
 					{
-						//Reduce-reduce conflict
-						act = ( ( act * -1 < item_set[i].prod ) ?
-									act : -1 * item_set[i].prod );
-						
-						warning = "Reduce";
+						var warning	= new String();
+						if( ex > 0 )
+						{
+							//Shift-reduce conflict
+	
+							//Is there any level specified?
+							if( symbols[item_set[i].lookahead[j]].level > 0
+								|| productions[ item_set[i].prod ].level > 0 )
+							{
+								//Is the level the same?
+								if( symbols[item_set[i].lookahead[j]].level ==
+									productions[ item_set[i].prod ].level )
+								{
+									//In case of left-associativity, reduce
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_LEFT )
+									{
+										//Reduce
+										act = -1 * item_set[i].prod;
+									}
+									//else, if nonassociativity is set,
+									//remove table entry.
+									else
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_NOASSOC )
+									{
+										remove_table_entry( states[s].actionrow,
+												item_set[i].lookahead[j] );
+	
+										_warning(
+											"Removing nonassociative symbol '" +
+											symbols[item_set[i].lookahead[j]].label +
+												"' in state " + s );
+	
+										output_warning = false;
+									}
+								}
+								else
+								{
+									//If symbol precedence is lower production's
+									//precedence, reduce
+									if( symbols[item_set[i].lookahead[j]].level <
+											productions[ item_set[i].prod ].level )
+										//Reduce
+										act = -1 * item_set[i].prod;
+								}
+							}
+							
+							warning = "Shift";
+						}
+						else
+						{
+							//Reduce-reduce conflict
+							act = ( ( act * -1 < item_set[i].prod ) ?
+										act : -1 * item_set[i].prod );
+							
+							warning = "Reduce";
+						}
+	
+						warning += "-reduce conflict on symbol '" +
+							symbols[item_set[i].lookahead[j]].label +
+								"' in state " + s;
+						warning += "\n         Conflict resolved by " +
+							( ( act <= 0 ) ? "reducing with production" :
+								"shifting to state" ) + " " +
+							( ( act <= 0 ) ? act * -1 : act );
+	
+						if( output_warning )
+							_warning( warning );
+	
+						if( act != ex )
+							update_table_entry( states[s].actionrow,
+								item_set[i].lookahead[j], act );
 					}
-
-					warning += "-reduce conflict on symbol '" + symbols[item_set[i].lookahead[j]].label + "' in state " + s;
-					warning += "\n         Conflict resolved by " +
-								( ( act <= 0 ) ? "reducing with production" : "shifting to state" )
-									+ " " + ( ( act <= 0 ) ? act * -1 : act );
-
-					if( output_warning )
-						_warning( warning );
-
-					if( act != ex )
-						update_table_entry( states[s].actionrow,
-							item_set[i].lookahead[j], act );
-				}				
+					
+					//Remember this reduction, if there is any
+					if( act <= 0 )
+						reds.push( act * -1 );
+				}
 			}
 		}
+	}
+	
+	/*
+		JMM 16.04.2009
+		Find most common reduction
+	*/
+	states[ s ].def_act = -1; //Define no default action
+	
+	//Are there any reductions? Then select the best of them!
+	for( i = 0; i < reds.length; i++ )
+	{
+		for( j = 0, count = 0; j < reds.length; j++ )
+		{
+			if( reds[j] == reds[i] )
+				count++;
+		}
+		
+		if( max < count )
+		{
+			max = count;
+			states[ s ].def_act = reds[ i ];
+		}
+	}
+	
+	//Remove all default reduce action reductions, if they exist.
+	if( states[s].def_act >= 0 )
+	{
+		do
+		{
+			count = states[s].actionrow.length;
+
+			for( i = 0; i < states[s].actionrow.length; i++ )
+				if( states[s].actionrow[i][1] == states[s].def_act * -1 )
+					states[s].actionrow.splice( i, 1 );
+		}
+		while( count != states[s].actionrow.length );
 	}
 }
 
@@ -1816,6 +1947,10 @@ function do_reductions( item_set, s )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
+								most common production will be defined as the
+								default, and all entries referencing this rule
+								are removed.
 ----------------------------------------------------------------------------- */
 function lalr1_parse_table( debug )
 {
@@ -1837,11 +1972,8 @@ function lalr1_parse_table( debug )
 	}
 	
 	for( i = 0; i < states.length; i++ )
-	{
-		do_reductions( states[i].kernel, i );
-		do_reductions( states[i].epsilon, i );
-	}
-	
+		do_reductions( i );
+
 	if( debug )
 	{		
 		for( i = 0; i < states.length; i++ )
@@ -2162,12 +2294,14 @@ function unreachable()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Fixed bug with new default-production
+								recognition
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
 	var i;
 	for( i = 0; i < states.length; i++ )
-		if( states[i].actionrow.length == 0 )
+		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );
 }
@@ -2666,6 +2800,7 @@ function print_dfa( dfa_states )
 	- Step-by-step parsing
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
@@ -2680,7 +2815,7 @@ var		cur_line;
 //Wrapper for semantic errors
 function line_error( line, txt )
 {
-	_error( "line " + line + ", " + txt );
+	_error( "line " + line + ": " + txt );
 }
 
 
@@ -2699,10 +2834,10 @@ function __jsccdbg_wait()
    var v = read_line();
 }
 
-function __jscclex( info )
+function __jscclex( PCB )
 {
 	var state;
-	var match;
+	var match		= -1;
 	var match_pos	= 0;
 	var start		= 0;
 	var pos;
@@ -2714,7 +2849,7 @@ function __jscclex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -2723,12 +2858,13 @@ function __jscclex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 38;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+
 switch( state )
 {
 	case 0:
@@ -2983,6 +3119,18 @@ switch( state )
 }
 
 
+
+				//Line- and column-counter
+				if( state > -1 )
+				{
+					if( chr == 10 )
+					{
+						PCB.line++;
+						PCB.column = 0;
+					}
+					PCB.column++;
+				}
+
 				pos++;
 	
 			}
@@ -2993,35 +3141,22 @@ switch( state )
 	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 	if( match == 12 )
 	{
-			//We have to count the lines!
-																for( var i = 0; i < info.att.length; i++ )
-																	if( info.att.charAt( i ) == "\n" )
-																		cur_line++;
-																		
-																info.att = info.att.substr( 2, info.att.length - 4 );
+			PCB.att = PCB.att.substr(
+																	2, PCB.att.length - 4 );
 															
 		}
 	else if( match == 16 )
 	{
-		 	//We have to count the lines!
-												cur_line++;
-												
-												continue;
-											
+		 	continue;	
 		}
 	else if( match == 17 )
 	{
-			//We have to count the lines!
-												for( var i = 0; i < info.att.length; i++ )
-													if( info.att.charAt( i ) == "\n" )
-															cur_line++;
-												continue;
-											
+			continue;	
 		}
 	else if( match == 18 )
 	{
@@ -3031,7 +3166,7 @@ switch( state )
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -3041,25 +3176,34 @@ switch( state )
 	return match;
 }
 
-
 function __jsccparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -3107,11 +3251,11 @@ var pop_tab = new Array(
 /* Action-Table */
 var act_tab = new Array(
 	/* State 0 */ new Array( 12/* "CODE" */,5 , 3/* "<" */,-33 , 4/* ">" */,-33 , 5/* "^" */,-33 , 6/* "!" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
-	/* State 1 */ new Array( 38/* "" */,0 ),
+	/* State 1 */ new Array( 38/* "$" */,0 ),
 	/* State 2 */ new Array( 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
 	/* State 3 */ new Array( 3/* "<" */,-2 , 4/* ">" */,-2 , 5/* "^" */,-2 , 6/* "!" */,-2 , 13/* "STRING_SINGLE" */,-2 , 14/* "STRING_DOUBLE" */,-2 ),
-	/* State 4 */ new Array( 12/* "CODE" */,17 , 3/* "<" */,-32 , 4/* ">" */,-32 , 5/* "^" */,-32 , 6/* "!" */,-32 , 13/* "STRING_SINGLE" */,-32 , 14/* "STRING_DOUBLE" */,-32 , 7/* ";" */,-32 , 38/* "" */,-32 , 9/* "|" */,-32 ),
-	/* State 5 */ new Array( 3/* "<" */,-35 , 4/* ">" */,-35 , 5/* "^" */,-35 , 6/* "!" */,-35 , 13/* "STRING_SINGLE" */,-35 , 14/* "STRING_DOUBLE" */,-35 , 12/* "CODE" */,-35 , 7/* ";" */,-35 , 38/* "" */,-35 , 9/* "|" */,-35 ),
+	/* State 4 */ new Array( 12/* "CODE" */,17 , 3/* "<" */,-32 , 4/* ">" */,-32 , 5/* "^" */,-32 , 6/* "!" */,-32 , 13/* "STRING_SINGLE" */,-32 , 14/* "STRING_DOUBLE" */,-32 , 7/* ";" */,-32 , 38/* "$" */,-32 , 9/* "|" */,-32 ),
+	/* State 5 */ new Array( 3/* "<" */,-35 , 4/* ">" */,-35 , 5/* "^" */,-35 , 6/* "!" */,-35 , 13/* "STRING_SINGLE" */,-35 , 14/* "STRING_DOUBLE" */,-35 , 12/* "CODE" */,-35 , 7/* ";" */,-35 , 38/* "$" */,-35 , 9/* "|" */,-35 ),
 	/* State 6 */ new Array( 2/* "##" */,19 , 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
 	/* State 7 */ new Array( 2/* "##" */,-5 , 3/* "<" */,-5 , 4/* ">" */,-5 , 5/* "^" */,-5 , 6/* "!" */,-5 , 13/* "STRING_SINGLE" */,-5 , 14/* "STRING_DOUBLE" */,-5 ),
 	/* State 8 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
@@ -3123,7 +3267,7 @@ var act_tab = new Array(
 	/* State 14 */ new Array( 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
 	/* State 15 */ new Array( 15/* "IDENT" */,-36 , 12/* "CODE" */,-36 , 7/* ";" */,-36 , 13/* "STRING_SINGLE" */,-36 , 14/* "STRING_DOUBLE" */,-36 , 2/* "##" */,-36 , 3/* "<" */,-36 , 4/* ">" */,-36 , 5/* "^" */,-36 , 6/* "!" */,-36 , 10/* "&" */,-36 , 9/* "|" */,-36 , 11/* "~" */,-36 ),
 	/* State 16 */ new Array( 15/* "IDENT" */,-37 , 12/* "CODE" */,-37 , 7/* ";" */,-37 , 13/* "STRING_SINGLE" */,-37 , 14/* "STRING_DOUBLE" */,-37 , 2/* "##" */,-37 , 3/* "<" */,-37 , 4/* ">" */,-37 , 5/* "^" */,-37 , 6/* "!" */,-37 , 10/* "&" */,-37 , 9/* "|" */,-37 , 11/* "~" */,-37 ),
-	/* State 17 */ new Array( 3/* "<" */,-34 , 4/* ">" */,-34 , 5/* "^" */,-34 , 6/* "!" */,-34 , 13/* "STRING_SINGLE" */,-34 , 14/* "STRING_DOUBLE" */,-34 , 12/* "CODE" */,-34 , 7/* ";" */,-34 , 38/* "" */,-34 , 9/* "|" */,-34 ),
+	/* State 17 */ new Array( 3/* "<" */,-34 , 4/* ">" */,-34 , 5/* "^" */,-34 , 6/* "!" */,-34 , 13/* "STRING_SINGLE" */,-34 , 14/* "STRING_DOUBLE" */,-34 , 12/* "CODE" */,-34 , 7/* ";" */,-34 , 38/* "$" */,-34 , 9/* "|" */,-34 ),
 	/* State 18 */ new Array( 2/* "##" */,-4 , 3/* "<" */,-4 , 4/* ">" */,-4 , 5/* "^" */,-4 , 6/* "!" */,-4 , 13/* "STRING_SINGLE" */,-4 , 14/* "STRING_DOUBLE" */,-4 ),
 	/* State 19 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 ),
 	/* State 20 */ new Array( 7/* ";" */,33 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
@@ -3135,19 +3279,19 @@ var act_tab = new Array(
 	/* State 26 */ new Array( 7/* ";" */,-14 , 13/* "STRING_SINGLE" */,-14 , 14/* "STRING_DOUBLE" */,-14 ),
 	/* State 27 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
 	/* State 28 */ new Array( 12/* "CODE" */,-38 , 7/* ";" */,-38 , 13/* "STRING_SINGLE" */,-38 , 14/* "STRING_DOUBLE" */,-38 , 8/* ":" */,-38 , 10/* "&" */,-38 , 9/* "|" */,-38 , 15/* "IDENT" */,-38 , 11/* "~" */,-38 ),
-	/* State 29 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 38/* "" */,-33 ),
-	/* State 30 */ new Array( 12/* "CODE" */,-16 , 38/* "" */,-16 , 15/* "IDENT" */,-16 , 1/* "ERROR_RESYNC" */,-16 ),
+	/* State 29 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 38/* "$" */,-33 ),
+	/* State 30 */ new Array( 12/* "CODE" */,-16 , 38/* "$" */,-16 , 15/* "IDENT" */,-16 , 1/* "ERROR_RESYNC" */,-16 ),
 	/* State 31 */ new Array( 8/* ":" */,40 ),
 	/* State 32 */ new Array( 7/* ";" */,41 ),
 	/* State 33 */ new Array( 2/* "##" */,-6 , 3/* "<" */,-6 , 4/* ">" */,-6 , 5/* "^" */,-6 , 6/* "!" */,-6 , 13/* "STRING_SINGLE" */,-6 , 14/* "STRING_DOUBLE" */,-6 ),
 	/* State 34 */ new Array( 2/* "##" */,-7 , 3/* "<" */,-7 , 4/* ">" */,-7 , 5/* "^" */,-7 , 6/* "!" */,-7 , 13/* "STRING_SINGLE" */,-7 , 14/* "STRING_DOUBLE" */,-7 ),
 	/* State 35 */ new Array( 2/* "##" */,-8 , 3/* "<" */,-8 , 4/* ">" */,-8 , 5/* "^" */,-8 , 6/* "!" */,-8 , 13/* "STRING_SINGLE" */,-8 , 14/* "STRING_DOUBLE" */,-8 ),
 	/* State 36 */ new Array( 7/* ";" */,-13 , 13/* "STRING_SINGLE" */,-13 , 14/* "STRING_DOUBLE" */,-13 ),
-	/* State 37 */ new Array( 12/* "CODE" */,-15 , 38/* "" */,-15 , 15/* "IDENT" */,-15 , 1/* "ERROR_RESYNC" */,-15 ),
-	/* State 38 */ new Array( 38/* "" */,-1 ),
-	/* State 39 */ new Array( 38/* "" */,-3 ),
+	/* State 37 */ new Array( 12/* "CODE" */,-15 , 38/* "$" */,-15 , 15/* "IDENT" */,-15 , 1/* "ERROR_RESYNC" */,-15 ),
+	/* State 38 */ new Array( 38/* "$" */,-1 ),
+	/* State 39 */ new Array( 38/* "$" */,-3 ),
 	/* State 40 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
-	/* State 41 */ new Array( 12/* "CODE" */,-18 , 38/* "" */,-18 , 15/* "IDENT" */,-18 , 1/* "ERROR_RESYNC" */,-18 ),
+	/* State 41 */ new Array( 12/* "CODE" */,-18 , 38/* "$" */,-18 , 15/* "IDENT" */,-18 , 1/* "ERROR_RESYNC" */,-18 ),
 	/* State 42 */ new Array( 9/* "|" */,50 , 7/* ";" */,51 ),
 	/* State 43 */ new Array( 7/* ";" */,-20 , 9/* "|" */,-20 ),
 	/* State 44 */ new Array( 10/* "&" */,53 , 12/* "CODE" */,-24 , 7/* ";" */,-24 , 9/* "|" */,-24 ),
@@ -3157,7 +3301,7 @@ var act_tab = new Array(
 	/* State 48 */ new Array( 10/* "&" */,-30 , 12/* "CODE" */,-30 , 7/* ";" */,-30 , 9/* "|" */,-30 , 15/* "IDENT" */,-30 , 13/* "STRING_SINGLE" */,-30 , 14/* "STRING_DOUBLE" */,-30 , 11/* "~" */,-30 ),
 	/* State 49 */ new Array( 10/* "&" */,-31 , 12/* "CODE" */,-31 , 7/* ";" */,-31 , 9/* "|" */,-31 , 15/* "IDENT" */,-31 , 13/* "STRING_SINGLE" */,-31 , 14/* "STRING_DOUBLE" */,-31 , 11/* "~" */,-31 ),
 	/* State 50 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
-	/* State 51 */ new Array( 12/* "CODE" */,-17 , 38/* "" */,-17 , 15/* "IDENT" */,-17 , 1/* "ERROR_RESYNC" */,-17 ),
+	/* State 51 */ new Array( 12/* "CODE" */,-17 , 38/* "$" */,-17 , 15/* "IDENT" */,-17 , 1/* "ERROR_RESYNC" */,-17 ),
 	/* State 52 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 9/* "|" */,-33 ),
 	/* State 53 */ new Array( 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
 	/* State 54 */ new Array( 10/* "&" */,-27 , 12/* "CODE" */,-27 , 7/* ";" */,-27 , 9/* "|" */,-27 , 15/* "IDENT" */,-27 , 13/* "STRING_SINGLE" */,-27 , 14/* "STRING_DOUBLE" */,-27 , 11/* "~" */,-27 ),
@@ -3272,15 +3416,18 @@ var labels = new Array(
 	"sequence" /* Non-terminal symbol */,
 	"symbol" /* Non-terminal symbol */,
 	"code" /* Non-terminal symbol */,
-	"" /* Terminal symbol */
+	"$" /* Terminal symbol */
 );
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -3289,33 +3436,47 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __jscclex( info );
+	PCB.la = __jscclex( PCB );
 			
 	while( true )
 	{
-		act = 60;
+		PCB.act = 60;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
+		
+		if( PCB.act == 60 )
+		{
+			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				PCB.act = 60;
+			else
+				PCB.act *= -1;
+		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( jscc_dbg_withtrace && sstack.length > 0 )
 		{
 			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
@@ -3324,25 +3485,25 @@ var labels = new Array(
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 60 )
+		//Parse error? Try to recover!
+		if( PCB.act == 60 )
 		{
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 60 )
+			while( sstack.length > 1 && PCB.act == 60 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -3352,9 +3513,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -3363,32 +3524,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 60 )
+			if( sstack.length > 1 && PCB.act != 60 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 38 )
+				while( PCB.la != 38 )
 				{
-					act = 60;
+					PCB.act = 60;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 60 )
+					if( PCB.act != 60 )
 						break;
 					
-					while( ( la = __jscclex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __jscclex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 38 && act == 60 );
+				while( PCB.la != 38 && PCB.act == 60 );
 			}
 			
-			if( act == 60 )
+			if( PCB.act == 60 || PCB.la == 38 )
 			{
 				if( jscc_dbg_withtrace )
 					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -3399,47 +3561,47 @@ var labels = new Array(
 				__jsccdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __jscclex( info );
+			PCB.la = __jscclex( PCB );
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Reducing by producution: " + act );
+				__jsccdbg_print( "Reducing by production: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPerforming semantic action..." );
@@ -3524,7 +3686,7 @@ switch( act )
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
-															line_error( cur_line, "Multiple whitespace definition" );
+															line_error( PCB.line, "Multiple whitespace definition" );
 													
 	}
 	break;
@@ -3648,7 +3810,7 @@ switch( act )
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3659,7 +3821,7 @@ switch( act )
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
-															line_error( cur_line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 	}
 	break;
@@ -3710,7 +3872,7 @@ switch( act )
 																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = index;
 														else
-															line_error( cur_line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
+															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
 													
 	}
 	break;
@@ -3774,36 +3936,40 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 60;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( jscc_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
+
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 
@@ -3853,12 +4019,9 @@ function parse_grammar( str, filename )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var parse_error = 0;
-
-	cur_line = 1;
-	cur_error = 0;
-	cur_filename = filename;
 	
 	first_lhs = true;
+	cur_line = 1;
 	
 	//jscc_dbg_withstepbystep = true;
 	//jscc_dbg_withtrace = true;
@@ -3872,8 +4035,7 @@ function parse_grammar( str, filename )
 						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
-
-	return cur_error + parse_error;
+	return parse_error;
 }
 	
 
@@ -3885,6 +4047,7 @@ function parse_grammar( str, filename )
 	- Step-by-step parsing
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
+	- Line and column counter variables
 	
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
@@ -3945,10 +4108,10 @@ function __regexdbg_wait()
    var v = read_line();
 }
 
-function __regexlex( info )
+function __regexlex( PCB )
 {
 	var state;
-	var match;
+	var match		= -1;
 	var match_pos	= 0;
 	var start		= 0;
 	var pos;
@@ -3960,7 +4123,7 @@ function __regexlex( info )
 		match = -1;
 		match_pos = 0;
 		start = 0;
-		pos = info.offset + 1 + ( match_pos - start );
+		pos = PCB.offset + 1 + ( match_pos - start );
 
 		do
 		{
@@ -3969,12 +4132,13 @@ function __regexlex( info )
 			match = -2;
 			start = pos;
 	
-			if( info.src.length <= start )
+			if( PCB.src.length <= start )
 				return 22;
 	
 			do
 			{
-				chr = info.src.charCodeAt( pos );
+				chr = PCB.src.charCodeAt( pos );
+
 switch( state )
 {
 	case 0:
@@ -4076,6 +4240,18 @@ switch( state )
 }
 
 
+
+				//Line- and column-counter
+				if( state > -1 )
+				{
+					if( chr == 10 )
+					{
+						PCB.line++;
+						PCB.column = 0;
+					}
+					PCB.column++;
+				}
+
 				pos++;
 	
 			}
@@ -4086,14 +4262,14 @@ switch( state )
 	
 		if( match > -1 )
 		{
-			info.att = info.src.substr( start, match_pos - start );
-			info.offset = match_pos;
+			PCB.att = PCB.src.substr( start, match_pos - start );
+			PCB.offset = match_pos;
 			
 
 		}
 		else
 		{
-			info.att = new String();
+			PCB.att = new String();
 			match = -1;
 		}
 		
@@ -4103,25 +4279,34 @@ switch( state )
 	return match;
 }
 
-
 function __regexparse( src, err_off, err_la )
 {
 	var		sstack			= new Array();
 	var		vstack			= new Array();
 	var 	err_cnt			= 0;
-	var		act;
-	var		go;
-	var		la;
 	var		rval;
-	var 	parseinfo		= new Function( "", "var offset; var src; var att;" );
-	var		info			= new parseinfo();
+	var		act;
+	
+	//PCB: Parser Control Block
+	var 	parsercontrol	= new Function( "",
+								"var la;" +
+								"var act;" +
+								"var offset;" +
+								"var src;" +
+								"var att;" +
+								"var line;" +
+								"var column;" +
+								"var error_step;" );
+	var		PCB	= new parsercontrol();
 	
 	//Visual parse tree generation
-	var 	treenode		= new Function( "", "var sym; var att; var child;" );
+	var 	treenode		= new Function( "",
+								"var sym;"+
+								"var att;"+
+								"var child;" );
 	var		treenodes		= new Array();
 	var		tree			= new Array();
 	var		tmptree			= null;
-	var		error_step		= 0;
 
 /* Pop-Table */
 var pop_tab = new Array(
@@ -4150,30 +4335,30 @@ var pop_tab = new Array(
 /* Action-Table */
 var act_tab = new Array(
 	/* State 0 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 1 */ new Array( 22/* "" */,0 ),
-	/* State 2 */ new Array( 2/* "|" */,14 , 22/* "" */,-1 ),
-	/* State 3 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "" */,-3 , 2/* "|" */,-3 , 7/* ")" */,-3 ),
-	/* State 4 */ new Array( 22/* "" */,-5 , 2/* "|" */,-5 , 6/* "(" */,-5 , 11/* "ASCII_CODE" */,-5 , 12/* "ESCAPED_CHAR" */,-5 , 13/* "ANY" */,-5 , 8/* "[" */,-5 , 10/* "ANY_CHAR" */,-5 , 7/* ")" */,-5 ),
-	/* State 5 */ new Array( 5/* "?" */,16 , 4/* "+" */,17 , 3/* "*" */,18 , 22/* "" */,-9 , 2/* "|" */,-9 , 6/* "(" */,-9 , 11/* "ASCII_CODE" */,-9 , 12/* "ESCAPED_CHAR" */,-9 , 13/* "ANY" */,-9 , 8/* "[" */,-9 , 10/* "ANY_CHAR" */,-9 , 7/* ")" */,-9 ),
-	/* State 6 */ new Array( 3/* "*" */,-10 , 4/* "+" */,-10 , 5/* "?" */,-10 , 22/* "" */,-10 , 2/* "|" */,-10 , 6/* "(" */,-10 , 11/* "ASCII_CODE" */,-10 , 12/* "ESCAPED_CHAR" */,-10 , 13/* "ANY" */,-10 , 8/* "[" */,-10 , 10/* "ANY_CHAR" */,-10 , 7/* ")" */,-10 ),
-	/* State 7 */ new Array( 3/* "*" */,-11 , 4/* "+" */,-11 , 5/* "?" */,-11 , 22/* "" */,-11 , 2/* "|" */,-11 , 6/* "(" */,-11 , 11/* "ASCII_CODE" */,-11 , 12/* "ESCAPED_CHAR" */,-11 , 13/* "ANY" */,-11 , 8/* "[" */,-11 , 10/* "ANY_CHAR" */,-11 , 7/* ")" */,-11 ),
+	/* State 1 */ new Array( 22/* "$" */,0 ),
+	/* State 2 */ new Array( 2/* "|" */,14 , 22/* "$" */,-1 ),
+	/* State 3 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "$" */,-3 , 2/* "|" */,-3 , 7/* ")" */,-3 ),
+	/* State 4 */ new Array( 22/* "$" */,-5 , 2/* "|" */,-5 , 6/* "(" */,-5 , 11/* "ASCII_CODE" */,-5 , 12/* "ESCAPED_CHAR" */,-5 , 13/* "ANY" */,-5 , 8/* "[" */,-5 , 10/* "ANY_CHAR" */,-5 , 7/* ")" */,-5 ),
+	/* State 5 */ new Array( 5/* "?" */,16 , 4/* "+" */,17 , 3/* "*" */,18 , 22/* "$" */,-9 , 2/* "|" */,-9 , 6/* "(" */,-9 , 11/* "ASCII_CODE" */,-9 , 12/* "ESCAPED_CHAR" */,-9 , 13/* "ANY" */,-9 , 8/* "[" */,-9 , 10/* "ANY_CHAR" */,-9 , 7/* ")" */,-9 ),
+	/* State 6 */ new Array( 3/* "*" */,-10 , 4/* "+" */,-10 , 5/* "?" */,-10 , 22/* "$" */,-10 , 2/* "|" */,-10 , 6/* "(" */,-10 , 11/* "ASCII_CODE" */,-10 , 12/* "ESCAPED_CHAR" */,-10 , 13/* "ANY" */,-10 , 8/* "[" */,-10 , 10/* "ANY_CHAR" */,-10 , 7/* ")" */,-10 ),
+	/* State 7 */ new Array( 3/* "*" */,-11 , 4/* "+" */,-11 , 5/* "?" */,-11 , 22/* "$" */,-11 , 2/* "|" */,-11 , 6/* "(" */,-11 , 11/* "ASCII_CODE" */,-11 , 12/* "ESCAPED_CHAR" */,-11 , 13/* "ANY" */,-11 , 8/* "[" */,-11 , 10/* "ANY_CHAR" */,-11 , 7/* ")" */,-11 ),
 	/* State 8 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 9 */ new Array( 3/* "*" */,-17 , 4/* "+" */,-17 , 5/* "?" */,-17 , 22/* "" */,-17 , 2/* "|" */,-17 , 6/* "(" */,-17 , 11/* "ASCII_CODE" */,-17 , 12/* "ESCAPED_CHAR" */,-17 , 13/* "ANY" */,-17 , 8/* "[" */,-17 , 10/* "ANY_CHAR" */,-17 , 7/* ")" */,-17 , 9/* "]" */,-17 ),
-	/* State 10 */ new Array( 3/* "*" */,-18 , 4/* "+" */,-18 , 5/* "?" */,-18 , 22/* "" */,-18 , 2/* "|" */,-18 , 6/* "(" */,-18 , 11/* "ASCII_CODE" */,-18 , 12/* "ESCAPED_CHAR" */,-18 , 13/* "ANY" */,-18 , 8/* "[" */,-18 , 10/* "ANY_CHAR" */,-18 , 7/* ")" */,-18 , 9/* "]" */,-18 ),
-	/* State 11 */ new Array( 3/* "*" */,-19 , 4/* "+" */,-19 , 5/* "?" */,-19 , 22/* "" */,-19 , 2/* "|" */,-19 , 6/* "(" */,-19 , 11/* "ASCII_CODE" */,-19 , 12/* "ESCAPED_CHAR" */,-19 , 13/* "ANY" */,-19 , 8/* "[" */,-19 , 10/* "ANY_CHAR" */,-19 , 7/* ")" */,-19 , 9/* "]" */,-19 ),
+	/* State 9 */ new Array( 3/* "*" */,-17 , 4/* "+" */,-17 , 5/* "?" */,-17 , 22/* "$" */,-17 , 2/* "|" */,-17 , 6/* "(" */,-17 , 11/* "ASCII_CODE" */,-17 , 12/* "ESCAPED_CHAR" */,-17 , 13/* "ANY" */,-17 , 8/* "[" */,-17 , 10/* "ANY_CHAR" */,-17 , 7/* ")" */,-17 , 9/* "]" */,-17 ),
+	/* State 10 */ new Array( 3/* "*" */,-18 , 4/* "+" */,-18 , 5/* "?" */,-18 , 22/* "$" */,-18 , 2/* "|" */,-18 , 6/* "(" */,-18 , 11/* "ASCII_CODE" */,-18 , 12/* "ESCAPED_CHAR" */,-18 , 13/* "ANY" */,-18 , 8/* "[" */,-18 , 10/* "ANY_CHAR" */,-18 , 7/* ")" */,-18 , 9/* "]" */,-18 ),
+	/* State 11 */ new Array( 3/* "*" */,-19 , 4/* "+" */,-19 , 5/* "?" */,-19 , 22/* "$" */,-19 , 2/* "|" */,-19 , 6/* "(" */,-19 , 11/* "ASCII_CODE" */,-19 , 12/* "ESCAPED_CHAR" */,-19 , 13/* "ANY" */,-19 , 8/* "[" */,-19 , 10/* "ANY_CHAR" */,-19 , 7/* ")" */,-19 , 9/* "]" */,-19 ),
 	/* State 12 */ new Array( 9/* "]" */,-16 , 11/* "ASCII_CODE" */,-16 , 12/* "ESCAPED_CHAR" */,-16 , 13/* "ANY" */,-16 ),
-	/* State 13 */ new Array( 3/* "*" */,-14 , 4/* "+" */,-14 , 5/* "?" */,-14 , 22/* "" */,-14 , 2/* "|" */,-14 , 6/* "(" */,-14 , 11/* "ASCII_CODE" */,-14 , 12/* "ESCAPED_CHAR" */,-14 , 13/* "ANY" */,-14 , 8/* "[" */,-14 , 10/* "ANY_CHAR" */,-14 , 7/* ")" */,-14 ),
+	/* State 13 */ new Array( 3/* "*" */,-14 , 4/* "+" */,-14 , 5/* "?" */,-14 , 22/* "$" */,-14 , 2/* "|" */,-14 , 6/* "(" */,-14 , 11/* "ASCII_CODE" */,-14 , 12/* "ESCAPED_CHAR" */,-14 , 13/* "ANY" */,-14 , 8/* "[" */,-14 , 10/* "ANY_CHAR" */,-14 , 7/* ")" */,-14 ),
 	/* State 14 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 15 */ new Array( 22/* "" */,-4 , 2/* "|" */,-4 , 6/* "(" */,-4 , 11/* "ASCII_CODE" */,-4 , 12/* "ESCAPED_CHAR" */,-4 , 13/* "ANY" */,-4 , 8/* "[" */,-4 , 10/* "ANY_CHAR" */,-4 , 7/* ")" */,-4 ),
-	/* State 16 */ new Array( 22/* "" */,-8 , 2/* "|" */,-8 , 6/* "(" */,-8 , 11/* "ASCII_CODE" */,-8 , 12/* "ESCAPED_CHAR" */,-8 , 13/* "ANY" */,-8 , 8/* "[" */,-8 , 10/* "ANY_CHAR" */,-8 , 7/* ")" */,-8 ),
-	/* State 17 */ new Array( 22/* "" */,-7 , 2/* "|" */,-7 , 6/* "(" */,-7 , 11/* "ASCII_CODE" */,-7 , 12/* "ESCAPED_CHAR" */,-7 , 13/* "ANY" */,-7 , 8/* "[" */,-7 , 10/* "ANY_CHAR" */,-7 , 7/* ")" */,-7 ),
-	/* State 18 */ new Array( 22/* "" */,-6 , 2/* "|" */,-6 , 6/* "(" */,-6 , 11/* "ASCII_CODE" */,-6 , 12/* "ESCAPED_CHAR" */,-6 , 13/* "ANY" */,-6 , 8/* "[" */,-6 , 10/* "ANY_CHAR" */,-6 , 7/* ")" */,-6 ),
+	/* State 15 */ new Array( 22/* "$" */,-4 , 2/* "|" */,-4 , 6/* "(" */,-4 , 11/* "ASCII_CODE" */,-4 , 12/* "ESCAPED_CHAR" */,-4 , 13/* "ANY" */,-4 , 8/* "[" */,-4 , 10/* "ANY_CHAR" */,-4 , 7/* ")" */,-4 ),
+	/* State 16 */ new Array( 22/* "$" */,-8 , 2/* "|" */,-8 , 6/* "(" */,-8 , 11/* "ASCII_CODE" */,-8 , 12/* "ESCAPED_CHAR" */,-8 , 13/* "ANY" */,-8 , 8/* "[" */,-8 , 10/* "ANY_CHAR" */,-8 , 7/* ")" */,-8 ),
+	/* State 17 */ new Array( 22/* "$" */,-7 , 2/* "|" */,-7 , 6/* "(" */,-7 , 11/* "ASCII_CODE" */,-7 , 12/* "ESCAPED_CHAR" */,-7 , 13/* "ANY" */,-7 , 8/* "[" */,-7 , 10/* "ANY_CHAR" */,-7 , 7/* ")" */,-7 ),
+	/* State 18 */ new Array( 22/* "$" */,-6 , 2/* "|" */,-6 , 6/* "(" */,-6 , 11/* "ASCII_CODE" */,-6 , 12/* "ESCAPED_CHAR" */,-6 , 13/* "ANY" */,-6 , 8/* "[" */,-6 , 10/* "ANY_CHAR" */,-6 , 7/* ")" */,-6 ),
 	/* State 19 */ new Array( 2/* "|" */,14 , 7/* ")" */,22 ),
 	/* State 20 */ new Array( 9/* "]" */,24 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 ),
-	/* State 21 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "" */,-2 , 2/* "|" */,-2 , 7/* ")" */,-2 ),
-	/* State 22 */ new Array( 3/* "*" */,-12 , 4/* "+" */,-12 , 5/* "?" */,-12 , 22/* "" */,-12 , 2/* "|" */,-12 , 6/* "(" */,-12 , 11/* "ASCII_CODE" */,-12 , 12/* "ESCAPED_CHAR" */,-12 , 13/* "ANY" */,-12 , 8/* "[" */,-12 , 10/* "ANY_CHAR" */,-12 , 7/* ")" */,-12 ),
+	/* State 21 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "$" */,-2 , 2/* "|" */,-2 , 7/* ")" */,-2 ),
+	/* State 22 */ new Array( 3/* "*" */,-12 , 4/* "+" */,-12 , 5/* "?" */,-12 , 22/* "$" */,-12 , 2/* "|" */,-12 , 6/* "(" */,-12 , 11/* "ASCII_CODE" */,-12 , 12/* "ESCAPED_CHAR" */,-12 , 13/* "ANY" */,-12 , 8/* "[" */,-12 , 10/* "ANY_CHAR" */,-12 , 7/* ")" */,-12 ),
 	/* State 23 */ new Array( 9/* "]" */,-15 , 11/* "ASCII_CODE" */,-15 , 12/* "ESCAPED_CHAR" */,-15 , 13/* "ANY" */,-15 ),
-	/* State 24 */ new Array( 3/* "*" */,-13 , 4/* "+" */,-13 , 5/* "?" */,-13 , 22/* "" */,-13 , 2/* "|" */,-13 , 6/* "(" */,-13 , 11/* "ASCII_CODE" */,-13 , 12/* "ESCAPED_CHAR" */,-13 , 13/* "ANY" */,-13 , 8/* "[" */,-13 , 10/* "ANY_CHAR" */,-13 , 7/* ")" */,-13 )
+	/* State 24 */ new Array( 3/* "*" */,-13 , 4/* "+" */,-13 , 5/* "?" */,-13 , 22/* "$" */,-13 , 2/* "|" */,-13 , 6/* "(" */,-13 , 11/* "ASCII_CODE" */,-13 , 12/* "ESCAPED_CHAR" */,-13 , 13/* "ANY" */,-13 , 8/* "[" */,-13 , 10/* "ANY_CHAR" */,-13 , 7/* ")" */,-13 )
 );
 
 /* Goto-Table */
@@ -4231,15 +4416,18 @@ var labels = new Array(
 	"Character" /* Non-terminal symbol */,
 	"CharacterSet" /* Non-terminal symbol */,
 	"CharClass" /* Non-terminal symbol */,
-	"" /* Terminal symbol */
+	"$" /* Terminal symbol */
 );
 
 
 	
-	info.offset = 0;
-	info.src = src;
-	info.att = new String();
-	
+	PCB.line = 1;
+	PCB.column = 1;
+	PCB.offset = 0;
+	PCB.error_step = 0;
+	PCB.src = src;
+	PCB.att = new String();
+
 	if( !err_off )
 		err_off	= new Array();
 	if( !err_la )
@@ -4248,33 +4436,47 @@ var labels = new Array(
 	sstack.push( 0 );
 	vstack.push( 0 );
 	
-	la = __regexlex( info );
+	PCB.la = __regexlex( PCB );
 			
 	while( true )
 	{
-		act = 26;
+		PCB.act = 26;
 		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 		{
-			if( act_tab[sstack[sstack.length-1]][i] == la )
+			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 			{
-				act = act_tab[sstack[sstack.length-1]][i+1];
+				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 				break;
 			}
 		}
+		
+		if( PCB.act == 26 )
+		{
+			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				PCB.act = 26;
+			else
+				PCB.act *= -1;
+		}
 
 		/*
-		_print( "state " + sstack[sstack.length-1] + " la = " + la + " info.att = >" +
-				info.att + "< act = " + act + " src = >" + info.src.substr( info.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
+		_print( "state " + sstack[sstack.length-1] +
+				" la = " +
+				PCB.la + " att = >" +
+				PCB.att + "< act = " +
+				PCB.act + " src = >" +
+				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+				" sstack = " + sstack.join() );
 		*/
 		
 		if( regex_dbg_withtrace && sstack.length > 0 )
 		{
 			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[la] + " (\"" + info.att + "\")\n" +
-							"\tAction: " + act + "\n" + 
-							"\tSource: \"" + info.src.substr( info.offset, 30 ) + ( ( info.offset + 30 < info.src.length ) ?
-									"..." : "" ) + "\"\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
@@ -4283,25 +4485,25 @@ var labels = new Array(
 		}
 		
 			
-		//Panic-mode: Try recovery when parse-error occurs!
-		if( act == 26 )
+		//Parse error? Try to recover!
+		if( PCB.act == 26 )
 		{
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[la] );
+				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
-			if( error_step == 0 )
+			if( PCB.error_step == 0 )
 			{
 				err_cnt++;
-				err_off.push( info.offset - info.att.length );			
+				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
-			while( sstack.length > 1 && act == 26 )
+			while( sstack.length > 1 && PCB.act == 26 )
 			{
 				sstack.pop();
 				vstack.pop();
@@ -4311,9 +4513,9 @@ var labels = new Array(
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
-						act = act_tab[sstack[sstack.length-1]][i+1];
+						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
-						sstack.push( act );
+						sstack.push( PCB.act );
 						vstack.push( new String() );
 
 						break;
@@ -4322,32 +4524,33 @@ var labels = new Array(
 			}
 			
 			//Is it better to leave the parser now?
-			if( sstack.length > 1 && act != 26 )
+			if( sstack.length > 1 && PCB.act != 26 )
 			{
 				//Ok, now try to shift on the next tokens
-				while( la != 22 )
+				while( PCB.la != 22 )
 				{
-					act = 26;
+					PCB.act = 26;
 					
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
-						if( act_tab[sstack[sstack.length-1]][i] == la )
+						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
-							act = act_tab[sstack[sstack.length-1]][i+1];
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 							break;
 						}
 					}
 					
-					if( act != 26 )
+					if( PCB.act != 26 )
 						break;
 					
-					while( ( la = __regexlex( info ) ) < 0 )
-						info.offset++;
+					while( ( PCB.la = __regexlex( PCB ) )
+								< 0 )
+						PCB.offset++;
 				}
-				while( la != 22 && act == 26 );
+				while( PCB.la != 22 && PCB.act == 26 );
 			}
 			
-			if( act == 26 )
+			if( PCB.act == 26 || PCB.la == 22 )
 			{
 				if( regex_dbg_withtrace )
 					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
@@ -4358,47 +4561,47 @@ var labels = new Array(
 				__regexdbg_print( "\tError recovery succeeded, continuing" );
 			
 			//Try to parse the next three tokens successfully...
-			error_step = 3;
+			PCB.error_step = 3;
 		}
 
 		//Shift
-		if( act > 0 )
+		if( PCB.act > 0 )
 		{
 			//Parse tree generation
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ la ];
-				node.att = info.att;
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
 				node.child = new Array();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 		
-			sstack.push( act );
-			vstack.push( info.att );
+			sstack.push( PCB.act );
+			vstack.push( PCB.att );
 			
-			la = __regexlex( info );
+			PCB.la = __regexlex( PCB );
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[la] + " (" + info.att + ")" );
+				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
-			if( error_step > 0 )
-				error_step--;
+			if( PCB.error_step > 0 )
+				PCB.error_step--;
 		}
 		//Reduce
 		else
 		{		
-			act *= -1;
+			act = PCB.act * -1;
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Reducing by producution: " + act );
+				__regexdbg_print( "Reducing by production: " + act );
 			
-			rval = void(0);
+			rval = void( 0 );
 			
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPerforming semantic action..." );
@@ -4645,36 +4848,40 @@ switch( act )
 				sstack.pop();
 				vstack.pop();
 			}
-									
-			go = -1;
+
+			//Get goto-table entry
+			PCB.act = 26;
 			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
 				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
 				{
-					go = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 			
+			//Do some parse tree construction if desired
 			if( regex_dbg_withparsetree )
 			{
 				var node = new treenode();
-				node.sym = labels[ pop_tab[act][0] ];
-				node.att = new String();
+				node.sym = labels[ pop_tab[PCB.act][0] ];
+				node.att = rval;
 				node.child = tmptree.reverse();
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
 			
+
 			//Goal symbol match?
-			if( act == 0 )
+			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-				
-			sstack.push( go );
-			vstack.push( rval );			
+			
+			//...and push it!
+			sstack.push( PCB.act );
+			vstack.push( rval );
 		}
 	}
 
