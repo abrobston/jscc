@@ -30,7 +30,7 @@
 #-------------------------------------------------------------------------------
 
 PLATFORM		=	v8
-V8			=	v8/v8sh
+V8				=	v8/v8sh
 JSCC			=	../jscc.js
 
 include sources.inc
@@ -39,6 +39,13 @@ include tools.inc
 all: 			$(JSCC) clean
 	@echo
 	@echo --- Compilation succeeded! ---
+	
+driver: ../driver_$(PLATFORM).js_
+	@echo
+	@echo --- Parser template generated! ---
+
+../driver_$(PLATFORM).js_:		driver/driver_$(PLATFORM).js driver/parser.js
+	cat driver/driver_$(PLATFORM).js driver/parser.js >../driver_$(PLATFORM).js_
 
 $(JSCC):	$(V8) $(SRC_FINAL)
 	cat $(SRC_FINAL) >$@

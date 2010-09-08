@@ -59,6 +59,13 @@ all: 			$(JSCC) clean
 	@echo
 	@echo --- Compilation succeeded! ---
 
+driver:  ..\\driver_$(PLATFORM).js
+	@echo
+	@echo --- Parser template generated! ---
+	
+..\\driver_$(PLATFORM).js: driver\\driver_$(PLATFORM).js driver\\parser.js
+	type driver\\driver_$(PLATFORM).js driver\\parser.js >..\\driver_$(PLATFORM).js_
+
 $(JSCC):		$(JSCC_WSH)
 	jsc /out:$@ /t:exe $(JSCC_WSH)
 	@echo

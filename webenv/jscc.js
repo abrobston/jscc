@@ -16,7 +16,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.32";
+var JSCC_VERSION			= "0.33.1";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -111,9 +111,12 @@ function STATE()
 {
 	var kernel;
 	var epsilon;
+
+	var def_act;
+
 	var done;
 	var closed;
-	
+
 	var actionrow;
 	var	gotorow;
 }
@@ -180,6 +183,9 @@ var exec_mode;
 var assoc_level;
 
 var	regex_weight;
+//This file remains empty.
+var DEFAULT_DRIVER = "";
+
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -573,7 +579,7 @@ function rhs_first( item, p, begin )
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	printtab.js
@@ -585,6 +591,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
 
+/*
+	15.04.2009	Jan Max Meyer	Removed the HTML-Code generation flag and re-
+								placed it with text output; In WebEnv, this
+								will be placed in <pre>-tags, and we finally
+								can view the parse-tables even on the console.
+*/
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
 	
@@ -605,6 +617,8 @@ of the Artistic License. Please see ARTISTIC for more information.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	New table generator section to build default
+								reduction table on each state.
 ----------------------------------------------------------------------------- */
 function print_parse_tables( mode )
 {
@@ -786,9 +800,53 @@ function print_parse_tables( mode )
 		code += ");\n\n";
 	}
 	
+	/*
+		JMM 16.04.2009:
+		Printing the default action table
+	*/
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+		code += "<tr>";
+		code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+		code += "</tr>";
+		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+		code += "</tr>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += "/* Default-Actions-Table */\n";
+		code += "var defact_tab = new Array(\n";
+	}
+	
+	for( i = 0; i < states.length; i++ )
+	{
+		if( mode == MODE_GEN_HTML )
+		{
+			code += "<tr>";
+			code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+			code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+			code += "</tr>";
+		}
+		else if( mode == MODE_GEN_JS )
+		{
+			code += "\t /* State " + i + " */ " + states[i].def_act + " " +
+						(( i < states.length-1 ) ? ",\n" : "\n");
+		}
+	}
+	
+	if( mode == MODE_GEN_HTML )
+	{
+		code += "</table>";
+	}
+	else if( mode == MODE_GEN_JS )
+	{
+		code += ");\n\n";
+	}
+	
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
@@ -1171,7 +1229,7 @@ function get_error_state()
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	tabgen.js
@@ -1193,6 +1251,7 @@ function create_state()
 	state.gotorow = new Array();
 	state.done = false;
 	state.closed = false;
+	state.def_act = 0;
 
 	states.push( state );
 	
@@ -1272,6 +1331,12 @@ function get_undone_state()
 	}
 			
 	return -1;
+}
+
+
+function sort_partition( a, b )
+{
+	return a.prod - b.prod;
 }
 
 
@@ -1504,6 +1569,8 @@ function close_items( seed, closure )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
+								and caused wrong lookahead computation.
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
@@ -1583,9 +1650,8 @@ function lalr1_closure( s )
 						
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
-			
-				//_print( productions[closure[i].prod].rhs[closure[i].dot_offset] + " " + partition_sym + "<br />" );
-				if( productions[closure[i].prod].rhs[closure[i].dot_offset] == partition_sym )
+				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
+						== partition_sym )
 				{
 					closure[i].dot_offset++;
 					partition.push( closure[i] );
@@ -1595,10 +1661,20 @@ function lalr1_closure( s )
 			}
 		}
 		
-		//print_item_set( "partition " + s, partition );
-		
 		if( partition.length > 0 )
 		{
+
+			/*
+				beachcoder Feb 23, 2009:
+				Uhh here was a very exciting bug that only came up on
+				special grammar constellations: If we don't sort the
+				partition set by production here, it may happen that
+				states get wrong lookahead, and unexpected conflicts
+				or failing grammars come up.
+			*/
+			partition.sort( sort_partition );
+			
+			//Now one can check for equality!
 			for( i = 0; i < states.length; i++ )
 			{	
 				if( item_set_equal( states[i].kernel, partition ) )
@@ -1692,102 +1768,160 @@ function lalr1_closure( s )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function do_reductions( item_set, s )
+function do_reductions( s )
 {
-	var i, j, ex, act, output_warning;
-	for( i = 0; i < item_set.length; i++ )
+	var n, i, j, ex, act, output_warning, item_set;
+	var reds = new Array();
+	var max = 0, count;
+	
+	for( n = 0; n < 2; n++ )
 	{
-		if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
+		if( !n )
+			item_set = states[ s ].kernel;
+		else
+			item_set = states[ s ].epsilon;
+			
+		// Do the reductions
+		for( i = 0; i < item_set.length; i++ )
 		{
-			for( j = 0; j < item_set[i].lookahead.length; j++ )
+			if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
 			{
-				output_warning = true;
-
-				ex = get_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j] );
-
-				act = ex;
-				if( ex == void(0) )
+				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
-					states[s].actionrow = add_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j], -1 * item_set[i].prod );
-						
-					reduces++;
-				}
-				else
-				{
-					var warning	= new String();
-					if( ex > 0 )
+					output_warning = true;
+	
+					ex = get_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j] );
+	
+					act = ex;
+					if( ex == void(0) )
 					{
-						//Shift-reduce conflict
+						act = -1 * item_set[i].prod;
 
-						//Is there any level specified?
-						if( symbols[item_set[i].lookahead[j]].level > 0
-							|| productions[ item_set[i].prod ].level > 0 )
-						{
-							//Is the level the same?
-							if( symbols[item_set[i].lookahead[j]].level ==
-								productions[ item_set[i].prod ].level )
-							{
-								//In case of left-associativity, reduce
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_LEFT )
-								{
-									//Reduce
-									act = -1 * item_set[i].prod;
-								}
-								//else, if nonassociativity is set,
-								//remove table entry.
-								else
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_NOASSOC )
-								{
-									remove_table_entry( states[s].actionrow,
-											item_set[i].lookahead[j] );
-
-									_warning(
-										"Removing nonassociative symbol '"
-										 + symbols[item_set[i].lookahead[j]].label + "' in state " + s );
-
-									output_warning = false;
-								}
-							}
-							else
-							{
-								//If symbol precedence is lower production's
-								//precedence, reduce
-								if( symbols[item_set[i].lookahead[j]].level <
-										productions[ item_set[i].prod ].level )
-									//Reduce
-									act = -1 * item_set[i].prod;
-							}
-						}
-						
-						warning = "Shift";
+						states[s].actionrow = add_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j], act );
+							
+						reduces++;
 					}
 					else
 					{
-						//Reduce-reduce conflict
-						act = ( ( act * -1 < item_set[i].prod ) ?
-									act : -1 * item_set[i].prod );
-						
-						warning = "Reduce";
+						var warning	= new String();
+						if( ex > 0 )
+						{
+							//Shift-reduce conflict
+	
+							//Is there any level specified?
+							if( symbols[item_set[i].lookahead[j]].level > 0
+								|| productions[ item_set[i].prod ].level > 0 )
+							{
+								//Is the level the same?
+								if( symbols[item_set[i].lookahead[j]].level ==
+									productions[ item_set[i].prod ].level )
+								{
+									//In case of left-associativity, reduce
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_LEFT )
+									{
+										//Reduce
+										act = -1 * item_set[i].prod;
+									}
+									//else, if nonassociativity is set,
+									//remove table entry.
+									else
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_NOASSOC )
+									{
+										remove_table_entry( states[s].actionrow,
+												item_set[i].lookahead[j] );
+	
+										_warning(
+											"Removing nonassociative symbol '" +
+											symbols[item_set[i].lookahead[j]].label +
+												"' in state " + s );
+	
+										output_warning = false;
+									}
+								}
+								else
+								{
+									//If symbol precedence is lower production's
+									//precedence, reduce
+									if( symbols[item_set[i].lookahead[j]].level <
+											productions[ item_set[i].prod ].level )
+										//Reduce
+										act = -1 * item_set[i].prod;
+								}
+							}
+							
+							warning = "Shift";
+						}
+						else
+						{
+							//Reduce-reduce conflict
+							act = ( ( act * -1 < item_set[i].prod ) ?
+										act : -1 * item_set[i].prod );
+							
+							warning = "Reduce";
+						}
+	
+						warning += "-reduce conflict on symbol '" +
+							symbols[item_set[i].lookahead[j]].label +
+								"' in state " + s;
+						warning += "\n         Conflict resolved by " +
+							( ( act <= 0 ) ? "reducing with production" :
+								"shifting to state" ) + " " +
+							( ( act <= 0 ) ? act * -1 : act );
+	
+						if( output_warning )
+							_warning( warning );
+	
+						if( act != ex )
+							update_table_entry( states[s].actionrow,
+								item_set[i].lookahead[j], act );
 					}
-
-					warning += "-reduce conflict on symbol '" + symbols[item_set[i].lookahead[j]].label + "' in state " + s;
-					warning += "\n         Conflict resolved by " +
-								( ( act <= 0 ) ? "reducing with production" : "shifting to state" )
-									+ " " + ( ( act <= 0 ) ? act * -1 : act );
-
-					if( output_warning )
-						_warning( warning );
-
-					if( act != ex )
-						update_table_entry( states[s].actionrow,
-							item_set[i].lookahead[j], act );
-				}				
+					
+					//Remember this reduction, if there is any
+					if( act <= 0 )
+						reds.push( act * -1 );
+				}
 			}
 		}
+	}
+	
+	/*
+		JMM 16.04.2009
+		Find most common reduction
+	*/
+	states[ s ].def_act = -1; //Define no default action
+	
+	//Are there any reductions? Then select the best of them!
+	for( i = 0; i < reds.length; i++ )
+	{
+		for( j = 0, count = 0; j < reds.length; j++ )
+		{
+			if( reds[j] == reds[i] )
+				count++;
+		}
+		
+		if( max < count )
+		{
+			max = count;
+			states[ s ].def_act = reds[ i ];
+		}
+	}
+	
+	//Remove all default reduce action reductions, if they exist.
+	if( states[s].def_act >= 0 )
+	{
+		do
+		{
+			count = states[s].actionrow.length;
+
+			for( i = 0; i < states[s].actionrow.length; i++ )
+				if( states[s].actionrow[i][1] == states[s].def_act * -1 )
+					states[s].actionrow.splice( i, 1 );
+		}
+		while( count != states[s].actionrow.length );
 	}
 }
 
@@ -1816,6 +1950,10 @@ function do_reductions( item_set, s )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
+								most common production will be defined as the
+								default, and all entries referencing this rule
+								are removed.
 ----------------------------------------------------------------------------- */
 function lalr1_parse_table( debug )
 {
@@ -1837,11 +1975,8 @@ function lalr1_parse_table( debug )
 	}
 	
 	for( i = 0; i < states.length; i++ )
-	{
-		do_reductions( states[i].kernel, i );
-		do_reductions( states[i].epsilon, i );
-	}
-	
+		do_reductions( i );
+
 	if( debug )
 	{		
 		for( i = 0; i < states.length; i++ )
@@ -2162,12 +2297,14 @@ function unreachable()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Fixed bug with new default-production
+								recognition
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
 	var i;
 	for( i = 0; i < states.length; i++ )
-		if( states[i].actionrow.length == 0 )
+		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );
 }
@@ -2677,13 +2814,7 @@ function line_error( line, txt )
 				features for debugging than the console derivates for the
 				various JavaScript platforms.
 	
-	Features:
-	- Parser trace messages
-	- Integrated error recovery
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
-	
+	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	This is in the public domain.
 */
 
@@ -2698,13 +2829,38 @@ function line_error( line, txt )
 
 
 
+var jscc_dbg_withparsetree	= false;
 var jscc_dbg_withtrace		= false;
+var jscc_dbg_withstepbystep	= false;
 var jscc_dbg_string			= new String();
 
 function __jsccdbg_print( text )
 {
 	jscc_dbg_string += text + "\n";
 }
+
+function __jsccdbg_flush()
+{
+	alert( jscc_dbg_string );
+}
+
+function __jsccdbg_wait()
+{
+	//Not implemented for Web.
+}
+
+function __jsccdbg_parsetree( indent, nodes, tree )
+{
+	//Not implemented for Web.
+}
+
+/* Code of driver.js will go here... */
+
+/*
+	This is the general, platform-independent part of every parser driver;
+	Input-/Output and Feature-Functions are done by the particular drivers
+	created for the particular platform.
+*/
 
 function __jscclex( PCB )
 {
@@ -3321,6 +3477,14 @@ var labels = new Array(
 				break;
 			}
 		}
+		
+		if( PCB.act == 60 )
+		{
+			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				PCB.act = 60;
+			else
+				PCB.act *= -1;
+		}
 
 		/*
 		_print( "state " + sstack[sstack.length-1] +
@@ -3353,7 +3517,26 @@ var labels = new Array(
 		if( PCB.act == 60 )
 		{
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
+			{
+				var expect = new String();
+				
+				__jsccdbg_print( "Error detected: " +
+					"There is no reduce or shift on the symbol " +
+						labels[PCB.la] );
+				
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+				{
+					if( expect != "" )
+						expect += ", ";
+						
+					expect += "\"" +
+								labels[ act_tab[sstack[sstack.length-1]][i] ]
+									+ "\"";
+				}
+				
+				__jsccdbg_print( "Expecting: " + expect );
+			}
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
@@ -3362,8 +3545,10 @@ var labels = new Array(
 				err_cnt++;
 				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					err_la[err_la.length-1].push(
+							labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
@@ -3373,7 +3558,8 @@ var labels = new Array(
 				vstack.pop();
 				
 				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
@@ -3381,6 +3567,15 @@ var labels = new Array(
 						
 						sstack.push( PCB.act );
 						vstack.push( new String() );
+						
+						if( jscc_dbg_withtrace )
+						{
+							__jsccdbg_print(
+								"Error recovery: error token " +
+									"could be shifted!" );
+							__jsccdbg_print( "Error recovery: " +
+									"current stack is " + sstack.join() );
+						}
 
 						break;
 					}
@@ -3393,9 +3588,15 @@ var labels = new Array(
 				//Ok, now try to shift on the next tokens
 				while( PCB.la != 38 )
 				{
+					if( jscc_dbg_withtrace )
+						__jsccdbg_print( "Error recovery: " +
+							"Trying to shift on \""
+								+ labels[ PCB.la ] + "\"" );
+
 					PCB.act = 60;
 					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+							i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
@@ -3406,10 +3607,18 @@ var labels = new Array(
 					
 					if( PCB.act != 60 )
 						break;
+						
+					if( jscc_dbg_withtrace )
+						__jsccdbg_print( "Error recovery: Discarding \""
+							+ labels[ PCB.la ] + "\"" );
 					
 					while( ( PCB.la = __jscclex( PCB ) )
 								< 0 )
 						PCB.offset++;
+				
+					if( jscc_dbg_withtrace )
+						__jsccdbg_print( "Error recovery: New token \""
+							+ labels[ PCB.la ] + "\"" );
 				}
 				while( PCB.la != 38 && PCB.act == 60 );
 			}
@@ -3417,12 +3626,14 @@ var labels = new Array(
 			if( PCB.act == 60 || PCB.la == 38 )
 			{
 				if( jscc_dbg_withtrace )
-					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
+					__jsccdbg_print( "\tError recovery failed, " +
+							"terminating parse process..." );
 				break;
 			}
 
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tError recovery succeeded, continuing" );
+				__jsccdbg_print( "\tError recovery succeeded, " +
+											"continuing" );
 			
 			//Try to parse the next three tokens successfully...
 			PCB.error_step = 3;
@@ -3431,9 +3642,20 @@ var labels = new Array(
 		//Shift
 		if( PCB.act > 0 )
 		{
+			//Parse tree generation
+			if( jscc_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
+				node.child = new Array();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__jsccdbg_print( "Shifting symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 		
 			sstack.push( PCB.act );
 			vstack.push( PCB.att );
@@ -3441,7 +3663,8 @@ var labels = new Array(
 			PCB.la = __jscclex( PCB );
 			
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__jsccdbg_print( "\tNew lookahead symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
 			if( PCB.error_step > 0 )
@@ -3776,11 +3999,18 @@ switch( act )
 
 
 			
+			if( jscc_dbg_withparsetree )
+				tmptree = new Array();
+
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
+				__jsccdbg_print( "\tPopping " + 
+									pop_tab[act][1] +  " off the stack..." );
 				
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
+				if( jscc_dbg_withparsetree )
+					tmptree.push( tree.pop() );
+					
 				sstack.pop();
 				vstack.pop();
 			}
@@ -3795,26 +4025,57 @@ switch( act )
 					break;
 				}
 			}
-
+			
+			//Do some parse tree construction if desired
+			if( jscc_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ pop_tab[act][0] ];
+				node.att = rval;
+				node.child = tmptree.reverse();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
+			
 			//Goal symbol match?
 			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[PCB.act][0] ] );
+				__jsccdbg_print( "\tPushing non-terminal " + 
+						labels[ pop_tab[act][0] ] );
 			
 			//...and push it!
 			sstack.push( PCB.act );
-			vstack.push( rval );			
+			vstack.push( rval );
 		}
 	}
 
 	if( jscc_dbg_withtrace )
+	{
 		__jsccdbg_print( "\nParse complete." );
+		
+		//This function is used for parser drivers that will output
+		//the entire debug messages in a row.
+		__jsccdbg_flush();
+	}
+
+	if( jscc_dbg_withparsetree )
+	{
+		if( err_cnt == 0 )
+		{
+			__jsccdbg_print( "\n\n--- Parse tree ---" );
+			__jsccdbg_parsetree( 0, treenodes, tree );
+		}
+		else
+		{
+			__jsccdbg_print( "\n\nParse tree cannot be viewed. " +
+									"There where parse errors." );
+		}
+	}
 	
 	return err_cnt;
 }
-
 
 
 
@@ -3842,6 +4103,7 @@ function parse_grammar( str, filename )
 	return parse_error;
 }
 	
+
 
 
 var first_nfa;
@@ -3889,13 +4151,7 @@ function create_nfa( where )
 				features for debugging than the console derivates for the
 				various JavaScript platforms.
 	
-	Features:
-	- Parser trace messages
-	- Integrated error recovery
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
-	
+	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	This is in the public domain.
 */
 
@@ -3937,13 +4193,38 @@ function create_nfa( where )
 
 
 
+var regex_dbg_withparsetree	= false;
 var regex_dbg_withtrace		= false;
+var regex_dbg_withstepbystep	= false;
 var regex_dbg_string			= new String();
 
 function __regexdbg_print( text )
 {
 	regex_dbg_string += text + "\n";
 }
+
+function __regexdbg_flush()
+{
+	alert( regex_dbg_string );
+}
+
+function __regexdbg_wait()
+{
+	//Not implemented for Web.
+}
+
+function __regexdbg_parsetree( indent, nodes, tree )
+{
+	//Not implemented for Web.
+}
+
+/* Code of driver.js will go here... */
+
+/*
+	This is the general, platform-independent part of every parser driver;
+	Input-/Output and Feature-Functions are done by the particular drivers
+	created for the particular platform.
+*/
 
 function __regexlex( PCB )
 {
@@ -4286,6 +4567,14 @@ var labels = new Array(
 				break;
 			}
 		}
+		
+		if( PCB.act == 26 )
+		{
+			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				PCB.act = 26;
+			else
+				PCB.act *= -1;
+		}
 
 		/*
 		_print( "state " + sstack[sstack.length-1] +
@@ -4318,7 +4607,26 @@ var labels = new Array(
 		if( PCB.act == 26 )
 		{
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
+			{
+				var expect = new String();
+				
+				__regexdbg_print( "Error detected: " +
+					"There is no reduce or shift on the symbol " +
+						labels[PCB.la] );
+				
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+				{
+					if( expect != "" )
+						expect += ", ";
+						
+					expect += "\"" +
+								labels[ act_tab[sstack[sstack.length-1]][i] ]
+									+ "\"";
+				}
+				
+				__regexdbg_print( "Expecting: " + expect );
+			}
 			
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
@@ -4327,8 +4635,10 @@ var labels = new Array(
 				err_cnt++;
 				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					err_la[err_la.length-1].push(
+							labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
@@ -4338,7 +4648,8 @@ var labels = new Array(
 				vstack.pop();
 				
 				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
@@ -4346,6 +4657,15 @@ var labels = new Array(
 						
 						sstack.push( PCB.act );
 						vstack.push( new String() );
+						
+						if( regex_dbg_withtrace )
+						{
+							__regexdbg_print(
+								"Error recovery: error token " +
+									"could be shifted!" );
+							__regexdbg_print( "Error recovery: " +
+									"current stack is " + sstack.join() );
+						}
 
 						break;
 					}
@@ -4358,9 +4678,15 @@ var labels = new Array(
 				//Ok, now try to shift on the next tokens
 				while( PCB.la != 22 )
 				{
+					if( regex_dbg_withtrace )
+						__regexdbg_print( "Error recovery: " +
+							"Trying to shift on \""
+								+ labels[ PCB.la ] + "\"" );
+
 					PCB.act = 26;
 					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+							i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
@@ -4371,10 +4697,18 @@ var labels = new Array(
 					
 					if( PCB.act != 26 )
 						break;
+						
+					if( regex_dbg_withtrace )
+						__regexdbg_print( "Error recovery: Discarding \""
+							+ labels[ PCB.la ] + "\"" );
 					
 					while( ( PCB.la = __regexlex( PCB ) )
 								< 0 )
 						PCB.offset++;
+				
+					if( regex_dbg_withtrace )
+						__regexdbg_print( "Error recovery: New token \""
+							+ labels[ PCB.la ] + "\"" );
 				}
 				while( PCB.la != 22 && PCB.act == 26 );
 			}
@@ -4382,12 +4716,14 @@ var labels = new Array(
 			if( PCB.act == 26 || PCB.la == 22 )
 			{
 				if( regex_dbg_withtrace )
-					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
+					__regexdbg_print( "\tError recovery failed, " +
+							"terminating parse process..." );
 				break;
 			}
 
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tError recovery succeeded, continuing" );
+				__regexdbg_print( "\tError recovery succeeded, " +
+											"continuing" );
 			
 			//Try to parse the next three tokens successfully...
 			PCB.error_step = 3;
@@ -4396,9 +4732,20 @@ var labels = new Array(
 		//Shift
 		if( PCB.act > 0 )
 		{
+			//Parse tree generation
+			if( regex_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ PCB.la ];
+				node.att = PCB.att;
+				node.child = new Array();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__regexdbg_print( "Shifting symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 		
 			sstack.push( PCB.act );
 			vstack.push( PCB.att );
@@ -4406,7 +4753,8 @@ var labels = new Array(
 			PCB.la = __regexlex( PCB );
 			
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__regexdbg_print( "\tNew lookahead symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
 			if( PCB.error_step > 0 )
@@ -4653,11 +5001,18 @@ switch( act )
 
 
 			
+			if( regex_dbg_withparsetree )
+				tmptree = new Array();
+
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
+				__regexdbg_print( "\tPopping " + 
+									pop_tab[act][1] +  " off the stack..." );
 				
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
+				if( regex_dbg_withparsetree )
+					tmptree.push( tree.pop() );
+					
 				sstack.pop();
 				vstack.pop();
 			}
@@ -4672,26 +5027,57 @@ switch( act )
 					break;
 				}
 			}
-
+			
+			//Do some parse tree construction if desired
+			if( regex_dbg_withparsetree )
+			{
+				var node = new treenode();
+				node.sym = labels[ pop_tab[act][0] ];
+				node.att = rval;
+				node.child = tmptree.reverse();
+				tree.push( treenodes.length );
+				treenodes.push( node );
+			}
+			
 			//Goal symbol match?
 			if( act == 0 ) //Don't use PCB.act here!
 				break;
 				
 			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[PCB.act][0] ] );
+				__regexdbg_print( "\tPushing non-terminal " + 
+						labels[ pop_tab[act][0] ] );
 			
 			//...and push it!
 			sstack.push( PCB.act );
-			vstack.push( rval );			
+			vstack.push( rval );
 		}
 	}
 
 	if( regex_dbg_withtrace )
+	{
 		__regexdbg_print( "\nParse complete." );
+		
+		//This function is used for parser drivers that will output
+		//the entire debug messages in a row.
+		__regexdbg_flush();
+	}
+
+	if( regex_dbg_withparsetree )
+	{
+		if( err_cnt == 0 )
+		{
+			__regexdbg_print( "\n\n--- Parse tree ---" );
+			__regexdbg_parsetree( 0, treenodes, tree );
+		}
+		else
+		{
+			__regexdbg_print( "\n\nParse tree cannot be viewed. " +
+									"There where parse errors." );
+		}
+	}
 	
 	return err_cnt;
 }
-
 
 
 
@@ -4781,193 +5167,4 @@ function compile_regex( str, accept, case_insensitive )
 //print_dfa( d );
 
 
-//This file remains empty.
-/* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
-
-File:	main.js
-Author:	Jan Max Meyer
-Usage:	Console-based program entry for the JS/CC parser generator.
-
-You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
------------------------------------------------------------------------------ */
-
-function version()
-{
-	var info = new String();
-
-	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
-				"Generator written in JavaScript\n";
-	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
-				"Jan Max Meyer\n";
-	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
-	
-	info += "You may use, modify and distribute this software under the " +
-				"terms and conditions\n";
-	info += "of the Artistic License. Please see ARTISTIC for more " +
-				"information.\n";
-	
-	_print( info );
-}
-
-function help()
-{
-	var help = new String();
-
-	help += "usage: jscc [options] filename\n\n";
-
-	help += "       -h   --help               Print this usage help\n";
-	help += "       -i   --version            Print version and copyright\n";
-	help += "       -o   --output <file>      Save output source to <file>\n";
-	help += "       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n";
-	help += "                                 fixing methods and variables\n";
-	help += "       -t   --template <file>    Use template file <file> as\n";
-	help += "                                 parser template\n";
-	help += "       -v   --verbose            Run in verbose mode\n";
-	help += "       -w   --warnings           Print warnings\n";
-		
-	_print( help );
-}
-
-// --- JS/CC entry ---
-
-//Initialize the globals
-reset_all( EXEC_CONSOLE );
-
-//Processing the command line arguments
-var out_file	= new String();
-var src_file	= new String();
-var tpl_file	= DEFAULT_DRIVER;
-var code_prefix	= new String();
-var dump_nfa	= false;
-var dump_dfa	= false;
-var verbose		= false;
-var	dfa_table;
-
-var argv = get_arguments();
-for( var i = 0; i < argv.length; i++ )
-{
-	if( argv[i].toLowerCase() == "-o"
-			|| argv[i].toLowerCase() == "--output" )
-		out_file = argv[++i];
-	else if( argv[i].toLowerCase() == "-t"
-			|| argv[i].toLowerCase() == "--template" )
-		tpl_file = argv[++i];
-	else if( argv[i].toLowerCase() == "-p"
-			|| argv[i].toLowerCase() == "--prefix" )
-		code_prefix = argv[++i];
-	else if( argv[i].toLowerCase() == "-w"
-			|| argv[i].toLowerCase() == "--warnings" )
-		show_warnings = true;
-	else if( argv[i].toLowerCase() == "-v"
-			|| argv[i].toLowerCase() == "--verbose" )
-		verbose = true;
-	else if( argv[i].toLowerCase() == "-d"
-			|| argv[i].toLowerCase() == "--debug" )
-	{
-		for( var j = 0; j < argv[i+1].length; j++ )
-			switch( argv[i+1].charAt( j ) )
-			{
-				case 'n':
-					dump_nfa = true;
-					break;
-				case 'd':
-					dump_dfa = true;
-					break;
-			}
-		
-		i++;
-	}
-	else if( argv[i].toLowerCase() == "-i"
-			|| argv[i].toLowerCase() == "--version" )
-	{
-		version();
-		_quit( 0 );
-	}
-	else if( argv[i].toLowerCase() == "-h"
-			|| argv[i].toLowerCase() == "--help" )
-	{
-		help();
-		_quit( 0 );
-	}
-	else if( src_file == "" )
-		src_file = argv[i];
-}
-
-//file is global source filename
-file = src_file;
-
-if( src_file != "" )
-{
-	var src = read_file( src_file );
-	parse_grammar( src, src_file );
-	
-	if( errors == 0 )
-	{
-		//Check grammar integrity
-		undef();
-		unreachable();
-		
-		if( errors == 0 )
-		{
-			//LALR(1) parse table generation
-			first();
-			
-			//print_symbols( MODE_GEN_TEXT );
-			//print_grammar( MODE_GEN_TEXT );
-			lalr1_parse_table( false );
-
-			check_empty_states();
-
-			if( errors == 0 )
-			{		
-				//DFA state table generation
-				if( dump_nfa )
-					print_nfa( nfa_states );
-					
-				dfa_table = create_subset( nfa_states );
-				dfa_table = minimize_dfa( dfa_table );
-				
-				if( dump_dfa )
-					print_dfa( dfa_table );	
-
-				var driver = read_file( tpl_file );
-									
-				driver = driver.replace( /##HEADER##/gi, code_head );
-				driver = driver.replace( /##TABLES##/gi, print_parse_tables( MODE_GEN_JS ) );
-				driver = driver.replace( /##DFA##/gi, print_dfa_table( dfa_table ) );
-				driver = driver.replace( /##TERMINAL_ACTIONS##/gi, print_term_actions() );
-				driver = driver.replace( /##LABELS##/gi, print_symbol_labels() );
-				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
-				driver = driver.replace( /##FOOTER##/gi, code_foot );
-				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				driver = driver.replace( /##ERROR##/gi, get_error_state() );
-				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
-				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
-				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
-
-				if( out_file != "" )
-					write_file( out_file, driver );
-				else
-					_print( driver );
-				
-				if( verbose )
-					_print( "\"" + src_file + "\" produced " + states.length + " states (" + shifts + " shifts, " +
-							reduces + " reductions, " + gotos + " gotos)" );
-			}
-		}
-	}
-	
-	if( verbose )
-		_print( warnings + " warning" + ( warnings > 1 ? "s" : "" ) + ", "
-			+ errors + " error" + ( errors > 1 ? "s" : "" ) );
-}
-else
-	help();
-
-//Exit with number of errors
-_quit( errors );
 

@@ -1,0 +1,32 @@
+#-------------------------------------------------------------------------------
+# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
+# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+#
+# You may use, modify and distribute this software under the terms and
+# conditions of the Artistic License. Please see ARTISTIC for more information.
+#
+# Platform:			Build only the web-driver.
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+
+PLATFORM		=	web
+
+
+all:
+	@echo
+	@echo --- Compilation succeeded! ---
+	
+driver: ../driver_$(PLATFORM).js_
+	@echo
+	@echo --- Parser template generated! ---
+
+../driver_$(PLATFORM).js_:		driver/driver_$(PLATFORM).js driver/parser.js
+	cat driver/driver_$(PLATFORM).js driver/parser.js >../driver_$(PLATFORM).js_
+
+clean:
+
+clean_all:
+
+bootstrap:			all 
+	@echo Sorry, there is no bootstrapper for Webenv!
