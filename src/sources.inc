@@ -9,7 +9,8 @@
 #-------------------------------------------------------------------------------
 
 # JS/CC constant sources
-SRC_GLOBAL		=	global.js
+SRC_GLOBAL		=	global.js \
+					io_$(PLATFORM).js
 
 SRC_MODULES		=	debug.js \
 					first.js \
@@ -21,8 +22,7 @@ SRC_MODULES		=	debug.js \
 					lexdfa.js \
 					lexdbg.js
 
-SRC_MAIN		= 	io_$(PLATFORM).js \
-					main.js
+SRC_MAIN		= 	main.js
 
 # JS/CC internal parsers
 SRC_PARSE		=	parse.par

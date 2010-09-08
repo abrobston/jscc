@@ -47,12 +47,18 @@ SRC_FINAL		=	$(SRC_GLOBAL) \
 					$(SRC_MODULES) \
 					$(SRC_PARSE_JS) \
 					$(SRC_REGEX_JS) \
-					io_$(PLATFORM).js \
 					main_$(PLATFORM).js
 
 all: 			$(JSCC) clean
 	@echo
 	@echo --- Compilation succeeded! ---
+	
+driver: ../driver_$(PLATFORM).js_
+	@echo
+	@echo --- Parser template generated! ---
+
+../driver_$(PLATFORM).js_:		driver/driver_$(PLATFORM).js driver/parser.js
+	cat driver/driver_$(PLATFORM).js driver/parser.js >../driver_$(PLATFORM).js_
 
 $(JSCC):		$(SRC_FINAL)
 	echo "#!/usr/bin/js" >$@

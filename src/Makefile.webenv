@@ -38,9 +38,22 @@ BUILDIN_VDRIVER	=	../webenv/webdriver.js
 include sources.inc
 include tools.inc
 
+SRC_FINAL		=	$(SRC_GLOBAL) \
+					$(SRC_MODULES) \
+					$(SRC_PARSE_JS) \
+					$(SRC_REGEX_JS)
+
+
 all: 			$(JSCC) $(BUILDIN_DRIVER) $(BUILDIN_VDRIVER) clean
 	@echo
 	@echo --- Compilation succeeded! ---
+	
+driver: ../driver_$(PLATFORM).js_
+	@echo
+	@echo --- Parser template generated! ---
+
+../driver_$(PLATFORM).js_:		driver/driver_$(PLATFORM).js driver/parser.js
+	cat driver/driver_$(PLATFORM).js driver/parser.js >../driver_$(PLATFORM).js_
 
 $(JSCC):		$(SRC_FINAL)
 	cat $(SRC_FINAL) >$@

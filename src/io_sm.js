@@ -32,5 +32,7 @@ function _print( txt )
 	print( txt );
 }
 
+var DEFAULT_DRIVER = "";
+
 //The rest of the platform-dependent code is done in jscc_main_sm.js,
 //because Spidermonkey can't handle files.

@@ -1,14 +1,7 @@
 /*
 	Default driver template for JS/CC generated parsers for Mozilla/Rhino
 	
-	Features:
-	- Parser trace messages
-	- Step-by-step parsing
-	- Integrated error recovery
-	- Pseudo-graphical parse tree generation
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
+	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2007 from driver.js_ to support Mozilla/Rhino
            by Louis P.Santillan <lpsantil@gmail.com>
 	
@@ -25,6 +18,11 @@ function __##PREFIX##dbg_print( text )
 	print( text );
 }
 
+function __##PREFIX##dbg_flush()
+{
+	//Not required here.
+}
+
 function __##PREFIX##dbg_wait()
 {
    var kbd = new java.io.BufferedReader(
@@ -32,6 +30,33 @@ function __##PREFIX##dbg_wait()
 
    kbd.readLine();
 }
+
+function __##PREFIX##dbg_parsetree( indent, nodes, tree )
+{
+	var str = new String();
+	for( var i = 0; i < tree.length; i++ )
+	{
+		str = "";
+		for( var j = indent; j > 0; j-- )
+			str += "\t";
+		
+		str += nodes[ tree[i] ].sym;
+		if( nodes[ tree[i] ].att != "" )
+			str += " >" + nodes[ tree[i] ].att + "<" ;
+			
+		__##PREFIX##dbg_print( str );
+		if( nodes[ tree[i] ].child.length > 0 )
+			__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
+	}
+}
+
+/* Code of driver.js will go here... */
+
+/*
+	This is the general, platform-independent part of every parser driver;
+	Input-/Output and Feature-Functions are done by the particular drivers
+	created for the particular platform.
+*/
 
 function __##PREFIX##lex( PCB )
 {
@@ -208,14 +233,19 @@ function __##PREFIX##parse( src, err_off, err_la )
 			{
 				var expect = new String();
 				
-				__##PREFIX##dbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
+				__##PREFIX##dbg_print( "Error detected: " +
+					"There is no reduce or shift on the symbol " +
+						labels[PCB.la] );
 				
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
 				{
 					if( expect != "" )
 						expect += ", ";
 						
-					expect += "\"" + labels[ act_tab[sstack[sstack.length-1]][i] ] + "\"";
+					expect += "\"" +
+								labels[ act_tab[sstack[sstack.length-1]][i] ]
+									+ "\"";
 				}
 				
 				__##PREFIX##dbg_print( "Expecting: " + expect );
@@ -228,8 +258,10 @@ function __##PREFIX##parse( src, err_off, err_la )
 				err_cnt++;
 				err_off.push( PCB.offset - PCB.att.length );
 				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					err_la[err_la.length-1].push(
+							labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
 			
 			//Perform error recovery			
@@ -239,7 +271,8 @@ function __##PREFIX##parse( src, err_off, err_la )
 				vstack.pop();
 				
 				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == ##ERROR_TOKEN## )
 					{
@@ -250,8 +283,11 @@ function __##PREFIX##parse( src, err_off, err_la )
 						
 						if( ##PREFIX##_dbg_withtrace )
 						{
-							__##PREFIX##dbg_print( "Error recovery: error token could be shifted!" );
-							__##PREFIX##dbg_print( "Error recovery: current stack is " + sstack.join() );
+							__##PREFIX##dbg_print(
+								"Error recovery: error token " +
+									"could be shifted!" );
+							__##PREFIX##dbg_print( "Error recovery: " +
+									"current stack is " + sstack.join() );
 						}
 
 						break;
@@ -266,12 +302,14 @@ function __##PREFIX##parse( src, err_off, err_la )
 				while( PCB.la != ##EOF## )
 				{
 					if( ##PREFIX##_dbg_withtrace )
-						__##PREFIX##dbg_print( "Error recovery: Trying to shift on \""
-							+ labels[ PCB.la ] + "\"" );
+						__##PREFIX##dbg_print( "Error recovery: " +
+							"Trying to shift on \""
+								+ labels[ PCB.la ] + "\"" );
 
 					PCB.act = ##ERROR##;
 					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
+					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length;
+							i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 						{
@@ -301,12 +339,14 @@ function __##PREFIX##parse( src, err_off, err_la )
 			if( PCB.act == ##ERROR## || PCB.la == ##EOF## )
 			{
 				if( ##PREFIX##_dbg_withtrace )
-					__##PREFIX##dbg_print( "\tError recovery failed, terminating parse process..." );
+					__##PREFIX##dbg_print( "\tError recovery failed, " +
+							"terminating parse process..." );
 				break;
 			}
 
 			if( ##PREFIX##_dbg_withtrace )
-				__##PREFIX##dbg_print( "\tError recovery succeeded, continuing" );
+				__##PREFIX##dbg_print( "\tError recovery succeeded, " +
+											"continuing" );
 			
 			//Try to parse the next three tokens successfully...
 			PCB.error_step = 3;
@@ -327,7 +367,8 @@ function __##PREFIX##parse( src, err_off, err_la )
 			}
 			
 			if( ##PREFIX##_dbg_withtrace )
-				__##PREFIX##dbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__##PREFIX##dbg_print( "Shifting symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 		
 			sstack.push( PCB.act );
 			vstack.push( PCB.att );
@@ -335,7 +376,8 @@ function __##PREFIX##parse( src, err_off, err_la )
 			PCB.la = __##PREFIX##lex( PCB );
 			
 			if( ##PREFIX##_dbg_withtrace )
-				__##PREFIX##dbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
+				__##PREFIX##dbg_print( "\tNew lookahead symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
 				
 			//Successfull shift and right beyond error recovery?
 			if( PCB.error_step > 0 )
@@ -360,7 +402,8 @@ function __##PREFIX##parse( src, err_off, err_la )
 				tmptree = new Array();
 
 			if( ##PREFIX##_dbg_withtrace )
-				__##PREFIX##dbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
+				__##PREFIX##dbg_print( "\tPopping " + 
+									pop_tab[act][1] +  " off the stack..." );
 				
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
@@ -398,7 +441,8 @@ function __##PREFIX##parse( src, err_off, err_la )
 				break;
 				
 			if( ##PREFIX##_dbg_withtrace )
-				__##PREFIX##dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+				__##PREFIX##dbg_print( "\tPushing non-terminal " + 
+						labels[ pop_tab[act][0] ] );
 			
 			//...and push it!
 			sstack.push( PCB.act );
@@ -407,7 +451,13 @@ function __##PREFIX##parse( src, err_off, err_la )
 	}
 
 	if( ##PREFIX##_dbg_withtrace )
+	{
 		__##PREFIX##dbg_print( "\nParse complete." );
+		
+		//This function is used for parser drivers that will output
+		//the entire debug messages in a row.
+		__##PREFIX##dbg_flush();
+	}
 
 	if( ##PREFIX##_dbg_withparsetree )
 	{
@@ -418,31 +468,13 @@ function __##PREFIX##parse( src, err_off, err_la )
 		}
 		else
 		{
-			__##PREFIX##dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+			__##PREFIX##dbg_print( "\n\nParse tree cannot be viewed. " +
+									"There where parse errors." );
 		}
 	}
 	
 	return err_cnt;
 }
 
-
-function __##PREFIX##dbg_parsetree( indent, nodes, tree )
-{
-	var str = new String();
-	for( var i = 0; i < tree.length; i++ )
-	{
-		str = "";
-		for( var j = indent; j > 0; j-- )
-			str += "\t";
-		
-		str += nodes[ tree[i] ].sym;
-		if( nodes[ tree[i] ].att != "" )
-			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
-		__##PREFIX##dbg_print( str );
-		if( nodes[ tree[i] ].child.length > 0 )
-			__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
-	}
-}
-
 ##FOOTER##
+
