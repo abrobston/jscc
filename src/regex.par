@@ -41,7 +41,8 @@ function create_nfa( where )
 	}
 	
 	where[i].edge = EDGE_EPSILON;
-	where[i].ccl = bitset_create( MAX_CHAR );
+	where[i].ccl=new BitSet(MAX_CHAR);
+	where[i].ccl_ = {};///SV: try to reblace array to object
 	where[i].accept = -1;
 	where[i].follow = -1;
 	where[i].follow2 = -1;
@@ -79,9 +80,11 @@ RegEx:			Expression						[*	%% = new PARAM();
 												*]
 				;
 
-Expression:		Expression '|' Catenation		[*	%% = new PARAM();
-													%%.start = create_nfa( nfa_states );
-													%%.end = create_nfa( nfa_states );
+Expression:		Expression '|' Catenation		[*	
+													%% = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+														});
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%%.start].follow2 = %3.start;
 													
@@ -91,15 +94,10 @@ Expression:		Expression '|' Catenation		[*	%% = new PARAM();
 				| Catenation
 				;
 				
-Catenation:		Catenation Factor				[*	/*
-														(As a C-junkie, I miss memcpy() here ;P)
-													*/
-													nfa_states[%1.end].edge		= nfa_states[%2.start].edge;
-													nfa_states[%1.end].ccl		= nfa_states[%2.start].ccl;
-													nfa_states[%1.end].follow	= nfa_states[%2.start].follow;
-													nfa_states[%1.end].follow2	= nfa_states[%2.start].follow2;
-													nfa_states[%1.end].accept	= nfa_states[%2.start].accept;
-													
+Catenation:		Catenation Factor				[*	
+													var weight=nfa_states[%1.end].weight;///SV0L0CH: if weight unused - delete this
+													nfa_states[%1.end]=new NFA(nfa_states[%2.start]);///SV0L0CH: we can use copy constructor
+													nfa_states[%1.end].weight=weight;///SV0L0CH: if weight unused - delete this
 													nfa_states[%2.start].edge = EDGE_FREE;
 													
 													%1.end = %2.end;
@@ -110,28 +108,31 @@ Catenation:		Catenation Factor				[*	/*
 				;
 				
 Factor:			Term '*'						[*
-													%% = new PARAM();
-													%%.start = create_nfa( nfa_states );
-													%%.end = create_nfa( nfa_states );
-													
+													%% = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+													});
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%1.end].follow = %%.end;
 
 													nfa_states[%%.start].follow2 = %%.end;
 													nfa_states[%1.end].follow2 = %1.start;
 												*]
-				| Term '+'						[* 	%% = new PARAM();
-													%%.start = create_nfa( nfa_states );
-													%%.end = create_nfa( nfa_states );
-													
+				| Term '+'						[* 	
+													%% = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+													});
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%1.end].follow = %%.end;
 
 													nfa_states[%1.end].follow2 = %1.start;
 												*]
-				| Term '?'						[* 	%% = new PARAM();
-													%%.start = create_nfa( nfa_states );
-													%%.end = create_nfa( nfa_states );
+				| Term '?'						[* 	
+													%% = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+														});
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%%.start].follow2 = %%.end;
 													nfa_states[%1.end].follow = %%.end;
@@ -145,20 +146,15 @@ Term:			Character						[*	%% = new PARAM();
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
 													
-													//_print( "SINGLE: >" + %1 + "<" );
-													
-													bitset_set( nfa_states[%%.start].ccl,
-															%1.charCodeAt( 0 ), 1 );
+													nfa_states[%%.start].ccl.set(%1.charCodeAt( 0 ), 1 );
+													//nfa_states[%%.start].ccl_[%1.charAt(0)]=true;///SV:array to object
 												*]
 				| CharacterSet
 				| '(' Expression ')'			[*	%% = %2; *]
 				;
 
 CharacterSet:	'[' CharClass ']'				[*	var negate = false;
-													var i = 0, j, start;
-													
-													//_print( "CHARCLASS: >" + %2 + "<" );
-													
+													var i = 0, j, start;													
 													%% = new PARAM();
 													%%.start = create_nfa( nfa_states );
 													%%.end = nfa_states[%%.start].follow
@@ -168,8 +164,10 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 													if( %2.charAt( i ) == '^' )
 													{
 														negate = true;
-														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
-															bitset_set( nfa_states[%%.start].ccl, j, 1 );
+														for( var j = MIN_CHAR; j < MAX_CHAR; j++ ){
+															nfa_states[%%.start].ccl.set(j,true);
+															///TODO:set all chars to true or replace to other construction
+														}
 														i++;
 													}
 
@@ -192,7 +190,6 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 												*]
 				| ANY_CHAR							[*	%% = new PARAM();
 				
-													//_print( "ANYCHAR: >" + %1 + "<" );
 													
 													%%.start = create_nfa( nfa_states );
 													%%.end = nfa_states[%%.start].follow
@@ -203,31 +200,13 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 												*]
 				;
 												
-CharClass:		CharClass Character				[*	%% = new String( %1 + %2 ); *]
-				|								[*	%% = new String(); *]
+CharClass:		CharClass Character				[*	%% = %1 + %2; *]
+				|								[*	%% = ""; *]
 				;
 
 
 Character:		ASCII_CODE						[*	%% = String.fromCharCode( %1.substr( 1 ) ); *]
-				| ESCAPED_CHAR					[*	switch( %1.substr( 1 ) )
-													{
-														case 'n':
-															%% = '\n';
-															break;
-														case 'r':
-															%% = '\r';
-															break;
-														case 't':
-															%% = '\t';
-															break;
-														case 'a':
-															%% = '\a';
-															break;
-														default:
-															%% = %1.substr( 1 );
-															break;
-													}
-												*]
+				| ESCAPED_CHAR					[*	%%={n:'\n',r:'\r',t:'\t',a:'\a'}[%1.substr(1)]||%1.substr(1); *]
 				| ANY							[*	%% = %1; *]
 				;
 
@@ -238,8 +217,8 @@ function compile_regex( str, accept, case_insensitive )
 	var i, j;
 	var weight = 0;
 	var true_edges = 0;
-	var error_offsets = new Array();
-	var error_expects = new Array();
+	var error_offsets = [];
+	var error_expects = [];
 	var error_count = 0;
 	
 	if( str == "" )
@@ -247,7 +226,7 @@ function compile_regex( str, accept, case_insensitive )
 	
 	//_print( "str = >" + str + "< " + case_insensitive );
 	
-	created_nfas = new Array();
+	created_nfas = [];
 	
 	first_nfa = create_nfa( nfa_states );
 	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 )
@@ -297,7 +276,7 @@ function compile_regex( str, accept, case_insensitive )
 	{
 		for( i = 0; i < error_count; i++ )
 		{
-			var spaces = new String();
+			var spaces = '';
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
 			

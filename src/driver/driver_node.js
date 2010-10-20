@@ -1,33 +1,24 @@
-/*
-	Default driver template for JS/CC generated parsers for Mozilla/Rhino
-	
-	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
-        Modified 2007 from driver.js_ to support Mozilla/Rhino
-           by Louis P.Santillan <lpsantil@gmail.com>
-	
-	This is in the public domain.
+/**@file driver_node.js
+ * @brief Contains functions and variables for nodejs
+ * http://nodejs.org
 */
+
 var __##PREFIX##_debug=(function(){///@TODO: create this variable without function
+	
 	var _dbg_withparsetree	= false;
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
 	
-	function __dbg_print( text )
-	{
-		print( text );
-	}
+	var __dbg_print=require('sys').print;
 	
 	function __dbg_flush()
 	{
-		//Not required here.
+		///Not required here.
 	}
 	
 	function __dbg_wait()
 	{
-	   var kbd = new java.io.BufferedReader(
-	                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
-	
-	   kbd.readLine();
+		///Not required here.
 	}
 	
 	function __dbg_parsetree( indent, nodes, tree )
@@ -58,5 +49,6 @@ var __##PREFIX##_debug=(function(){///@TODO: create this variable without functi
 		__dbg_parsetree:__dbg_parsetree
 	};
 })();
+
 
 

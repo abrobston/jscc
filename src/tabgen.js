@@ -16,10 +16,10 @@ function create_state()
 {
 	var state = new STATE();
 	
-	state.kernel = new Array();
-	state.epsilon = new Array();
-	state.actionrow = new Array();
-	state.gotorow = new Array();
+	state.kernel = [];
+	state.epsilon = [];
+	state.actionrow = [];
+	state.gotorow = [];
 	state.done = false;
 	state.closed = false;
 	state.def_act = 0;
@@ -36,7 +36,7 @@ function create_item( p )
 	
 	item.prod = p;
 	item.dot_offset = 0;
-	item.lookahead = new Array();
+	item.lookahead = [];
 	
 	return item;
 }
@@ -49,7 +49,7 @@ function add_table_entry( row, sym, act )
 		if( row[i][0] == sym )
 			return row;
 	
-	row.push( new Array( sym, act ) );
+	row.push( [ sym, act ] );
 	return row;
 }
 
@@ -185,10 +185,10 @@ function create_symbol( label, kind, special )
 	var sym = new SYMBOL();
 	sym.label = label;
 	sym.kind = kind;
-	sym.prods = new Array();
+	sym.prods = [];
 	sym.nullable = false;
 	sym.id = symbols.length;
-	sym.code = new String();
+	sym.code = "";
 	
 	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
 	sym.level = 0; //Could be changed by grammar parser
@@ -198,7 +198,7 @@ function create_symbol( label, kind, special )
 	//Flags
 	sym.defined = false;
 
-	sym.first = new Array();
+	sym.first = [];
 	
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
@@ -345,7 +345,7 @@ function close_items( seed, closure )
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
-	var closure = new Array(), nclosure, partition;
+	var closure = [], nclosure, partition;
 	var item, partition_sym;
 	var i, j, k, l, cnt = 0, old_cnt = 0, tmp_cnt, ns;
 	
@@ -378,7 +378,7 @@ function lalr1_closure( s )
 
 			closure[0].prod = states[s].kernel[i].prod;
 			closure[0].dot_offset = states[s].kernel[i].dot_offset;
-			closure[0].lookahead = new Array();
+			closure[0].lookahead = [];
 		
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
@@ -410,8 +410,8 @@ function lalr1_closure( s )
 	
 	while( closure.length > 0 )
 	{
-		partition = new Array();
-		nclosure = new Array();
+		partition = [];
+		nclosure = [];
 		partition_sym = -1;
 		
 		for( i = 0; i < closure.length; i++ )
@@ -542,7 +542,7 @@ function lalr1_closure( s )
 function do_reductions( s )
 {
 	var n, i, j, ex, act, output_warning, item_set;
-	var reds = new Array();
+	var reds = [];
 	var max = 0, count;
 	
 	for( n = 0; n < 2; n++ )
@@ -576,7 +576,7 @@ function do_reductions( s )
 					}
 					else
 					{
-						var warning	= new String();
+						var warning	= "";
 						if( ex > 0 )
 						{
 							//Shift-reduce conflict

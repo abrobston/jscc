@@ -41,234 +41,158 @@ of the Artistic License. Please see ARTISTIC for more information.
 	16.04.2009	Jan Max Meyer	New table generator section to build default
 								reduction table on each state.
 ----------------------------------------------------------------------------- */
-function print_parse_tables( mode )
-{
-	var code	= new String();
+function print_parse_tables( mode ){
+	var code	= "";
 	var i, j, deepest = 0, val;
-	
-	/* Printing the pop table */
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
-		code += "</tr>";
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
-		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
-		code += "</tr>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Pop-Table */\n";
-		code += "var pop_tab = new Array(\n";
-	}
-	
-	for( i = 0; i < productions.length; i++ )
-	{
-		if( mode == MODE_GEN_HTML )
-		{
+	switch(mode){
+		case MODE_GEN_HTML:case "html":{
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
-			code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
-			code += "<td>" + productions[i].rhs.length + "</td>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
 			code += "</tr>";
-		}
-		else if( mode == MODE_GEN_JS )
-		{
-			code += "\tnew Array( " + productions[i].lhs + "/* " + symbols[productions[i].lhs].label + " */, "
-				+ productions[i].rhs.length + " )" +
-					(( i < productions.length-1 ) ? ",\n" : "\n");
-		}
-	}
-	
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "</table>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += ");\n\n";
-	}
-	
-	/* Printing the action table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_TERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_TERM )
-				code += "<td><b>" + symbols[i].label + "</b></td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < productions.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
+				code += "<td>" + productions[i].rhs.length + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_TERM )
+					deepest++;
 			
-			for( j = 0; j < symbols.length; j++ )
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
+			code += "</tr>";
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
 			{
-				if( symbols[j].kind == SYM_TERM )
-				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
-					{
-						if( val <= 0 )
-							code += "r" + (val * -1);
-						else
-							code += "s" + val;
-					}
-					code += "</td>";
-				}
+				if( symbols[i].kind == SYM_TERM )
+					code += "<td><b>" + symbols[i].label + "</b></td>";
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Action-Table */\n";
-		code += "var act_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */ new Array( "
-			for( j = 0; j < states[i].actionrow.length; j++ )
-				code += states[i].actionrow[j][0] + "/* \"" + 
-					symbols[states[i].actionrow[j][0]].label + "\" */," + states[i].actionrow[j][1]
-						+ ( ( j < states[i].actionrow.length-1 ) ? " , " : "" );
+			code += "</tr>";
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
-	/* Printing the goto table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_NONTERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_NONTERM )
-				code += "<td>" + symbols[i].label + "</td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-			
-			for( j = 0; j < symbols.length; j++ )
+			for( i = 0; i < states.length; i++ )
 			{
-				if( symbols[j].kind == SYM_NONTERM )
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
 				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+					if( symbols[j].kind == SYM_TERM )
 					{
-						code += val;
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
+						{
+							if( val <= 0 )
+								code += "r" + (val * -1);
+							else
+								code += "s" + val;
+						}
+						code += "</td>";
 					}
-					code += "</td>";
 				}
+				
+				code += "</tr>" ;
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Goto-Table */\n";
-		code += "var goto_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */";
-			code += " new Array( "
-							
-			for( j = 0; j < states[i].gotorow.length; j++ )
-				code += states[i].gotorow[j][0] + "/* " + symbols[ states[i].gotorow[j][0] ].label + " */,"
-					+ states[i].gotorow[j][1] + ( ( j < states[i].gotorow.length-1 ) ? " , " : "" );
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_NONTERM )
+					deepest++;
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
-	/*
-		JMM 16.04.2009:
-		Printing the default action table
-	*/
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
-		code += "</tr>";
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
-		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
-		code += "</tr>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Default-Actions-Table */\n";
-		code += "var defact_tab = new Array(\n";
-	}
-	
-	for( i = 0; i < states.length; i++ )
-	{
-		if( mode == MODE_GEN_HTML )
-		{
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
-			code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
-			code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
 			code += "</tr>";
-		}
-		else if( mode == MODE_GEN_JS )
-		{
-			code += "\t /* State " + i + " */ " + states[i].def_act + " " +
-						(( i < states.length-1 ) ? ",\n" : "\n");
-		}
-	}
-	
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "</table>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += ");\n\n";
-	}
-	
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
+			{
+				if( symbols[i].kind == SYM_NONTERM )
+					code += "<td>" + symbols[i].label + "</td>";
+			}
+			
+			code += "</tr>";
+			
+			for( i = 0; i < states.length; i++ )
+			{
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
+				{
+					if( symbols[j].kind == SYM_NONTERM )
+					{
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+						{
+							code += val;
+						}
+						code += "</td>";
+					}
+				}
+				
+				code += "</tr>" ;
+			}
+			
+			code += "</table>";
+
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+			code += "</tr>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < states.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+				code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+		break;}
+		case MODE_GEN_JS:case "js":{
+			var pop_tab_json =[];
+			for( i = 0; i < productions.length; i++ )
+				pop_tab_json.push([productions[i].lhs,productions[i].rhs.length]);
+			code +="\nvar pop_tab ="+JSON.stringify(pop_tab_json)+";\n";
+			
+			var act_tab_json =[];
+			for( i = 0; i < states.length; i++ ){
+				var act_tab_json_item=[];
+				for( j = 0; j < states[i].actionrow.length; j++ )
+					act_tab_json_item.push(states[i].actionrow[j][0],states[i].actionrow[j][1]);
+				act_tab_json.push(act_tab_json_item);}
+			code +="\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
+			
+			var goto_tab_json = [];
+			for( i = 0; i < states.length; i++ ){
+				var goto_tab_json_item=[];
+				for( j = 0; j < states[i].gotorow.length; j++ )
+					goto_tab_json_item.push(states[i].gotorow[j][0],states[i].gotorow[j][1]);
+				goto_tab_json.push(goto_tab_json_item);}
+			code +="\nvar goto_tab ="+JSON.stringify(goto_tab_json)+";\n";	
+			
+			var defact_tab_json=[];
+			for( i = 0; i < states.length; i++ )
+				defact_tab_json.push(states[i].def_act);
+			code +="\nvar defact_tab ="+JSON.stringify(defact_tab_json)+";\n";
+			
+		break;}		
+	}	
 	return code;
 }
-
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
 	
@@ -287,13 +211,44 @@ function print_parse_tables( mode )
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_dfa_table( dfa_states )
-{
-	var code = new String();
+{	
+	var code ="";
+	code += "\nvar DFA_DATA=[];\n\n";
+	var json=[],ii,jj;
+	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
+		var line={};
+		for(jj=0;jj<dfa_states[ii].line.length;jj++)
+			if(dfa_states[ii].line[jj]!=-1)
+				line[jj]=dfa_states[ii].line[jj];
+		json.push({
+			line:line,
+			//nfa_set:dfa_states[ii].nfa_set,
+			accept:dfa_states[ii].accept,
+			//done:dfa_states[ii].done,
+			//group:dfa_states[ii].group
+			});
+		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
+		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
+	})(ii);
+	var json_str=JSON.stringify(json);
+	json_str=json_str.replace(/,/g,",\n\t");
+	//code+="\nvar DFA_DATA="+json_str+";\n\n";
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	/*
+	code+="var st=DATA[state].line[chr];\n"+
+	"if(typeof st == \"undefined\")st=-1;\n"+
+	"var ac=DATA[state].accept;\n"+
+	"set_state(st)\n"+
+	"if(ac!=-1){\n"+
+	"\tset_match(ac);\n"+
+	"\tset_match_pos(pos);\n"+
+	"}\n"+
+	"return;\n\n";
+	*/
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
-	code += "switch( state )\n"
-	code += "{\n";
+	code += "switch( state )\n{\n";
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		code += "	case " + i + ":\n";
@@ -336,28 +291,31 @@ function print_dfa_table( dfa_states )
 			}
 			
 			if( !grp_first )
-				code += " ) state = " + j + ";\n";
+				//code += " ) state = " + j + ";\n";
+				code += " ) set_state(" + j + ");\n";
 		}
 				
 		code += "		";
 		if( !first )
 			code += "else ";
-		code += "state = -1;\n"
+		//code += "state = -1;\n"
+		code += "set_state(-1);\n"
 		
 		if( dfa_states[i].accept > -1 )
 		{
-			code += "		match = " + dfa_states[i].accept + ";\n";
-			code += "		match_pos = pos;\n";
+			//code += "		match = " + dfa_states[i].accept + ";\n";
+			//code += "		match_pos = pos;\n";
+			code += "		set_match(" + dfa_states[i].accept + ");\n";
+			code += "		set_match_pos(pos);\n";
 		}
 		
 		code += "		break;\n\n";
 	}
 	
 	code += "}\n\n";
-
+	code += "}\n";
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -375,33 +333,12 @@ function print_dfa_table( dfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_symbol_labels()
-{
-	var code = new String();
-	var i;	
-	
-	code += "/* Symbol labels */\n";
-	code += "var labels = new Array(\n";
-	for( i = 0; i < symbols.length; i++ )
-	{
-		code += "\t\"" + symbols[i].label + "\" ";
-		
-		if( symbols[i].kind == SYM_TERM )
-			code += "/* Terminal symbol */";
-		else
-			code += "/* Non-terminal symbol */";
-			
-		if( i < symbols.length-1 )
-			code += ",";
-			
-		code += "\n";
-	}
-
-	code += ");\n\n";
-
-	return code;
+function print_symbol_labels(){//Generate code without comments
+	var i,arr
+	for(var i=0,arr=[];i<symbols.length;i++)
+		arr.push(symbols[i].label);
+	return "var labels = "+JSON.stringify(symbols)+";\n\n";
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_term_actions()
@@ -431,8 +368,8 @@ function print_symbol_labels()
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%match|%offset|%source" );
+	var code = "";
+	var re = /%match|%offset|%source/;
 	var i, j, k;	
 	var semcode;
 	var strmatch;
@@ -446,7 +383,7 @@ function print_term_actions()
 						"if( match == " + i + " )\n";
 			code += "	{\n";
 			
-			semcode = new String();
+			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
@@ -495,8 +432,8 @@ function print_term_actions()
 ----------------------------------------------------------------------------- */
 function print_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%[0-9]+|%%" );
+	var code = "";
+	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
 	
@@ -508,7 +445,7 @@ function print_actions()
 		code += "	case " + i + ":\n";
 		code += "	{\n";
 		
-		semcode = new String();
+		semcode = "";
 		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
 		{
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );

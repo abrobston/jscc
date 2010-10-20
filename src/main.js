@@ -13,13 +13,13 @@ of the Artistic License. Please see ARTISTIC for more information.
 
 function version()
 {
-	var info = new String();
+	var info = "";
 
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
 				"Generator written in JavaScript\n";
-	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
+	info += "Copyright (C) 2007-2010 by J.M.K S.F. Software Technologies," +
 				"Jan Max Meyer\n";
-	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
+	info += "http://jscc.jmksf.com ++ jscc<at>jmksf<dot>com\n\n";
 	
 	info += "You may use, modify and distribute this software under the " +
 				"terms and conditions\n";
@@ -31,7 +31,7 @@ function version()
 
 function help()
 {
-	var help = new String();
+	var help = "";
 
 	help += "usage: jscc [options] filename\n\n";
 
@@ -54,10 +54,10 @@ function help()
 reset_all( EXEC_CONSOLE );
 
 //Processing the command line arguments
-var out_file	= new String();
-var src_file	= new String();
+var out_file	= "";
+var src_file	= "";
 var tpl_file	= DEFAULT_DRIVER;
-var code_prefix	= new String();
+var code_prefix	= "";
 var dump_nfa	= false;
 var dump_dfa	= false;
 var verbose		= false;

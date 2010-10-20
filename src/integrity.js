@@ -59,8 +59,8 @@ function undef()
 ----------------------------------------------------------------------------- */
 function unreachable()
 {
-	var		stack		= new Array();
-	var		reachable	= new Array();
+	var		stack		= [];
+	var		reachable	= [];
 	var		i, j, k, l;
 	
 	for( i = 0; i < symbols.length; i++ )

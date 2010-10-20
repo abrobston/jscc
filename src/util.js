@@ -71,12 +71,12 @@ function reset_all( mode )
 	assoc_level = 1;
 	exec_mode = mode;
 
-	symbols = new Array();
-	productions = new Array();
-	states = new Array();
-	nfa_states = new Array();
-	dfa_states = new Array();
-	lex = new Array();
+	symbols = [];
+	productions = [];
+	states = [];
+	nfa_states = [];
+	dfa_states = [];
+	lex = [];
 	
 	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
@@ -88,8 +88,8 @@ function reset_all( mode )
 	
 	p = new PROD();
 	p.lhs = 0;
-	p.rhs = new Array();
-	p.code = new String( "%% = %1;" );
+	p.rhs = [];
+	p.code = "%% = %1;";
 	symbols[0].prods.push( productions.length );
 	productions.push( p );
 	
@@ -101,7 +101,7 @@ function reset_all( mode )
 	line = 1;
 	lookahead = void(0);
 	*/
-	file = new String();
+	file = "";
 	errors = 0;
 	show_errors = true;
 	warnings = 0;
@@ -113,8 +113,8 @@ function reset_all( mode )
 	
 	regex_weight = 0;
 	
-	code_head = new String();
-	code_foot = new String();
+	code_head = "";
+	code_foot = "";
 }
 
 

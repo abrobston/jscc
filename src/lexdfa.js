@@ -14,12 +14,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 //Utility functions; I think there is no documentation required about them.
 
 function create_dfa( where )
-{
+{///SV: this array better to replace by object with single characters like indexes
 	var dfa = new DFA();
 	
 	dfa.line = new Array( MAX_CHAR );
 	dfa.accept = -1;
-	dfa.nfa_set = new Array();
+	dfa.nfa_set = [];
 	dfa.done = false;
 	dfa.group = -1;
 	
@@ -59,9 +59,9 @@ function get_undone_dfa( dfa_states )
 //NFA test function; Has no use currently.
 function execute_nfa( machine, str )
 {
-	var	result		= new Array();
+	var	result		= [];
 	var	accept;
-	var	last_accept	= new Array();
+	var	last_accept	= [];
 	var last_length = 0;
 	var	chr_cnt		= 0;
 
@@ -110,7 +110,7 @@ function execute_nfa( machine, str )
 ----------------------------------------------------------------------------- */
 function move( state_set, machine, ch )
 {
-	var hits	= new Array();
+	var hits	= [];
 	var tos		= -1;
 	
 	do
@@ -147,8 +147,8 @@ function move( state_set, machine, ch )
 ----------------------------------------------------------------------------- */
 function epsilon_closure( state_set, machine )
 {
-	var 	stack	= new Array();
-	var		accept	= new Array();
+	var 	stack	= [];
+	var		accept	= [];
 	var		tos		= -1;
 	
 	for( var i = 0; i < state_set.length; i++ )
@@ -215,8 +215,8 @@ function epsilon_closure( state_set, machine )
 ----------------------------------------------------------------------------- */
 function create_subset( nfa_states )
 {
-	var dfa_states = new Array();
-	var stack = new Array();
+	var dfa_states = [];
+	var stack = [];
 	var current = create_dfa( dfa_states );
 	var trans;
 	var next = -1;
@@ -249,7 +249,7 @@ function create_subset( nfa_states )
 			
 		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 		{
-			trans = new Array();
+			trans = [];
 			trans = trans.concat( dfa_states[ current ].nfa_set );
 			
 			trans = move( trans, nfa_states, i );
@@ -297,10 +297,10 @@ function create_subset( nfa_states )
 ----------------------------------------------------------------------------- */
 function minimize_dfa( dfa_states )
 {
-	var		groups			= new Array();
-	var		group			= new Array();
-	var		accept_groups	= new Array();
-	var		min_dfa_states	= new Array();
+	var		groups			= [];
+	var		group			= [];
+	var		accept_groups	= [];
+	var		min_dfa_states	= [];
 	var		old_cnt 		= 0;
 	var		cnt 			= 0;
 	var		new_group;
@@ -314,7 +314,7 @@ function minimize_dfa( dfa_states )
 		Accepting and non-accepting states are pushed in
 		separate groups first
 	*/
-	groups.push( new Array() );
+	groups.push( [] );
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		if( dfa_states[i].accept > -1 )
@@ -326,7 +326,7 @@ function minimize_dfa( dfa_states )
 			if( j == accept_groups.length )
 			{
 				accept_groups.push( dfa_states[i].accept );
-				groups.push( new Array() );
+				groups.push( [] );
 			}
 			groups[ j+1 ].push( i );
 			dfa_states[ i ].group = j+1;
@@ -348,7 +348,7 @@ function minimize_dfa( dfa_states )
 
 		for( i = 0; i < groups.length; i++ )
 		{
-			new_group = new Array();
+			new_group = [];
 			
 			if( groups[i].length > 0 )
 			{
@@ -385,7 +385,7 @@ function minimize_dfa( dfa_states )
 
 			if( new_group.length > 0 )
 			{
-				groups[ groups.length ] = new Array();
+				groups[ groups.length ] = [];
 				groups[ groups.length-1 ] = groups[ groups.length-1 ].concat( new_group );
 				cnt += new_group.length;
 			}

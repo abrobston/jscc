@@ -51,9 +51,9 @@ function line_error( line, txt )
 	'[A-Za-z0-9_-]+'						IDENT
 	
 	/~ Whitespace: ~/
-	'\n'									[* 	continue;	*]
-	'/~([^~]/|~[^/]|[^~/])*~/'				[*	continue;	*]
-	'[\t\r ]+'								[*	continue;	*]
+	'\n'									[* continue; *]
+	'/~([^~]/|~[^/]|[^~/])*~/'				[* continue; *]
+	'[\t\r ]+'								[* continue; *]
 	;
 	
 ##
@@ -101,7 +101,7 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 															var regex = %2.substr( 1, %2.length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
 															compile_regex( regex, whitespace_token, 
-																( %2.charAt( 0 ) == '\'' ) ? false : true );
+																 %2.charAt( 0 ) != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
@@ -112,24 +112,20 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 token_defs:		token_defs token_def 				[*	%1.push( %2 );
 														%% = %1;
 													*]
-				| token_def							[*	%% = new Array();
-														%%.push( %1 );
-													*]
+				| token_def							[*	%%=[%1];	*]
 				;
 
 token_def:		string identifier code_opt 			[*	%% = create_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL );
 														var regex = %1.substr( 1, %1.length - 2 );
 														symbols[%%].code = %3;
 
-														compile_regex( regex, symbols[ %% ].id, 
-															( %1.charAt( 0 ) == '\'' ) ? false : true );
+														compile_regex( regex, symbols[ %% ].id, %1.charAt( 0 ) != '\''  );
 													*]
 				| string code_opt 					[*	var regex = %1.substr( 1, %1.length - 2 );
 														%% = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
 														symbols[%%].code = %2;
 
-														compile_regex( regex, symbols[ %% ].id, 
-															( %1.charAt( 0 ) == '\'' ) ? false : true );
+														compile_regex( regex, symbols[ %% ].id,  %1.charAt( 0 ) != '\'' );
 													*]
 				;
 
@@ -158,23 +154,21 @@ grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1,
 				| ~ ';'
 				;
 
-productions:	productions '|' rhs					[*	%% = new Array();
+productions:	productions '|' rhs					[*	///SV: why you create new array and not use the same?
+														%% = [];
 														%% = %%.concat( %1 );
 														%%.push( %3 );
 													*]
-				| rhs								[*	%% = new Array();
-														%%.push( %1 );
-													*]
+				| rhs								[*	%%=[%1]; *]
 				;
 
-rhs:			sequence_opt rhs_prec code_opt		[*	var prod = new PROD();
-														prod.id = productions.length;
-														prod.rhs = %1;
-														prod.level = %2;
-														prod.code = %3;														
-														if( prod.code == "" )
-															prod.code = new String( DEF_PROD_CODE );
-														
+rhs:			sequence_opt rhs_prec code_opt		[*	
+														var prod = new PROD({
+															id:productions.length,
+															rhs:%1,
+															level:%2,
+															code:(%3=="")?DEF_PROD_CODE:(%3)
+														});
 														//Get level of the leftmost terminal
 														//as production level.
 														if( prod.level == 0 )
@@ -211,16 +205,11 @@ rhs_prec:		'&' identifier						[* 	var index;
 				;
 
 sequence_opt:	sequence
-				|									[*	%% = new Array(); *]
+				|									[*	%% = []; *]
 				;
 
-sequence:		sequence symbol						[*	%% = new Array();
-														%% = %%.concat( %1 );
-														%%.push( %2 );
-													*]
-				| symbol							[*	%% = new Array();
-														%%.push( %1 );
-													*]
+sequence:		sequence symbol						[*	%%=%1.concat([%2]); *]
+				| symbol							[* %%=[%1]; *]
 				;
 
 symbol:			identifier							[*	var index;
@@ -243,7 +232,7 @@ symbol:			identifier							[*	var index;
 
 /~ Universal elements ~/
 code_opt:		code
-				|									[*	%% = new String(); *]
+				|									[*	%% = ""; *]
 				;
 
 code:			code CODE							[*	%% = %1 + %2; *]
@@ -261,8 +250,8 @@ identifier:		IDENT
 
 function parse_grammar( str, filename )
 {
-	var error_offsets = new Array();
-	var error_expects = new Array();
+	var error_offsets = [];
+	var error_expects = [];
 	var parse_error = 0;
 	
 	first_lhs = true;
