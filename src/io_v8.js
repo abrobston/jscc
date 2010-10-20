@@ -44,7 +44,7 @@ function _quit( exitcode )
 
 function read_file( file )
 {
-	var src = new String();
+	var src = "";
 	
 	if( file_exists( file ) )
 		src = file_read( file );

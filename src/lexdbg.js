@@ -25,7 +25,7 @@ function print_nfa( ta )
 						
 		if( nfa_states[i].edge == EDGE_CHAR )
 		{
-			var chars = new String();
+			var chars = "";
 			for( var j = MIN_CHAR; j < MAX_CHAR; j++)
 			{
 				if( bitset_get( nfa_states[i].ccl, j ) )
@@ -49,7 +49,7 @@ function print_nfa( ta )
 
 function print_dfa( dfa_states )
 {
-	var str = new String();
+	var str = "";
 	var chr_cnt = 0;
 	for( var i = 0; i < dfa_states.length; i++ )
 	{

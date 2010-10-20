@@ -10,47 +10,50 @@ Usage:	Bitset functionalities implemented in JavaScript.
 You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
+///SV: it is no reason to optimize data size, so we may use array of bool directly in code
 
-//I think there is no documentation required on these tiny functions...
-function bitset_create( size )
+function BitSetBool(size)
 {
-	if( size <= 0 )
-		return new Array();
-	
-	return new Array( Math.ceil( size / 8 ) );
+	this.data=new Array((size>0)?size:0);
 }
 
+BitSetBool.prototype={
+	set:function(bit,state)
+	{
+		return this.data[bit]=state;
+	},
+	get:function(bit)
+	{
+		return this.data[bit];
+	},
+	count:function()
+	{
+		var i, c = 0;
 
+		for( i = 0; i < this.data.length; i++ )
+			if( this.data[i] )
+				c++;
+		return c;
+	}
+}
+
+var BitSet=BitSetBool;
+
+///SV: this functions used before deleting them call from code
+function bitset_create(size)
+{
+	return new BitSet(size);
+}
 function bitset_set( bitset, bit, state )
 {
-	if( !bitset && bit < 0 )
-		return false;
-		
-	if( state )
-		bitset[ Math.floor( bit / 8 ) ] |= ( 1 << (bit % 8) );
-	else
-		bitset[ Math.floor( bit / 8 ) ] &= ( 0xFF ^ ( 1 << (bit % 8) ) );
-		
-	return true;
+	return bitset.set(bit,state);
 }
-
-
 function bitset_get( bitset, bit )
 {
-	if( !bitset && bit < 0 )
-		return 0;
-
-	return bitset[ Math.floor( bit / 8 ) ] & ( 1 << ( bit % 8 ) );
+	return bitset.get(bit);
 }
-
-
-function bitset_count( bitset )
+function bitset_count(bitset)
 {
-	var cnt = 0;
-
-	for( var i = 0; i < bitset.length * 8; i++ )
-		if( bitset_get( bitset, i ) )
-			cnt++;
-			
-	return cnt;
+	return bitset.count();
 }
+

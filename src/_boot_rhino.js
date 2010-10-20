@@ -1,3 +1,251 @@
+
+if (!this.JSON) {
+    this.JSON = {};
+}
+
+(function () {
+
+    function f(n) {
+        return n < 10 ? '0' + n : n;
+    }
+
+    if (typeof Date.prototype.toJSON !== 'function') {
+
+        Date.prototype.toJSON = function (key) {
+
+            return isFinite(this.valueOf()) ?
+                   this.getUTCFullYear()   + '-' +
+                 f(this.getUTCMonth() + 1) + '-' +
+                 f(this.getUTCDate())      + 'T' +
+                 f(this.getUTCHours())     + ':' +
+                 f(this.getUTCMinutes())   + ':' +
+                 f(this.getUTCSeconds())   + 'Z' : null;
+        };
+
+        String.prototype.toJSON =
+        Number.prototype.toJSON =
+        Boolean.prototype.toJSON = function (key) {
+            return this.valueOf();
+        };
+    }
+
+    var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
+        escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
+        gap,
+        indent,
+        meta = {    
+            '\b': '\\b',
+            '\t': '\\t',
+            '\n': '\\n',
+            '\f': '\\f',
+            '\r': '\\r',
+            '"' : '\\"',
+            '\\': '\\\\'
+        },
+        rep;
+
+
+    function quote(string) {
+      escapable.lastIndex = 0;
+        return escapable.test(string) ?
+            '"' + string.replace(escapable, function (a) {
+                var c = meta[a];
+                return typeof c === 'string' ? c :
+                    '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            }) + '"' :
+            '"' + string + '"';
+    }
+
+
+    function str(key, holder) {
+
+        var i,          
+            k,          
+            v,          
+            length,
+            mind = gap,
+            partial,
+            value = holder[key];
+
+
+        if (value && typeof value === 'object' &&
+                typeof value.toJSON === 'function') {
+            value = value.toJSON(key);
+        }
+
+
+        if (typeof rep === 'function') {
+            value = rep.call(holder, key, value);
+        }
+
+
+        switch (typeof value) {
+        case 'string':
+            return quote(value);
+
+        case 'number':
+
+
+            return isFinite(value) ? String(value) : 'null';
+
+        case 'boolean':
+        case 'null':
+
+
+            return String(value);
+
+
+        case 'object':
+
+
+            if (!value) {
+                return 'null';
+            }
+
+
+            gap += indent;
+            partial = [];
+
+
+            if (Object.prototype.toString.apply(value) === '[object Array]') {
+
+
+                length = value.length;
+                for (i = 0; i < length; i += 1) {
+                    partial[i] = str(i, value) || 'null';
+                }
+
+
+                v = partial.length === 0 ? '[]' :
+                    gap ? '[\n' + gap +
+                            partial.join(',\n' + gap) + '\n' +
+                                mind + ']' :
+                          '[' + partial.join(',') + ']';
+                gap = mind;
+                return v;
+            }
+
+
+            if (rep && typeof rep === 'object') {
+                length = rep.length;
+                for (i = 0; i < length; i += 1) {
+                    k = rep[i];
+                    if (typeof k === 'string') {
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                        }
+                    }
+                }
+            } else {
+
+
+                for (k in value) {
+                    if (Object.hasOwnProperty.call(value, k)) {
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                        }
+                    }
+                }
+            }
+
+
+            v = partial.length === 0 ? '{}' :
+                gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' +
+                        mind + '}' : '{' + partial.join(',') + '}';
+            gap = mind;
+            return v;
+        }
+    }
+
+
+
+    if (typeof JSON.stringify !== 'function') {
+        JSON.stringify = function (value, replacer, space) {
+
+
+            var i;
+            gap = '';
+            indent = '';
+
+
+            if (typeof space === 'number') {
+                for (i = 0; i < space; i += 1) {
+                    indent += ' ';
+                }
+
+
+            } else if (typeof space === 'string') {
+                indent = space;
+            }
+
+
+            rep = replacer;
+            if (replacer && typeof replacer !== 'function' &&
+                    (typeof replacer !== 'object' ||
+                     typeof replacer.length !== 'number')) {
+                throw new Error('JSON.stringify');
+            }
+
+            return str('', {'': value});
+        };
+    }
+
+
+    if (typeof JSON.parse !== 'function') {
+        JSON.parse = function (text, reviver) {
+
+            var j;
+
+            function walk(holder, key) {
+
+                var k, v, value = holder[key];
+                if (value && typeof value === 'object') {
+                    for (k in value) {
+                        if (Object.hasOwnProperty.call(value, k)) {
+                            v = walk(value, k);
+                            if (v !== undefined) {
+                                value[k] = v;
+                            } else {
+                                delete value[k];
+                            }
+                        }
+                    }
+                }
+                return reviver.call(holder, key, value);
+            }
+
+
+
+            text = String(text);
+            cx.lastIndex = 0;
+            if (cx.test(text)) {
+                text = text.replace(cx, function (a) {
+                    return '\\u' +
+                        ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+                });
+            }
+
+
+            if (/^[\],:{}\s]*$/.
+test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@').
+replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
+
+
+                j = eval('(' + text + ')');
+
+
+                return typeof reviver === 'function' ?
+                    walk({'': j}, '') : j;
+            }
+
+
+            throw new SyntaxError('JSON.parse');
+        };
+    }
+}());
 /* -HEADER----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -11,12 +259,27 @@ You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
+/// constructors generator:
+function createConstructor(a){
+    var arr={};
+    for(var i = 0;i<a.length;i++)
+        arr[a[i]]=true;
+    return function(o){
+        o=o||{};
+        for(var f in o)
+            if(f in arr)
+                this[f]=o[f];
+    }
+}
+/// there was "continue" in code, we must to replace it
+function Continue(){}
 /*
 	Constants
 */
-
+var NEW_VERSION=true;
+//var DEFAULT_DRIVER="";
 //Program version info 
-var JSCC_VERSION			= "0.32";
+var JSCC_VERSION			= "0.33";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -71,83 +334,15 @@ var EDGE_CHAR				= 2;
 /*
 	Structs
 */
-function SYMBOL()
-{
-	var kind;			//Symbol kind (SYM_TERM, SYM_NONTERM)
-	var label;			//Symbol label/name
-	var prods;			//Array of associated productions (SYM_NONTERM only)
-	var first;			//Array of first symbols
-	
-	var associativity;	//Associativity mode (SYM_TERM only)
-	var level;			//Association level (SYM_TERM only)
-	
-	var code;			//Code to be executed at token recognition (SYM_TERM only)
-	var special;		//Special symbol
-	
-	/* --- Flags & Information --- */
-	var nullable;		//Nullable-flag
-	var defined;		//Defined flag
-	
-	var defined_at;		//Line of definition
-	var used_at;		//Line of use
-}
 
-function PROD()
-{
-	var lhs;
-	var rhs;
-	var level;
-	var code;
-}
-
-function ITEM()
-{
-	var prod;
-	var dot_offset;
-	var lookahead;
-}
-
-function STATE()
-{
-	var kernel;
-	var epsilon;
-	var done;
-	var closed;
-	
-	var actionrow;
-	var	gotorow;
-}
-
-function NFA()
-{
-	var		edge;
-	var		ccl;
-	var		follow;
-	var		follow2;
-	var		accept;
-	var		weight;
-}
-
-function DFA()
-{
-	var		line;
-	var		nfa_set;
-	var		accept;
-	var		done;
-	var		group;
-}
-
-function PARAM()
-{
-	var start;
-	var end;
-}
-
-function TOKEN()
-{
-	var token;
-	var lexeme;
-}
+var SYMBOL=createConstructor(['kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
+var PROD=createConstructor(['id','lhs','rhs','level','code']);
+var ITEM=createConstructor(['prod','dot_offset','lookahead']);
+var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
+var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);//object
+var PARAM=createConstructor(['start','end']);
+var TOKEN=createConstructor(['token','lexeme']);
 
 /*
 	Globals (will be initialized via reset_all()!)
@@ -180,6 +375,89 @@ var exec_mode;
 var assoc_level;
 
 var	regex_weight;
+/* -MODULE----------------------------------------------------------------------
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Contibutions by Louis P. Santillan <lpsantil@gmail.com>
+http://www.jmksf.com ++ jscc<-AT->jmksf.com
+
+File:	io_rhino.js
+Author:	Louis P. Santillan
+		Jan Max Meyer
+Usage:	Console-based wrapper function set for JS/CC to be executed
+		via Mozilla/Rhino.
+
+You may use, modify and distribute this software under the terms and conditions
+of the Artistic License. Please see ARTISTIC for more information.
+----------------------------------------------------------------------------- */
+
+var DEFAULT_DRIVER = "driver_rhino.js_";
+
+function _error( msg )
+{
+	if( show_errors )
+		print( file + ": error: " + msg );
+	
+	errors++;
+}
+
+function _warning( msg )
+{
+	if( show_warnings )
+		print( file + ": warning: " + msg );
+	
+	warnings++;
+}
+
+function _print( txt )
+{
+	print( txt );
+}
+
+function _quit( exitcode )
+{
+	quit( exitcode );
+}
+
+function read_file( file )
+{
+	var src = new String();
+	
+	if( ( new java.io.File( file ).exists() ) )
+		src = readFile( file );
+	else
+	{
+		_error( "unable to open file '" + file + "'" );
+		quit( 1 );
+	}
+	
+	return src;
+}
+
+function write_file( file, content )
+{
+	var f = new java.io.PrintWriter( file );
+		
+	if( f )
+	{
+		f.write( content );
+		f.close();
+	}
+	else
+	{
+		_error( "unable to write '" + file + "'" );
+		return false;
+	}
+	
+	return true;
+}
+
+var args_global_var = arguments;
+function get_arguments()
+{
+   return args_global_var;
+}
+
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -573,7 +851,7 @@ function rhs_first( item, p, begin )
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	printtab.js
@@ -585,6 +863,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
 
+/*
+	15.04.2009	Jan Max Meyer	Removed the HTML-Code generation flag and re-
+								placed it with text output; In WebEnv, this
+								will be placed in <pre>-tags, and we finally
+								can view the parse-tables even on the console.
+*/
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
 	
@@ -605,191 +889,161 @@ of the Artistic License. Please see ARTISTIC for more information.
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	New table generator section to build default
+								reduction table on each state.
 ----------------------------------------------------------------------------- */
-function print_parse_tables( mode )
-{
-	var code	= new String();
+function print_parse_tables( mode ){
+	var code	= "";
 	var i, j, deepest = 0, val;
-	
-	/* Printing the pop table */
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
-		code += "</tr>";
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
-		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
-		code += "</tr>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Pop-Table */\n";
-		code += "var pop_tab = new Array(\n";
-	}
-	
-	for( i = 0; i < productions.length; i++ )
-	{
-		if( mode == MODE_GEN_HTML )
-		{
+	switch(mode){
+		case MODE_GEN_HTML:case "html":{
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
-			code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
-			code += "<td>" + productions[i].rhs.length + "</td>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
 			code += "</tr>";
-		}
-		else if( mode == MODE_GEN_JS )
-		{
-			code += "\tnew Array( " + productions[i].lhs + "/* " + symbols[productions[i].lhs].label + " */, "
-				+ productions[i].rhs.length + " )" +
-					(( i < productions.length-1 ) ? ",\n" : "\n");
-		}
-	}
-	
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "</table>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += ");\n\n";
-	}
-	
-	/* Printing the action table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_TERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_TERM )
-				code += "<td><b>" + symbols[i].label + "</b></td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < productions.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
+				code += "<td>" + productions[i].rhs.length + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_TERM )
+					deepest++;
 			
-			for( j = 0; j < symbols.length; j++ )
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
+			code += "</tr>";
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
 			{
-				if( symbols[j].kind == SYM_TERM )
-				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
-					{
-						if( val <= 0 )
-							code += "r" + (val * -1);
-						else
-							code += "s" + val;
-					}
-					code += "</td>";
-				}
+				if( symbols[i].kind == SYM_TERM )
+					code += "<td><b>" + symbols[i].label + "</b></td>";
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Action-Table */\n";
-		code += "var act_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */ new Array( "
-			for( j = 0; j < states[i].actionrow.length; j++ )
-				code += states[i].actionrow[j][0] + "/* \"" + 
-					symbols[states[i].actionrow[j][0]].label + "\" */," + states[i].actionrow[j][1]
-						+ ( ( j < states[i].actionrow.length-1 ) ? " , " : "" );
+			code += "</tr>";
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
-	/* Printing the goto table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_NONTERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_NONTERM )
-				code += "<td>" + symbols[i].label + "</td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-			
-			for( j = 0; j < symbols.length; j++ )
+			for( i = 0; i < states.length; i++ )
 			{
-				if( symbols[j].kind == SYM_NONTERM )
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
 				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+					if( symbols[j].kind == SYM_TERM )
 					{
-						code += val;
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
+						{
+							if( val <= 0 )
+								code += "r" + (val * -1);
+							else
+								code += "s" + val;
+						}
+						code += "</td>";
 					}
-					code += "</td>";
 				}
+				
+				code += "</tr>" ;
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Goto-Table */\n";
-		code += "var goto_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */";
-			code += " new Array( "
-							
-			for( j = 0; j < states[i].gotorow.length; j++ )
-				code += states[i].gotorow[j][0] + "/* " + symbols[ states[i].gotorow[j][0] ].label + " */,"
-					+ states[i].gotorow[j][1] + ( ( j < states[i].gotorow.length-1 ) ? " , " : "" );
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_NONTERM )
+					deepest++;
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
+			code += "</tr>";
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
+			{
+				if( symbols[i].kind == SYM_NONTERM )
+					code += "<td>" + symbols[i].label + "</td>";
+			}
+			
+			code += "</tr>";
+			
+			for( i = 0; i < states.length; i++ )
+			{
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
+				{
+					if( symbols[j].kind == SYM_NONTERM )
+					{
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+						{
+							code += val;
+						}
+						code += "</td>";
+					}
+				}
+				
+				code += "</tr>" ;
+			}
+			
+			code += "</table>";
+
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+			code += "</tr>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < states.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+				code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+		break;}
+		case MODE_GEN_JS:case "js":{
+			var pop_tab_json =[];
+			for( i = 0; i < productions.length; i++ )
+				pop_tab_json.push([productions[i].lhs,productions[i].rhs.length]);
+			code +="\nvar pop_tab ="+JSON.stringify(pop_tab_json)+";\n";
+			
+			var act_tab_json =[];
+			for( i = 0; i < states.length; i++ ){
+				var act_tab_json_item=[];
+				for( j = 0; j < states[i].actionrow.length; j++ )
+					act_tab_json_item.push(states[i].actionrow[j][0],states[i].actionrow[j][1]);
+				act_tab_json.push(act_tab_json_item);}
+			code +="\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
+			
+			var goto_tab_json = [];
+			for( i = 0; i < states.length; i++ ){
+				var goto_tab_json_item=[];
+				for( j = 0; j < states[i].gotorow.length; j++ )
+					goto_tab_json_item.push(states[i].gotorow[j][0],states[i].gotorow[j][1]);
+				goto_tab_json.push(goto_tab_json_item);}
+			code +="\nvar goto_tab ="+JSON.stringify(goto_tab_json)+";\n";	
+			
+			var defact_tab_json=[];
+			for( i = 0; i < states.length; i++ )
+				defact_tab_json.push(states[i].def_act);
+			code +="\nvar defact_tab ="+JSON.stringify(defact_tab_json)+";\n";
+			
+		break;}		
+	}	
 	return code;
 }
-
-
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
 	
@@ -808,13 +1062,49 @@ function print_parse_tables( mode )
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_dfa_table( dfa_states )
-{
-	var code = new String();
+{	
+	var code ="";
+	//code += "\nvar DFA_DATA=[];\n\n";
+	//var json=[],ii,jj;
+	
+	//This is how I would format it
+	/*for( ii=0; ii < dfa_states.length; ii++)
+	(
+		function( ii )
+		{
+			var line = {};
+			for( jj = 0; jj < dfa_states[ii].line.length; jj++ )
+				if(dfa_states[ii].line[jj]!=-1)
+					line[jj] = dfa_states[ii].line[jj];
+					
+		//and so on... ;)
+		
+		json.push({
+			line:line,
+			accept:dfa_states[ii].accept,
+			});
+		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
+		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
+	})(ii);*/
+	//var json_str = JSON.stringify( json );
+	//json_str=json_str.replace( /,/g , ",\n\t" );
+	//code+="\nvar DFA_DATA="+json_str+";\n\n";
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	/*
+	code+="var st=DATA[state].line[chr];\n"+
+	"if(typeof st == \"undefined\")st=-1;\n"+
+	"var ac=DATA[state].accept;\n"+
+	"set_state(st)\n"+
+	"if(ac!=-1){\n"+
+	"\tset_match(ac);\n"+
+	"\tset_match_pos(pos);\n"+
+	"}\n"+
+	"return;\n\n";
+	*/
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
-	code += "switch( state )\n"
-	code += "{\n";
+	code += "switch( state )\n{\n";
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		code += "	case " + i + ":\n";
@@ -857,28 +1147,31 @@ function print_dfa_table( dfa_states )
 			}
 			
 			if( !grp_first )
-				code += " ) state = " + j + ";\n";
+				//code += " ) state = " + j + ";\n";
+				code += " ) set_state(" + j + ");\n";
 		}
 				
 		code += "		";
 		if( !first )
 			code += "else ";
-		code += "state = -1;\n"
+		//code += "state = -1;\n"
+		code += "set_state(-1);\n"
 		
 		if( dfa_states[i].accept > -1 )
 		{
-			code += "		match = " + dfa_states[i].accept + ";\n";
-			code += "		match_pos = pos;\n";
+			//code += "		match = " + dfa_states[i].accept + ";\n";
+			//code += "		match_pos = pos;\n";
+			code += "		set_match(" + dfa_states[i].accept + ");\n";
+			code += "		set_match_pos(pos);\n";
 		}
 		
 		code += "		break;\n\n";
 	}
 	
 	code += "}\n\n";
-
+	code += "}\n";
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -896,33 +1189,12 @@ function print_dfa_table( dfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_symbol_labels()
-{
-	var code = new String();
-	var i;	
-	
-	code += "/* Symbol labels */\n";
-	code += "var labels = new Array(\n";
-	for( i = 0; i < symbols.length; i++ )
-	{
-		code += "\t\"" + symbols[i].label + "\" ";
-		
-		if( symbols[i].kind == SYM_TERM )
-			code += "/* Terminal symbol */";
-		else
-			code += "/* Non-terminal symbol */";
-			
-		if( i < symbols.length-1 )
-			code += ",";
-			
-		code += "\n";
-	}
-
-	code += ");\n\n";
-
-	return code;
+function print_symbol_labels(){//Generate code without comments
+	var i,arr
+	for(var i = 0, arr= []; i < symbols.length ; i++ )
+		arr.push( symbols[ i ].label );
+	return "var labels = "+JSON.stringify( symbols )+";\n\n";
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_term_actions()
@@ -952,8 +1224,8 @@ function print_symbol_labels()
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%match|%offset|%source" );
+	var code = "";
+	var re = /%match|%offset|%source/;
 	var i, j, k;	
 	var semcode;
 	var strmatch;
@@ -967,7 +1239,7 @@ function print_term_actions()
 						"if( match == " + i + " )\n";
 			code += "	{\n";
 			
-			semcode = new String();
+			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
@@ -1016,8 +1288,8 @@ function print_term_actions()
 ----------------------------------------------------------------------------- */
 function print_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%[0-9]+|%%" );
+	var code = "";
+	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
 	
@@ -1029,7 +1301,7 @@ function print_actions()
 		code += "	case " + i + ":\n";
 		code += "	{\n";
 		
-		semcode = new String();
+		semcode = "";
 		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
 		{
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
@@ -1171,7 +1443,7 @@ function get_error_state()
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
 http://www.jmksf.com ++ jscc<-AT->jmksf.com
 
 File:	tabgen.js
@@ -1187,12 +1459,13 @@ function create_state()
 {
 	var state = new STATE();
 	
-	state.kernel = new Array();
-	state.epsilon = new Array();
-	state.actionrow = new Array();
-	state.gotorow = new Array();
+	state.kernel = [];
+	state.epsilon = [];
+	state.actionrow = [];
+	state.gotorow = [];
 	state.done = false;
 	state.closed = false;
+	state.def_act = 0;
 
 	states.push( state );
 	
@@ -1206,7 +1479,7 @@ function create_item( p )
 	
 	item.prod = p;
 	item.dot_offset = 0;
-	item.lookahead = new Array();
+	item.lookahead = [];
 	
 	return item;
 }
@@ -1219,7 +1492,7 @@ function add_table_entry( row, sym, act )
 		if( row[i][0] == sym )
 			return row;
 	
-	row.push( new Array( sym, act ) );
+	row.push( [ sym, act ] );
 	return row;
 }
 
@@ -1272,6 +1545,12 @@ function get_undone_state()
 	}
 			
 	return -1;
+}
+
+
+function sort_partition( a, b )
+{
+	return a.prod - b.prod;
 }
 
 
@@ -1349,10 +1628,10 @@ function create_symbol( label, kind, special )
 	var sym = new SYMBOL();
 	sym.label = label;
 	sym.kind = kind;
-	sym.prods = new Array();
+	sym.prods = [];
 	sym.nullable = false;
 	sym.id = symbols.length;
-	sym.code = new String();
+	sym.code = "";
 	
 	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
 	sym.level = 0; //Could be changed by grammar parser
@@ -1362,7 +1641,7 @@ function create_symbol( label, kind, special )
 	//Flags
 	sym.defined = false;
 
-	sym.first = new Array();
+	sym.first = [];
 	
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
@@ -1504,10 +1783,12 @@ function close_items( seed, closure )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
+								and caused wrong lookahead computation.
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
-	var closure = new Array(), nclosure, partition;
+	var closure = [], nclosure, partition;
 	var item, partition_sym;
 	var i, j, k, l, cnt = 0, old_cnt = 0, tmp_cnt, ns;
 	
@@ -1540,7 +1821,7 @@ function lalr1_closure( s )
 
 			closure[0].prod = states[s].kernel[i].prod;
 			closure[0].dot_offset = states[s].kernel[i].dot_offset;
-			closure[0].lookahead = new Array();
+			closure[0].lookahead = [];
 		
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
@@ -1572,8 +1853,8 @@ function lalr1_closure( s )
 	
 	while( closure.length > 0 )
 	{
-		partition = new Array();
-		nclosure = new Array();
+		partition = [];
+		nclosure = [];
 		partition_sym = -1;
 		
 		for( i = 0; i < closure.length; i++ )
@@ -1583,9 +1864,8 @@ function lalr1_closure( s )
 						
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
-			
-				//_print( productions[closure[i].prod].rhs[closure[i].dot_offset] + " " + partition_sym + "<br />" );
-				if( productions[closure[i].prod].rhs[closure[i].dot_offset] == partition_sym )
+				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
+						== partition_sym )
 				{
 					closure[i].dot_offset++;
 					partition.push( closure[i] );
@@ -1595,10 +1875,20 @@ function lalr1_closure( s )
 			}
 		}
 		
-		//print_item_set( "partition " + s, partition );
-		
 		if( partition.length > 0 )
 		{
+
+			/*
+				beachcoder Feb 23, 2009:
+				Uhh here was a very exciting bug that only came up on
+				special grammar constellations: If we don't sort the
+				partition set by production here, it may happen that
+				states get wrong lookahead, and unexpected conflicts
+				or failing grammars come up.
+			*/
+			partition.sort( sort_partition );
+			
+			//Now one can check for equality!
 			for( i = 0; i < states.length; i++ )
 			{	
 				if( item_set_equal( states[i].kernel, partition ) )
@@ -1692,102 +1982,160 @@ function lalr1_closure( s )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function do_reductions( item_set, s )
+function do_reductions( s )
 {
-	var i, j, ex, act, output_warning;
-	for( i = 0; i < item_set.length; i++ )
+	var n, i, j, ex, act, output_warning, item_set;
+	var reds = [];
+	var max = 0, count;
+	
+	for( n = 0; n < 2; n++ )
 	{
-		if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
+		if( !n )
+			item_set = states[ s ].kernel;
+		else
+			item_set = states[ s ].epsilon;
+			
+		// Do the reductions
+		for( i = 0; i < item_set.length; i++ )
 		{
-			for( j = 0; j < item_set[i].lookahead.length; j++ )
+			if( item_set[i].dot_offset == productions[item_set[i].prod].rhs.length )
 			{
-				output_warning = true;
-
-				ex = get_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j] );
-
-				act = ex;
-				if( ex == void(0) )
+				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
-					states[s].actionrow = add_table_entry( states[s].actionrow,
-						item_set[i].lookahead[j], -1 * item_set[i].prod );
-						
-					reduces++;
-				}
-				else
-				{
-					var warning	= new String();
-					if( ex > 0 )
+					output_warning = true;
+	
+					ex = get_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j] );
+	
+					act = ex;
+					if( ex == void(0) )
 					{
-						//Shift-reduce conflict
+						act = -1 * item_set[i].prod;
 
-						//Is there any level specified?
-						if( symbols[item_set[i].lookahead[j]].level > 0
-							|| productions[ item_set[i].prod ].level > 0 )
-						{
-							//Is the level the same?
-							if( symbols[item_set[i].lookahead[j]].level ==
-								productions[ item_set[i].prod ].level )
-							{
-								//In case of left-associativity, reduce
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_LEFT )
-								{
-									//Reduce
-									act = -1 * item_set[i].prod;
-								}
-								//else, if nonassociativity is set,
-								//remove table entry.
-								else
-								if( symbols[item_set[i].lookahead[j]].assoc
-										== ASSOC_NOASSOC )
-								{
-									remove_table_entry( states[s].actionrow,
-											item_set[i].lookahead[j] );
-
-									_warning(
-										"Removing nonassociative symbol '"
-										 + symbols[item_set[i].lookahead[j]].label + "' in state " + s );
-
-									output_warning = false;
-								}
-							}
-							else
-							{
-								//If symbol precedence is lower production's
-								//precedence, reduce
-								if( symbols[item_set[i].lookahead[j]].level <
-										productions[ item_set[i].prod ].level )
-									//Reduce
-									act = -1 * item_set[i].prod;
-							}
-						}
-						
-						warning = "Shift";
+						states[s].actionrow = add_table_entry( states[s].actionrow,
+							item_set[i].lookahead[j], act );
+							
+						reduces++;
 					}
 					else
 					{
-						//Reduce-reduce conflict
-						act = ( ( act * -1 < item_set[i].prod ) ?
-									act : -1 * item_set[i].prod );
-						
-						warning = "Reduce";
+						var warning	= "";
+						if( ex > 0 )
+						{
+							//Shift-reduce conflict
+	
+							//Is there any level specified?
+							if( symbols[item_set[i].lookahead[j]].level > 0
+								|| productions[ item_set[i].prod ].level > 0 )
+							{
+								//Is the level the same?
+								if( symbols[item_set[i].lookahead[j]].level ==
+									productions[ item_set[i].prod ].level )
+								{
+									//In case of left-associativity, reduce
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_LEFT )
+									{
+										//Reduce
+										act = -1 * item_set[i].prod;
+									}
+									//else, if nonassociativity is set,
+									//remove table entry.
+									else
+									if( symbols[item_set[i].lookahead[j]].assoc
+											== ASSOC_NOASSOC )
+									{
+										remove_table_entry( states[s].actionrow,
+												item_set[i].lookahead[j] );
+	
+										_warning(
+											"Removing nonassociative symbol '" +
+											symbols[item_set[i].lookahead[j]].label +
+												"' in state " + s );
+	
+										output_warning = false;
+									}
+								}
+								else
+								{
+									//If symbol precedence is lower production's
+									//precedence, reduce
+									if( symbols[item_set[i].lookahead[j]].level <
+											productions[ item_set[i].prod ].level )
+										//Reduce
+										act = -1 * item_set[i].prod;
+								}
+							}
+							
+							warning = "Shift";
+						}
+						else
+						{
+							//Reduce-reduce conflict
+							act = ( ( act * -1 < item_set[i].prod ) ?
+										act : -1 * item_set[i].prod );
+							
+							warning = "Reduce";
+						}
+	
+						warning += "-reduce conflict on symbol '" +
+							symbols[item_set[i].lookahead[j]].label +
+								"' in state " + s;
+						warning += "\n         Conflict resolved by " +
+							( ( act <= 0 ) ? "reducing with production" :
+								"shifting to state" ) + " " +
+							( ( act <= 0 ) ? act * -1 : act );
+	
+						if( output_warning )
+							_warning( warning );
+	
+						if( act != ex )
+							update_table_entry( states[s].actionrow,
+								item_set[i].lookahead[j], act );
 					}
-
-					warning += "-reduce conflict on symbol '" + symbols[item_set[i].lookahead[j]].label + "' in state " + s;
-					warning += "\n         Conflict resolved by " +
-								( ( act <= 0 ) ? "reducing with production" : "shifting to state" )
-									+ " " + ( ( act <= 0 ) ? act * -1 : act );
-
-					if( output_warning )
-						_warning( warning );
-
-					if( act != ex )
-						update_table_entry( states[s].actionrow,
-							item_set[i].lookahead[j], act );
-				}				
+					
+					//Remember this reduction, if there is any
+					if( act <= 0 )
+						reds.push( act * -1 );
+				}
 			}
 		}
+	}
+	
+	/*
+		JMM 16.04.2009
+		Find most common reduction
+	*/
+	states[ s ].def_act = -1; //Define no default action
+	
+	//Are there any reductions? Then select the best of them!
+	for( i = 0; i < reds.length; i++ )
+	{
+		for( j = 0, count = 0; j < reds.length; j++ )
+		{
+			if( reds[j] == reds[i] )
+				count++;
+		}
+		
+		if( max < count )
+		{
+			max = count;
+			states[ s ].def_act = reds[ i ];
+		}
+	}
+	
+	//Remove all default reduce action reductions, if they exist.
+	if( states[s].def_act >= 0 )
+	{
+		do
+		{
+			count = states[s].actionrow.length;
+
+			for( i = 0; i < states[s].actionrow.length; i++ )
+				if( states[s].actionrow[i][1] == states[s].def_act * -1 )
+					states[s].actionrow.splice( i, 1 );
+		}
+		while( count != states[s].actionrow.length );
 	}
 }
 
@@ -1816,6 +2164,10 @@ function do_reductions( item_set, s )
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
+								most common production will be defined as the
+								default, and all entries referencing this rule
+								are removed.
 ----------------------------------------------------------------------------- */
 function lalr1_parse_table( debug )
 {
@@ -1837,11 +2189,8 @@ function lalr1_parse_table( debug )
 	}
 	
 	for( i = 0; i < states.length; i++ )
-	{
-		do_reductions( states[i].kernel, i );
-		do_reductions( states[i].epsilon, i );
-	}
-	
+		do_reductions( i );
+
 	if( debug )
 	{		
 		for( i = 0; i < states.length; i++ )
@@ -1931,12 +2280,12 @@ function reset_all( mode )
 	assoc_level = 1;
 	exec_mode = mode;
 
-	symbols = new Array();
-	productions = new Array();
-	states = new Array();
-	nfa_states = new Array();
-	dfa_states = new Array();
-	lex = new Array();
+	symbols = [];
+	productions = [];
+	states = [];
+	nfa_states = [];
+	dfa_states = [];
+	lex = [];
 	
 	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
@@ -1948,8 +2297,8 @@ function reset_all( mode )
 	
 	p = new PROD();
 	p.lhs = 0;
-	p.rhs = new Array();
-	p.code = new String( "%% = %1;" );
+	p.rhs = [];
+	p.code = "%% = %1;";
 	symbols[0].prods.push( productions.length );
 	productions.push( p );
 	
@@ -1961,7 +2310,7 @@ function reset_all( mode )
 	line = 1;
 	lookahead = void(0);
 	*/
-	file = new String();
+	file = "";
 	errors = 0;
 	show_errors = true;
 	warnings = 0;
@@ -1973,8 +2322,8 @@ function reset_all( mode )
 	
 	regex_weight = 0;
 	
-	code_head = new String();
-	code_foot = new String();
+	code_head = "";
+	code_foot = "";
 }
 
 
@@ -1990,50 +2339,50 @@ Usage:	Bitset functionalities implemented in JavaScript.
 You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
-
-//I think there is no documentation required on these tiny functions...
-function bitset_create( size )
+///SV: it is no reason to optimize data size, so we may use array of bool directly in code
+function BitSetBool(size)
 {
-	if( size <= 0 )
-		return new Array();
-	
-	return new Array( Math.ceil( size / 8 ) );
+	this.data=new Array((size>0)?size:0);
+}
+BitSetBool.prototype={
+	set:function(bit,state)
+	{
+		return this.data[bit]=state;
+	},
+	get:function(bit)
+	{
+		return this.data[bit];
+	},
+	count:function()
+	{
+		var i, c = 0;
+
+		for( i = 0; i < this.data.length; i++ )
+			if( this.data[i] )
+				c++;
+		return c;
+	}
 }
 
-
+var BitSet=BitSetBool;
+///SV: this functions used before deleting them call from code
+function bitset_create(size)
+{
+	return new BitSet(size);
+}
 function bitset_set( bitset, bit, state )
 {
-	if( !bitset && bit < 0 )
-		return false;
-		
-	if( state )
-		bitset[ Math.floor( bit / 8 ) ] |= ( 1 << (bit % 8) );
-	else
-		bitset[ Math.floor( bit / 8 ) ] &= ( 0xFF ^ ( 1 << (bit % 8) ) );
-		
-	return true;
+	return bitset.set(bit,state);
 }
-
-
 function bitset_get( bitset, bit )
 {
-	if( !bitset && bit < 0 )
-		return 0;
-
-	return bitset[ Math.floor( bit / 8 ) ] & ( 1 << ( bit % 8 ) );
+	return bitset.get(bit);
 }
-
-
-function bitset_count( bitset )
+function bitset_count(bitset)
 {
-	var cnt = 0;
-
-	for( var i = 0; i < bitset.length * 8; i++ )
-		if( bitset_get( bitset, i ) )
-			cnt++;
-			
-	return cnt;
+	return bitset.count();
 }
+
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -2095,8 +2444,8 @@ function undef()
 ----------------------------------------------------------------------------- */
 function unreachable()
 {
-	var		stack		= new Array();
-	var		reachable	= new Array();
+	var		stack		= [];
+	var		reachable	= [];
 	var		i, j, k, l;
 	
 	for( i = 0; i < symbols.length; i++ )
@@ -2162,12 +2511,14 @@ function unreachable()
   
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
+	16.04.2009	Jan Max Meyer	Fixed bug with new default-production
+								recognition
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
 	var i;
 	for( i = 0; i < states.length; i++ )
-		if( states[i].actionrow.length == 0 )
+		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );
 }
@@ -2187,12 +2538,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 //Utility functions; I think there is no documentation required about them.
 
 function create_dfa( where )
-{
+{///SV0L0CH: this array better to replace by object with single characters like indexes
 	var dfa = new DFA();
 	
 	dfa.line = new Array( MAX_CHAR );
 	dfa.accept = -1;
-	dfa.nfa_set = new Array();
+	dfa.nfa_set = [];
 	dfa.done = false;
 	dfa.group = -1;
 	
@@ -2232,9 +2583,9 @@ function get_undone_dfa( dfa_states )
 //NFA test function; Has no use currently.
 function execute_nfa( machine, str )
 {
-	var	result		= new Array();
+	var	result		= [];
 	var	accept;
-	var	last_accept	= new Array();
+	var	last_accept	= [];
 	var last_length = 0;
 	var	chr_cnt		= 0;
 
@@ -2283,7 +2634,7 @@ function execute_nfa( machine, str )
 ----------------------------------------------------------------------------- */
 function move( state_set, machine, ch )
 {
-	var hits	= new Array();
+	var hits	= [];
 	var tos		= -1;
 	
 	do
@@ -2320,8 +2671,8 @@ function move( state_set, machine, ch )
 ----------------------------------------------------------------------------- */
 function epsilon_closure( state_set, machine )
 {
-	var 	stack	= new Array();
-	var		accept	= new Array();
+	var 	stack	= [];
+	var		accept	= [];
 	var		tos		= -1;
 	
 	for( var i = 0; i < state_set.length; i++ )
@@ -2388,8 +2739,8 @@ function epsilon_closure( state_set, machine )
 ----------------------------------------------------------------------------- */
 function create_subset( nfa_states )
 {
-	var dfa_states = new Array();
-	var stack = new Array();
+	var dfa_states = [];
+	var stack = [];
 	var current = create_dfa( dfa_states );
 	var trans;
 	var next = -1;
@@ -2422,7 +2773,7 @@ function create_subset( nfa_states )
 			
 		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 		{
-			trans = new Array();
+			trans = [];
 			trans = trans.concat( dfa_states[ current ].nfa_set );
 			
 			trans = move( trans, nfa_states, i );
@@ -2470,10 +2821,10 @@ function create_subset( nfa_states )
 ----------------------------------------------------------------------------- */
 function minimize_dfa( dfa_states )
 {
-	var		groups			= new Array();
-	var		group			= new Array();
-	var		accept_groups	= new Array();
-	var		min_dfa_states	= new Array();
+	var		groups			= [];
+	var		group			= [];
+	var		accept_groups	= [];
+	var		min_dfa_states	= [];
 	var		old_cnt 		= 0;
 	var		cnt 			= 0;
 	var		new_group;
@@ -2487,7 +2838,7 @@ function minimize_dfa( dfa_states )
 		Accepting and non-accepting states are pushed in
 		separate groups first
 	*/
-	groups.push( new Array() );
+	groups.push( [] );
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		if( dfa_states[i].accept > -1 )
@@ -2499,7 +2850,7 @@ function minimize_dfa( dfa_states )
 			if( j == accept_groups.length )
 			{
 				accept_groups.push( dfa_states[i].accept );
-				groups.push( new Array() );
+				groups.push( [] );
 			}
 			groups[ j+1 ].push( i );
 			dfa_states[ i ].group = j+1;
@@ -2521,7 +2872,7 @@ function minimize_dfa( dfa_states )
 
 		for( i = 0; i < groups.length; i++ )
 		{
-			new_group = new Array();
+			new_group = [];
 			
 			if( groups[i].length > 0 )
 			{
@@ -2558,7 +2909,7 @@ function minimize_dfa( dfa_states )
 
 			if( new_group.length > 0 )
 			{
-				groups[ groups.length ] = new Array();
+				groups[ groups.length ] = [];
 				groups[ groups.length-1 ] = groups[ groups.length-1 ].concat( new_group );
 				cnt += new_group.length;
 			}
@@ -2661,20 +3012,71 @@ function print_dfa( dfa_states )
 /*
 	Default driver template for JS/CC generated parsers for Mozilla/Rhino
 	
-	Features:
-	- Parser trace messages
-	- Step-by-step parsing
-	- Integrated error recovery
-	- Pseudo-graphical parse tree generation
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
+	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2007 from driver.js_ to support Mozilla/Rhino
            by Louis P.Santillan <lpsantil@gmail.com>
 	
 	This is in the public domain.
 */
+var __jscc_debug=(function(){
+	var _dbg_withparsetree	= false;
+	var _dbg_withtrace		= false;
+	var _dbg_withstepbystep	= false;
+	
+	function __dbg_print( text )
+	{
+		print( text );
+	}
+	
+	function __dbg_flush()
+	{
+		//Not required here.
+	}
+	
+	function __dbg_wait()
+	{
+	   var kbd = new java.io.BufferedReader(
+	                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
+	
+	   kbd.readLine();
+	}
+	
+	function __dbg_parsetree( indent, nodes, tree )
+	{
+		var str = "";
+		for( var i = 0; i < tree.length; i++ )
+		{
+			str = "";
+			for( var j = indent; j > 0; j-- )
+				str += "\t";
+			
+			str += nodes[ tree[i] ].sym;
+			if( nodes[ tree[i] ].att != "" )
+				str += " >" + nodes[ tree[i] ].att + "<" ;
+				
+			__dbg_print( str );
+			if( nodes[ tree[i] ].child.length > 0 )
+				__dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
+		}
+	}
+	return {
+		__dbg_print:__dbg_print,
+		_dbg_withtrace:_dbg_withtrace,
+		__dbg_wait:__dbg_wait,
+		_dbg_withparsetree:_dbg_withparsetree,
+		_dbg_withstepbystep:_dbg_withstepbystep,
+		__dbg_flush:__dbg_flush,
+		__dbg_parsetree:__dbg_parsetree
+		};
+})();
+/* Code of driver.js will go here... */
 
+/*
+	This is the general, platform-independent part of every parser driver;
+	Input-/Output and Feature-Functions are done by the particular drivers
+	created for the particular platform.
+*/
+	
 var		first_lhs;
 var		cur_line;
 
@@ -2685,334 +3087,334 @@ function line_error( line, txt )
 }
 
 
+var __jsccparse=(function(debug){
+	with(debug){
+		var dbg_print = __dbg_print;
+		var dbg_withtrace = _dbg_withtrace;
+		var dbg_wait = __dbg_wait;
+		var dbg_withparsetree = _dbg_withparsetree;
+		var dbg_withstepbystep = _dbg_withstepbystep;
+		var dbg_flush = __dbg_flush;
+		var dbg_parsetree = __dbg_parsetree;
+	}
 
-var jscc_dbg_withparsetree	= false;
-var jscc_dbg_withtrace		= false;
-var jscc_dbg_withstepbystep	= false;
-
-function __jsccdbg_print( text )
-{
-	print( text );
-}
-
-function __jsccdbg_wait()
-{
-   var kbd = new java.io.BufferedReader(
-                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
-
-   kbd.readLine();
-}
-
-function __jscclex( PCB )
-{
-	var state;
-	var match		= -1;
-	var match_pos	= 0;
-	var start		= 0;
-	var pos;
-	var chr;
-
-	while( 1 )
-	{
-		state = 0;
-		match = -1;
-		match_pos = 0;
-		start = 0;
-		pos = PCB.offset + 1 + ( match_pos - start );
-
-		do
-		{
-			pos--;
-			state = 0;
-			match = -2;
-			start = pos;
-	
-			if( PCB.src.length <= start )
-				return 38;
-	
-			do
-			{
-				chr = PCB.src.charCodeAt( pos );
-
+function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 switch( state )
 {
 	case 0:
-		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
-		else if( chr == 10 ) state = 2;
-		else if( chr == 33 ) state = 3;
-		else if( chr == 38 ) state = 4;
-		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
-		else if( chr == 58 ) state = 6;
-		else if( chr == 59 ) state = 7;
-		else if( chr == 60 ) state = 8;
-		else if( chr == 62 ) state = 9;
-		else if( chr == 94 ) state = 10;
-		else if( chr == 124 ) state = 11;
-		else if( chr == 126 ) state = 12;
-		else if( chr == 34 ) state = 18;
-		else if( chr == 35 ) state = 21;
-		else if( chr == 39 ) state = 22;
-		else if( chr == 47 ) state = 23;
-		else if( chr == 91 ) state = 24;
-		else state = -1;
+		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
+		else if( chr == 10 ) set_state(2);
+		else if( chr == 33 ) set_state(3);
+		else if( chr == 38 ) set_state(4);
+		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
+		else if( chr == 58 ) set_state(6);
+		else if( chr == 59 ) set_state(7);
+		else if( chr == 60 ) set_state(8);
+		else if( chr == 62 ) set_state(9);
+		else if( chr == 94 ) set_state(10);
+		else if( chr == 124 ) set_state(11);
+		else if( chr == 126 ) set_state(12);
+		else if( chr == 34 ) set_state(18);
+		else if( chr == 35 ) set_state(21);
+		else if( chr == 39 ) set_state(22);
+		else if( chr == 47 ) set_state(23);
+		else if( chr == 91 ) set_state(24);
+		else set_state(-1);
 		break;
 
 	case 1:
-		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
-		else state = -1;
-		match = 18;
-		match_pos = pos;
+		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
+		else set_state(-1);
+		set_match(18);
+		set_match_pos(pos);
 		break;
 
 	case 2:
-		state = -1;
-		match = 16;
-		match_pos = pos;
+		set_state(-1);
+		set_match(16);
+		set_match_pos(pos);
 		break;
 
 	case 3:
-		state = -1;
-		match = 6;
-		match_pos = pos;
+		set_state(-1);
+		set_match(6);
+		set_match_pos(pos);
 		break;
 
 	case 4:
-		state = -1;
-		match = 10;
-		match_pos = pos;
+		set_state(-1);
+		set_match(10);
+		set_match_pos(pos);
 		break;
 
 	case 5:
-		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
-		else state = -1;
-		match = 15;
-		match_pos = pos;
+		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
+		else set_state(-1);
+		set_match(15);
+		set_match_pos(pos);
 		break;
 
 	case 6:
-		state = -1;
-		match = 8;
-		match_pos = pos;
+		set_state(-1);
+		set_match(8);
+		set_match_pos(pos);
 		break;
 
 	case 7:
-		state = -1;
-		match = 7;
-		match_pos = pos;
+		set_state(-1);
+		set_match(7);
+		set_match_pos(pos);
 		break;
 
 	case 8:
-		state = -1;
-		match = 3;
-		match_pos = pos;
+		set_state(-1);
+		set_match(3);
+		set_match_pos(pos);
 		break;
 
 	case 9:
-		state = -1;
-		match = 4;
-		match_pos = pos;
+		set_state(-1);
+		set_match(4);
+		set_match_pos(pos);
 		break;
 
 	case 10:
-		state = -1;
-		match = 5;
-		match_pos = pos;
+		set_state(-1);
+		set_match(5);
+		set_match_pos(pos);
 		break;
 
 	case 11:
-		state = -1;
-		match = 9;
-		match_pos = pos;
+		set_state(-1);
+		set_match(9);
+		set_match_pos(pos);
 		break;
 
 	case 12:
-		state = -1;
-		match = 11;
-		match_pos = pos;
+		set_state(-1);
+		set_match(11);
+		set_match_pos(pos);
 		break;
 
 	case 13:
-		state = -1;
-		match = 14;
-		match_pos = pos;
+		set_state(-1);
+		set_match(14);
+		set_match_pos(pos);
 		break;
 
 	case 14:
-		state = -1;
-		match = 2;
-		match_pos = pos;
+		set_state(-1);
+		set_match(2);
+		set_match_pos(pos);
 		break;
 
 	case 15:
-		state = -1;
-		match = 13;
-		match_pos = pos;
+		set_state(-1);
+		set_match(13);
+		set_match_pos(pos);
 		break;
 
 	case 16:
-		state = -1;
-		match = 17;
-		match_pos = pos;
+		set_state(-1);
+		set_match(17);
+		set_match_pos(pos);
 		break;
 
 	case 17:
-		state = -1;
-		match = 12;
-		match_pos = pos;
+		set_state(-1);
+		set_match(12);
+		set_match_pos(pos);
 		break;
 
 	case 18:
-		if( chr == 34 ) state = 13;
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
+		if( chr == 34 ) set_state(13);
+		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
+		else if( chr == 92 ) set_state(25);
+		else set_state(-1);
 		break;
 
 	case 19:
-		if( chr == 34 ) state = 13;
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
-		match = 14;
-		match_pos = pos;
+		if( chr == 34 ) set_state(13);
+		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
+		else if( chr == 92 ) set_state(25);
+		else set_state(-1);
+		set_match(14);
+		set_match_pos(pos);
 		break;
 
 	case 20:
-		if( chr == 39 ) state = 15;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
-		match = 13;
-		match_pos = pos;
+		if( chr == 39 ) set_state(15);
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
+		else if( chr == 92 ) set_state(26);
+		else set_state(-1);
+		set_match(13);
+		set_match_pos(pos);
 		break;
 
 	case 21:
-		if( chr == 35 ) state = 14;
-		else state = -1;
+		if( chr == 35 ) set_state(14);
+		else set_state(-1);
 		break;
 
 	case 22:
-		if( chr == 39 ) state = 15;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
+		if( chr == 39 ) set_state(15);
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
+		else if( chr == 92 ) set_state(26);
+		else set_state(-1);
 		break;
 
 	case 23:
-		if( chr == 126 ) state = 27;
-		else state = -1;
+		if( chr == 126 ) set_state(27);
+		else set_state(-1);
 		break;
 
 	case 24:
-		if( chr == 42 ) state = 35;
-		else state = -1;
+		if( chr == 42 ) set_state(35);
+		else set_state(-1);
 		break;
 
 	case 25:
-		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 34 ) state = 19;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
+		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
+		else if( chr == 34 ) set_state(19);
+		else if( chr == 92 ) set_state(25);
+		else set_state(-1);
 		break;
 
 	case 26:
-		if( chr == 39 ) state = 20;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
+		if( chr == 39 ) set_state(20);
+		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
+		else if( chr == 92 ) set_state(26);
+		else set_state(-1);
 		break;
 
 	case 27:
-		if( chr == 47 ) state = 28;
-		else if( chr == 126 ) state = 29;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
+		if( chr == 47 ) set_state(28);
+		else if( chr == 126 ) set_state(29);
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
+		else set_state(-1);
 		break;
 
 	case 28:
-		if( chr == 47 ) state = 27;
-		else state = -1;
+		if( chr == 47 ) set_state(27);
+		else set_state(-1);
 		break;
 
 	case 29:
-		if( chr == 47 ) state = 16;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) state = 27;
-		else state = -1;
+		if( chr == 47 ) set_state(16);
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) set_state(27);
+		else set_state(-1);
 		break;
 
 	case 30:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else state = -1;
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) set_state(30);
+		else if( chr == 42 ) set_state(31);
+		else set_state(-1);
 		break;
 
 	case 31:
-		if( chr == 93 ) state = 17;
-		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 34;
-		else state = -1;
+		if( chr == 93 ) set_state(17);
+		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(34);
+		else set_state(-1);
 		break;
 
 	case 32:
-		if( chr == 93 ) state = 34;
-		else state = -1;
+		if( chr == 93 ) set_state(34);
+		else set_state(-1);
 		break;
 
 	case 33:
-		if( chr == 126 ) state = 29;
-		else if( chr == 47 ) state = 33;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
+		if( chr == 126 ) set_state(29);
+		else if( chr == 47 ) set_state(33);
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
+		else set_state(-1);
 		break;
 
 	case 34:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else if( chr == 93 ) state = 32;
-		else state = -1;
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
+		else if( chr == 42 ) set_state(31);
+		else if( chr == 93 ) set_state(32);
+		else set_state(-1);
 		break;
 
 	case 35:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else if( chr == 93 ) state = 32;
-		else state = -1;
+		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
+		else if( chr == 42 ) set_state(31);
+		else if( chr == 93 ) set_state(32);
+		else set_state(-1);
 		break;
 
 	case 36:
-		if( chr == 126 ) state = 29;
-		else if( chr == 47 ) state = 33;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
+		if( chr == 126 ) set_state(29);
+		else if( chr == 47 ) set_state(33);
+		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
+		else set_state(-1);
 		break;
 
 }
 
+}
 
 
-				//Line- and column-counter
-				if( state > -1 )
+	function lex( PCB )
+	{
+		var state;
+		var match		= -1;
+		var match_pos	= 0;
+		var start		= 0;
+		var pos;
+		var chr;
+
+		while(true)
+		{
+			state = 0;
+			match = -1;
+			match_pos = 0;
+			start = 0;
+			pos = PCB.offset + 1 + ( match_pos - start );
+			///Functions for manipulation of variables
+			function set_match(v){match=v;}
+			function set_state(v){state=v;}
+			function set_match_pos(v){match_pos=v;}
+			do
+			{
+				pos--;
+				state = 0;
+				match = -2;
+				start = pos;
+	
+				if( PCB.src.length <= start )
+					return 38;
+	
+				do
 				{
-					if( chr == 10 )
-					{
-						PCB.line++;
-						PCB.column = 0;
-					}
-					PCB.column++;
-				}
+					chr = PCB.src.charCodeAt( pos );
 
-				pos++;
+
+					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					//Line- and column-counter
+					if( state > -1 )
+					{
+						if( chr == 10 )
+						{
+							PCB.line++;
+							PCB.column = 0;
+						}
+						PCB.column++;
+					}
+
+					pos++;
+	
+				}
+				while( state > -1 );
 	
 			}
-			while( state > -1 );
+			while( -1 > -1 && match == -1 );
 	
-		}
-		while( -1 > -1 && match == -1 );
-	
-		if( match > -1 )
-		{
-			PCB.att = PCB.src.substr( start, match_pos - start );
-			PCB.offset = match_pos;
-			
+			if( match > -1 )
+			{
+				PCB.att = PCB.src.substr( start, match_pos - start );
+				PCB.offset = match_pos;
+
 	if( match == 12 )
 	{
 			PCB.att = PCB.att.substr(
@@ -3021,452 +3423,47 @@ switch( state )
 		}
 	else if( match == 16 )
 	{
-		 	continue;	
+		 continue;	/*throw new Continue();*/	
 		}
 	else if( match == 17 )
 	{
-			continue;	
+		 continue;	/*throw new Continue();*/	
 		}
 	else if( match == 18 )
 	{
-			continue;	
+		 continue;	/*throw new Continue();*/	
 		}
 
-		}
-		else
-		{
-			PCB.att = new String();
-			match = -1;
-		}
+
+			}
+			else
+			{
+				PCB.att = "";
+				match = -1;
+			}
 		
-		break;
+			break;
+		}
+
+		return match;
 	}
 
-	return match;
-}
 
-function __jsccparse( src, err_off, err_la )
-{
-	var		sstack			= new Array();
-	var		vstack			= new Array();
-	var 	err_cnt			= 0;
-	var		rval;
-	var		act;
-	
-	//PCB: Parser Control Block
-	var 	parsercontrol	= new Function( "",
-								"var la;" +
-								"var act;" +
-								"var offset;" +
-								"var src;" +
-								"var att;" +
-								"var line;" +
-								"var column;" +
-								"var error_step;" );
-	var		PCB	= new parsercontrol();
-	
-	//Visual parse tree generation
-	var 	treenode		= new Function( "",
-								"var sym;"+
-								"var att;"+
-								"var child;" );
-	var		treenodes		= new Array();
-	var		tree			= new Array();
-	var		tmptree			= null;
+var pop_tab =[[0,1],[23,5],[19,1],[22,1],[20,2],[20,1],[25,3],[25,3],[25,3],[25,2],[25,2],[26,2],[26,1],[28,3],[28,2],[21,2],[21,1],[30,4],[30,2],[31,3],[31,1],[32,3],[34,2],[34,2],[34,0],[33,1],[33,0],[35,2],[35,1],[36,1],[36,1],[36,1],[24,1],[24,0],[37,2],[37,1],[27,1],[27,1],[29,1]];
 
-/* Pop-Table */
-var pop_tab = new Array(
-	new Array( 0/* def' */, 1 ),
-	new Array( 23/* def */, 5 ),
-	new Array( 19/* header_code */, 1 ),
-	new Array( 22/* footer_code */, 1 ),
-	new Array( 20/* token_assocs */, 2 ),
-	new Array( 20/* token_assocs */, 1 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 2 ),
-	new Array( 25/* token_assoc */, 2 ),
-	new Array( 26/* token_defs */, 2 ),
-	new Array( 26/* token_defs */, 1 ),
-	new Array( 28/* token_def */, 3 ),
-	new Array( 28/* token_def */, 2 ),
-	new Array( 21/* grammar_defs */, 2 ),
-	new Array( 21/* grammar_defs */, 1 ),
-	new Array( 30/* grammar_def */, 4 ),
-	new Array( 30/* grammar_def */, 2 ),
-	new Array( 31/* productions */, 3 ),
-	new Array( 31/* productions */, 1 ),
-	new Array( 32/* rhs */, 3 ),
-	new Array( 34/* rhs_prec */, 2 ),
-	new Array( 34/* rhs_prec */, 2 ),
-	new Array( 34/* rhs_prec */, 0 ),
-	new Array( 33/* sequence_opt */, 1 ),
-	new Array( 33/* sequence_opt */, 0 ),
-	new Array( 35/* sequence */, 2 ),
-	new Array( 35/* sequence */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 24/* code_opt */, 1 ),
-	new Array( 24/* code_opt */, 0 ),
-	new Array( 37/* code */, 2 ),
-	new Array( 37/* code */, 1 ),
-	new Array( 27/* string */, 1 ),
-	new Array( 27/* string */, 1 ),
-	new Array( 29/* identifier */, 1 )
-);
+var act_tab =[[12,5],[],[3,8,4,9,5,10,6,12,13,15,14,16],[],[12,17],[],[2,19,3,8,4,9,5,10,6,12,13,15,14,16],[],[13,15,14,16],[13,15,14,16],[13,15,14,16],[7,24,13,15,14,16],[13,15,14,16],[],[15,28,12,5],[],[],[],[],[1,32,15,28],[7,33,13,15,14,16],[7,34,13,15,14,16],[7,35,13,15,14,16],[],[],[],[],[12,5],[],[1,32,15,28,12,5],[],[8,40],[7,41],[],[],[],[],[],[],[],[11,49,15,28,13,15,14,16],[],[9,50,7,51],[],[10,53],[11,49,15,28,13,15,14,16],[],[],[],[],[11,49,15,28,13,15,14,16],[],[12,5],[15,28,13,15,14,16],[],[],[],[],[]];
 
-/* Action-Table */
-var act_tab = new Array(
-	/* State 0 */ new Array( 12/* "CODE" */,5 , 3/* "<" */,-33 , 4/* ">" */,-33 , 5/* "^" */,-33 , 6/* "!" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
-	/* State 1 */ new Array( 38/* "$" */,0 ),
-	/* State 2 */ new Array( 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 3 */ new Array( 3/* "<" */,-2 , 4/* ">" */,-2 , 5/* "^" */,-2 , 6/* "!" */,-2 , 13/* "STRING_SINGLE" */,-2 , 14/* "STRING_DOUBLE" */,-2 ),
-	/* State 4 */ new Array( 12/* "CODE" */,17 , 3/* "<" */,-32 , 4/* ">" */,-32 , 5/* "^" */,-32 , 6/* "!" */,-32 , 13/* "STRING_SINGLE" */,-32 , 14/* "STRING_DOUBLE" */,-32 , 7/* ";" */,-32 , 38/* "$" */,-32 , 9/* "|" */,-32 ),
-	/* State 5 */ new Array( 3/* "<" */,-35 , 4/* ">" */,-35 , 5/* "^" */,-35 , 6/* "!" */,-35 , 13/* "STRING_SINGLE" */,-35 , 14/* "STRING_DOUBLE" */,-35 , 12/* "CODE" */,-35 , 7/* ";" */,-35 , 38/* "$" */,-35 , 9/* "|" */,-35 ),
-	/* State 6 */ new Array( 2/* "##" */,19 , 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 7 */ new Array( 2/* "##" */,-5 , 3/* "<" */,-5 , 4/* ">" */,-5 , 5/* "^" */,-5 , 6/* "!" */,-5 , 13/* "STRING_SINGLE" */,-5 , 14/* "STRING_DOUBLE" */,-5 ),
-	/* State 8 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 9 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 10 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 11 */ new Array( 7/* ";" */,24 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 12 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 13 */ new Array( 7/* ";" */,-12 , 13/* "STRING_SINGLE" */,-12 , 14/* "STRING_DOUBLE" */,-12 ),
-	/* State 14 */ new Array( 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
-	/* State 15 */ new Array( 15/* "IDENT" */,-36 , 12/* "CODE" */,-36 , 7/* ";" */,-36 , 13/* "STRING_SINGLE" */,-36 , 14/* "STRING_DOUBLE" */,-36 , 2/* "##" */,-36 , 3/* "<" */,-36 , 4/* ">" */,-36 , 5/* "^" */,-36 , 6/* "!" */,-36 , 10/* "&" */,-36 , 9/* "|" */,-36 , 11/* "~" */,-36 ),
-	/* State 16 */ new Array( 15/* "IDENT" */,-37 , 12/* "CODE" */,-37 , 7/* ";" */,-37 , 13/* "STRING_SINGLE" */,-37 , 14/* "STRING_DOUBLE" */,-37 , 2/* "##" */,-37 , 3/* "<" */,-37 , 4/* ">" */,-37 , 5/* "^" */,-37 , 6/* "!" */,-37 , 10/* "&" */,-37 , 9/* "|" */,-37 , 11/* "~" */,-37 ),
-	/* State 17 */ new Array( 3/* "<" */,-34 , 4/* ">" */,-34 , 5/* "^" */,-34 , 6/* "!" */,-34 , 13/* "STRING_SINGLE" */,-34 , 14/* "STRING_DOUBLE" */,-34 , 12/* "CODE" */,-34 , 7/* ";" */,-34 , 38/* "$" */,-34 , 9/* "|" */,-34 ),
-	/* State 18 */ new Array( 2/* "##" */,-4 , 3/* "<" */,-4 , 4/* ">" */,-4 , 5/* "^" */,-4 , 6/* "!" */,-4 , 13/* "STRING_SINGLE" */,-4 , 14/* "STRING_DOUBLE" */,-4 ),
-	/* State 19 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 ),
-	/* State 20 */ new Array( 7/* ";" */,33 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 21 */ new Array( 7/* ";" */,34 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 22 */ new Array( 7/* ";" */,35 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 23 */ new Array( 7/* ";" */,-11 , 13/* "STRING_SINGLE" */,-11 , 14/* "STRING_DOUBLE" */,-11 ),
-	/* State 24 */ new Array( 2/* "##" */,-9 , 3/* "<" */,-9 , 4/* ">" */,-9 , 5/* "^" */,-9 , 6/* "!" */,-9 , 13/* "STRING_SINGLE" */,-9 , 14/* "STRING_DOUBLE" */,-9 ),
-	/* State 25 */ new Array( 2/* "##" */,-10 , 3/* "<" */,-10 , 4/* ">" */,-10 , 5/* "^" */,-10 , 6/* "!" */,-10 , 13/* "STRING_SINGLE" */,-10 , 14/* "STRING_DOUBLE" */,-10 ),
-	/* State 26 */ new Array( 7/* ";" */,-14 , 13/* "STRING_SINGLE" */,-14 , 14/* "STRING_DOUBLE" */,-14 ),
-	/* State 27 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 13/* "STRING_SINGLE" */,-33 , 14/* "STRING_DOUBLE" */,-33 ),
-	/* State 28 */ new Array( 12/* "CODE" */,-38 , 7/* ";" */,-38 , 13/* "STRING_SINGLE" */,-38 , 14/* "STRING_DOUBLE" */,-38 , 8/* ":" */,-38 , 10/* "&" */,-38 , 9/* "|" */,-38 , 15/* "IDENT" */,-38 , 11/* "~" */,-38 ),
-	/* State 29 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 , 12/* "CODE" */,5 , 38/* "$" */,-33 ),
-	/* State 30 */ new Array( 12/* "CODE" */,-16 , 38/* "$" */,-16 , 15/* "IDENT" */,-16 , 1/* "ERROR_RESYNC" */,-16 ),
-	/* State 31 */ new Array( 8/* ":" */,40 ),
-	/* State 32 */ new Array( 7/* ";" */,41 ),
-	/* State 33 */ new Array( 2/* "##" */,-6 , 3/* "<" */,-6 , 4/* ">" */,-6 , 5/* "^" */,-6 , 6/* "!" */,-6 , 13/* "STRING_SINGLE" */,-6 , 14/* "STRING_DOUBLE" */,-6 ),
-	/* State 34 */ new Array( 2/* "##" */,-7 , 3/* "<" */,-7 , 4/* ">" */,-7 , 5/* "^" */,-7 , 6/* "!" */,-7 , 13/* "STRING_SINGLE" */,-7 , 14/* "STRING_DOUBLE" */,-7 ),
-	/* State 35 */ new Array( 2/* "##" */,-8 , 3/* "<" */,-8 , 4/* ">" */,-8 , 5/* "^" */,-8 , 6/* "!" */,-8 , 13/* "STRING_SINGLE" */,-8 , 14/* "STRING_DOUBLE" */,-8 ),
-	/* State 36 */ new Array( 7/* ";" */,-13 , 13/* "STRING_SINGLE" */,-13 , 14/* "STRING_DOUBLE" */,-13 ),
-	/* State 37 */ new Array( 12/* "CODE" */,-15 , 38/* "$" */,-15 , 15/* "IDENT" */,-15 , 1/* "ERROR_RESYNC" */,-15 ),
-	/* State 38 */ new Array( 38/* "$" */,-1 ),
-	/* State 39 */ new Array( 38/* "$" */,-3 ),
-	/* State 40 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
-	/* State 41 */ new Array( 12/* "CODE" */,-18 , 38/* "$" */,-18 , 15/* "IDENT" */,-18 , 1/* "ERROR_RESYNC" */,-18 ),
-	/* State 42 */ new Array( 9/* "|" */,50 , 7/* ";" */,51 ),
-	/* State 43 */ new Array( 7/* ";" */,-20 , 9/* "|" */,-20 ),
-	/* State 44 */ new Array( 10/* "&" */,53 , 12/* "CODE" */,-24 , 7/* ";" */,-24 , 9/* "|" */,-24 ),
-	/* State 45 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-25 , 12/* "CODE" */,-25 , 7/* ";" */,-25 , 9/* "|" */,-25 ),
-	/* State 46 */ new Array( 10/* "&" */,-28 , 12/* "CODE" */,-28 , 7/* ";" */,-28 , 9/* "|" */,-28 , 15/* "IDENT" */,-28 , 13/* "STRING_SINGLE" */,-28 , 14/* "STRING_DOUBLE" */,-28 , 11/* "~" */,-28 ),
-	/* State 47 */ new Array( 10/* "&" */,-29 , 12/* "CODE" */,-29 , 7/* ";" */,-29 , 9/* "|" */,-29 , 15/* "IDENT" */,-29 , 13/* "STRING_SINGLE" */,-29 , 14/* "STRING_DOUBLE" */,-29 , 11/* "~" */,-29 ),
-	/* State 48 */ new Array( 10/* "&" */,-30 , 12/* "CODE" */,-30 , 7/* ";" */,-30 , 9/* "|" */,-30 , 15/* "IDENT" */,-30 , 13/* "STRING_SINGLE" */,-30 , 14/* "STRING_DOUBLE" */,-30 , 11/* "~" */,-30 ),
-	/* State 49 */ new Array( 10/* "&" */,-31 , 12/* "CODE" */,-31 , 7/* ";" */,-31 , 9/* "|" */,-31 , 15/* "IDENT" */,-31 , 13/* "STRING_SINGLE" */,-31 , 14/* "STRING_DOUBLE" */,-31 , 11/* "~" */,-31 ),
-	/* State 50 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 , 10/* "&" */,-26 , 12/* "CODE" */,-26 , 7/* ";" */,-26 , 9/* "|" */,-26 ),
-	/* State 51 */ new Array( 12/* "CODE" */,-17 , 38/* "$" */,-17 , 15/* "IDENT" */,-17 , 1/* "ERROR_RESYNC" */,-17 ),
-	/* State 52 */ new Array( 12/* "CODE" */,5 , 7/* ";" */,-33 , 9/* "|" */,-33 ),
-	/* State 53 */ new Array( 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 54 */ new Array( 10/* "&" */,-27 , 12/* "CODE" */,-27 , 7/* ";" */,-27 , 9/* "|" */,-27 , 15/* "IDENT" */,-27 , 13/* "STRING_SINGLE" */,-27 , 14/* "STRING_DOUBLE" */,-27 , 11/* "~" */,-27 ),
-	/* State 55 */ new Array( 7/* ";" */,-19 , 9/* "|" */,-19 ),
-	/* State 56 */ new Array( 7/* ";" */,-21 , 9/* "|" */,-21 ),
-	/* State 57 */ new Array( 12/* "CODE" */,-23 , 7/* ";" */,-23 , 9/* "|" */,-23 ),
-	/* State 58 */ new Array( 12/* "CODE" */,-22 , 7/* ";" */,-22 , 9/* "|" */,-22 )
-);
+var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[25,18,26,11,28,13,27,14],[],[26,20,28,13,27,14],[26,21,28,13,27,14],[26,22,28,13,27,14],[28,23,27,14],[27,25],[],[24,26,29,27,37,4],[],[],[],[],[21,29,30,30,29,31],[28,23,27,14],[28,23,27,14],[28,23,27,14],[],[],[],[],[24,36,37,4],[],[30,37,22,38,24,39,29,31,37,4],[],[],[],[],[],[],[],[],[],[],[31,42,32,43,33,44,35,45,36,46,29,47,27,48],[],[],[],[34,52],[36,54,29,47,27,48],[],[],[],[],[32,55,33,44,35,45,36,46,29,47,27,48],[],[24,56,37,4],[27,57,29,58],[],[],[],[],[]];
 
-/* Goto-Table */
-var goto_tab = new Array(
-	/* State 0 */ new Array( 23/* def */,1 , 19/* header_code */,2 , 24/* code_opt */,3 , 37/* code */,4 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array( 20/* token_assocs */,6 , 25/* token_assoc */,7 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 3 */ new Array(  ),
-	/* State 4 */ new Array(  ),
-	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array( 25/* token_assoc */,18 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 26/* token_defs */,20 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 9 */ new Array( 26/* token_defs */,21 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 10 */ new Array( 26/* token_defs */,22 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 11 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 12 */ new Array( 27/* string */,25 ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 24/* code_opt */,26 , 29/* identifier */,27 , 37/* code */,4 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array( 21/* grammar_defs */,29 , 30/* grammar_def */,30 , 29/* identifier */,31 ),
-	/* State 20 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 21 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 22 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  ),
-	/* State 25 */ new Array(  ),
-	/* State 26 */ new Array(  ),
-	/* State 27 */ new Array( 24/* code_opt */,36 , 37/* code */,4 ),
-	/* State 28 */ new Array(  ),
-	/* State 29 */ new Array( 30/* grammar_def */,37 , 22/* footer_code */,38 , 24/* code_opt */,39 , 29/* identifier */,31 , 37/* code */,4 ),
-	/* State 30 */ new Array(  ),
-	/* State 31 */ new Array(  ),
-	/* State 32 */ new Array(  ),
-	/* State 33 */ new Array(  ),
-	/* State 34 */ new Array(  ),
-	/* State 35 */ new Array(  ),
-	/* State 36 */ new Array(  ),
-	/* State 37 */ new Array(  ),
-	/* State 38 */ new Array(  ),
-	/* State 39 */ new Array(  ),
-	/* State 40 */ new Array( 31/* productions */,42 , 32/* rhs */,43 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 41 */ new Array(  ),
-	/* State 42 */ new Array(  ),
-	/* State 43 */ new Array(  ),
-	/* State 44 */ new Array( 34/* rhs_prec */,52 ),
-	/* State 45 */ new Array( 36/* symbol */,54 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 46 */ new Array(  ),
-	/* State 47 */ new Array(  ),
-	/* State 48 */ new Array(  ),
-	/* State 49 */ new Array(  ),
-	/* State 50 */ new Array( 32/* rhs */,55 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 51 */ new Array(  ),
-	/* State 52 */ new Array( 24/* code_opt */,56 , 37/* code */,4 ),
-	/* State 53 */ new Array( 27/* string */,57 , 29/* identifier */,58 ),
-	/* State 54 */ new Array(  ),
-	/* State 55 */ new Array(  ),
-	/* State 56 */ new Array(  ),
-	/* State 57 */ new Array(  ),
-	/* State 58 */ new Array(  )
-);
+var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
+
+
+var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t2, %match.length - 4 );\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[38]}];
 
 
 
-/* Symbol labels */
-var labels = new Array(
-	"def'" /* Non-terminal symbol */,
-	"ERROR_RESYNC" /* Terminal symbol */,
-	"##" /* Terminal symbol */,
-	"<" /* Terminal symbol */,
-	">" /* Terminal symbol */,
-	"^" /* Terminal symbol */,
-	"!" /* Terminal symbol */,
-	";" /* Terminal symbol */,
-	":" /* Terminal symbol */,
-	"|" /* Terminal symbol */,
-	"&" /* Terminal symbol */,
-	"~" /* Terminal symbol */,
-	"CODE" /* Terminal symbol */,
-	"STRING_SINGLE" /* Terminal symbol */,
-	"STRING_DOUBLE" /* Terminal symbol */,
-	"IDENT" /* Terminal symbol */,
-	"n" /* Terminal symbol */,
-	"/~([^~]/|~[^/]|[^~/])*~/" /* Terminal symbol */,
-	"[tr ]+" /* Terminal symbol */,
-	"header_code" /* Non-terminal symbol */,
-	"token_assocs" /* Non-terminal symbol */,
-	"grammar_defs" /* Non-terminal symbol */,
-	"footer_code" /* Non-terminal symbol */,
-	"def" /* Non-terminal symbol */,
-	"code_opt" /* Non-terminal symbol */,
-	"token_assoc" /* Non-terminal symbol */,
-	"token_defs" /* Non-terminal symbol */,
-	"string" /* Non-terminal symbol */,
-	"token_def" /* Non-terminal symbol */,
-	"identifier" /* Non-terminal symbol */,
-	"grammar_def" /* Non-terminal symbol */,
-	"productions" /* Non-terminal symbol */,
-	"rhs" /* Non-terminal symbol */,
-	"sequence_opt" /* Non-terminal symbol */,
-	"rhs_prec" /* Non-terminal symbol */,
-	"sequence" /* Non-terminal symbol */,
-	"symbol" /* Non-terminal symbol */,
-	"code" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
-);
-
-
-	
-	PCB.line = 1;
-	PCB.column = 1;
-	PCB.offset = 0;
-	PCB.error_step = 0;
-	PCB.src = src;
-	PCB.att = new String();
-
-	if( !err_off )
-		err_off	= new Array();
-	if( !err_la )
-		err_la = new Array();
-	
-	sstack.push( 0 );
-	vstack.push( 0 );
-	
-	PCB.la = __jscclex( PCB );
-			
-	while( true )
-	{
-		PCB.act = 60;
-		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-		{
-			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-			{
-				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-				break;
-			}
-		}
-
-		/*
-		_print( "state " + sstack[sstack.length-1] +
-				" la = " +
-				PCB.la + " att = >" +
-				PCB.att + "< act = " +
-				PCB.act + " src = >" +
-				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-				" sstack = " + sstack.join() );
-		*/
-		
-		if( jscc_dbg_withtrace && sstack.length > 0 )
-		{
-			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-			
-			if( jscc_dbg_withstepbystep )
-				__jsccdbg_wait();
-		}
-		
-			
-		//Parse error? Try to recover!
-		if( PCB.act == 60 )
-		{
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
-			//Report errors only when error_step is 0, and this is not a
-			//subsequent error from a previous parse
-			if( PCB.error_step == 0 )
-			{
-				err_cnt++;
-				err_off.push( PCB.offset - PCB.att.length );
-				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			}
-			
-			//Perform error recovery			
-			while( sstack.length > 1 && PCB.act == 60 )
-			{
-				sstack.pop();
-				vstack.pop();
-				
-				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( act_tab[sstack[sstack.length-1]][i] == 1 )
-					{
-						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
-						sstack.push( PCB.act );
-						vstack.push( new String() );
-
-						break;
-					}
-				}
-			}
-			
-			//Is it better to leave the parser now?
-			if( sstack.length > 1 && PCB.act != 60 )
-			{
-				//Ok, now try to shift on the next tokens
-				while( PCB.la != 38 )
-				{
-					PCB.act = 60;
-					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-						{
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-							break;
-						}
-					}
-					
-					if( PCB.act != 60 )
-						break;
-					
-					while( ( PCB.la = __jscclex( PCB ) )
-								< 0 )
-						PCB.offset++;
-				}
-				while( PCB.la != 38 && PCB.act == 60 );
-			}
-			
-			if( PCB.act == 60 || PCB.la == 38 )
-			{
-				if( jscc_dbg_withtrace )
-					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
-				break;
-			}
-
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tError recovery succeeded, continuing" );
-			
-			//Try to parse the next three tokens successfully...
-			PCB.error_step = 3;
-		}
-
-		//Shift
-		if( PCB.act > 0 )
-		{
-			//Parse tree generation
-			if( jscc_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ PCB.la ];
-				node.att = PCB.att;
-				node.child = new Array();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
-			sstack.push( PCB.act );
-			vstack.push( PCB.att );
-			
-			PCB.la = __jscclex( PCB );
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
-			//Successfull shift and right beyond error recovery?
-			if( PCB.error_step > 0 )
-				PCB.error_step--;
-		}
-		//Reduce
-		else
-		{		
-			act = PCB.act * -1;
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Reducing by production: " + act );
-			
-			rval = void( 0 );
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPerforming semantic action..." );
-			
+	function ACTIONS(act,sstack,vstack){
+		var rval;
 switch( act )
 {
 	case 0:
@@ -3544,7 +3541,7 @@ switch( act )
 															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
 															compile_regex( regex, whitespace_token, 
-																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
+																 vstack[ vstack.length - 1 ].charAt( 0 ) != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
@@ -3560,9 +3557,7 @@ switch( act )
 	break;
 	case 12:
 	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
+			rval=[vstack[ vstack.length - 1 ]];	
 	}
 	break;
 	case 13:
@@ -3571,8 +3566,7 @@ switch( act )
 														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
-														compile_regex( regex, symbols[ rval ].id, 
-															( vstack[ vstack.length - 3 ].charAt( 0 ) == '\'' ) ? false : true );
+														compile_regex( regex, symbols[ rval ].id, vstack[ vstack.length - 3 ].charAt( 0 ) != '\''  );
 													
 	}
 	break;
@@ -3582,8 +3576,7 @@ switch( act )
 														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
-														compile_regex( regex, symbols[ rval ].id, 
-															( vstack[ vstack.length - 2 ].charAt( 0 ) == '\'' ) ? false : true );
+														compile_regex( regex, symbols[ rval ].id,  vstack[ vstack.length - 2 ].charAt( 0 ) != '\'' );
 													
 	}
 	break;
@@ -3623,7 +3616,8 @@ switch( act )
 	break;
 	case 19:
 	{
-			rval = new Array();
+			///SV0L0CH: why you create new array and not use the same?
+														rval = [];
 														rval = rval.concat( vstack[ vstack.length - 3 ] );
 														rval.push( vstack[ vstack.length - 1 ] );
 													
@@ -3631,21 +3625,18 @@ switch( act )
 	break;
 	case 20:
 	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
+			rval=[vstack[ vstack.length - 1 ]]; 
 	}
 	break;
 	case 21:
 	{
-			var prod = new PROD();
-														prod.id = productions.length;
-														prod.rhs = vstack[ vstack.length - 3 ];
-														prod.level = vstack[ vstack.length - 2 ];
-														prod.code = vstack[ vstack.length - 1 ];														
-														if( prod.code == "" )
-															prod.code = new String( DEF_PROD_CODE );
-														
+			
+														var prod = new PROD({
+															id:productions.length,
+															rhs:vstack[ vstack.length - 3 ],
+															level:vstack[ vstack.length - 2 ],
+															code:(vstack[ vstack.length - 1 ]=="")?DEF_PROD_CODE:(vstack[ vstack.length - 1 ])
+														});
 														//Get level of the leftmost terminal
 														//as production level.
 														if( prod.level == 0 )
@@ -3698,22 +3689,17 @@ switch( act )
 	break;
 	case 26:
 	{
-			rval = new Array(); 
+			rval = []; 
 	}
 	break;
 	case 27:
 	{
-			rval = new Array();
-														rval = rval.concat( vstack[ vstack.length - 2 ] );
-														rval.push( vstack[ vstack.length - 1 ] );
-													
+			rval=vstack[ vstack.length - 2 ].concat([vstack[ vstack.length - 1 ]]); 
 	}
 	break;
 	case 28:
 	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
+		 rval=[vstack[ vstack.length - 1 ]]; 
 	}
 	break;
 	case 29:
@@ -3751,7 +3737,7 @@ switch( act )
 	break;
 	case 33:
 	{
-			rval = new String(); 
+			rval = ""; 
 	}
 	break;
 	case 34:
@@ -3782,102 +3768,356 @@ switch( act )
 }
 
 
+		return rval;
+	}
+	function parse( src, err_off, err_la )
+	{
+		var		sstack			= [];
+		var		vstack			= [];
+		var 	err_cnt			= 0;
+		var		rval;
+		var		act;
+	
+		//Visual parse tree generation
+
+		var		treenodes		= [];
+		var		tree			= [];
+		var		tmptree			= null;
+		
+		/*
+			This is the parser control block (PCB);
+			It is used to hold the entire parser state
+			in one object, to be quickly accessed from
+			various functions.
+		*/ 
+		var PCB	= {
+			line:1,
+			column:1,
+			offset:0,
+			error_step:0,
+			src:src,
+			att:""
+		};
+
+		if( !err_off )
+			err_off	= [];
+		if( !err_la )
+			err_la = [];
+	
+		sstack.push( 0 );
+		vstack.push( 0 );
+	
+		PCB.la = lex( PCB );
 			
-			if( jscc_dbg_withparsetree )
-				tmptree = new Array();
-
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
-			for( var i = 0; i < pop_tab[act][1]; i++ )
-			{
-				if( jscc_dbg_withparsetree )
-					tmptree.push( tree.pop() );
-					
-				sstack.pop();
-				vstack.pop();
-			}
-
-			//Get goto-table entry
+		while( true )
+		{
 			PCB.act = 60;
-			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
+			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
-				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
+				if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 				{
-					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
-			
-			//Do some parse tree construction if desired
-			if( jscc_dbg_withparsetree )
+		
+			if( PCB.act == 60 )
 			{
-				var node = new treenode();
-				node.sym = labels[ pop_tab[PCB.act][0] ];
-				node.att = rval;
-				node.child = tmptree.reverse();
-				tree.push( treenodes.length );
-				treenodes.push( node );
+				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+					PCB.act = 60;
+				else
+					PCB.act *= -1;
 			}
+
+			/*
+			_print( "state " + sstack[sstack.length-1] +
+					" la = " +
+					PCB.la + " att = >" +
+					PCB.att + "< act = " +
+					PCB.act + " src = >" +
+					PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+					" sstack = " + sstack.join() );
+			*/
+		
+			if( dbg_withtrace && sstack.length > 0 )
+			{
+				dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
+							"\tStack: " + sstack.join() + "\n" +
+							"\tValue stack: " + vstack.join() + "\n" );
 			
-			//Goal symbol match?
-			if( act == 0 ) //Don't use PCB.act here!
-				break;
+				if( dbg_withstepbystep )
+					dbg_wait();
+			}
+		
+			
+			//Parse error? Try to recover!
+			if( PCB.act == 60 )
+			{
+				if( dbg_withtrace )
+				{
+					var expect = "";
 				
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+					dbg_print( "Error detected: " +
+						"There is no reduce or shift on the symbol " +
+							labels[PCB.la] );
+				
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					{
+						if( expect != "" )
+							expect += ", ";
+						
+						expect += "\"" +
+								labels[ act_tab[sstack[sstack.length-1]][i] ]
+									+ "\"";
+					}
+				
+					dbg_print( "Expecting: " + expect );
+				}
 			
-			//...and push it!
-			sstack.push( PCB.act );
-			vstack.push( rval );
-		}
-	}
+				//Report errors only when error_step is 0, and this is not a
+				//subsequent error from a previous parse
+				if( PCB.error_step == 0 )
+				{
+					err_cnt++;
+					err_off.push( PCB.offset - PCB.att.length );
+					err_la.push([]);
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+						err_la[err_la.length-1].push(
+							labels[act_tab[sstack[sstack.length-1]][i]] );
+				}
+			
+				//Perform error recovery			
+				while( sstack.length > 1 && PCB.act == 60 )
+				{
+					sstack.pop();
+					vstack.pop();
+				
+					//Try to shift on error token
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					{
+						if( act_tab[sstack[sstack.length-1]][i] == 1 )
+						{
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+						
+							sstack.push( PCB.act );
+							vstack.push("");
+						
+							if( dbg_withtrace )
+							{
+								dbg_print(
+									"Error recovery: error token " +
+									"could be shifted!" );
+								dbg_print( "Error recovery: " +
+									"current stack is " + sstack.join() );
+							}
 
-	if( jscc_dbg_withtrace )
-		__jsccdbg_print( "\nParse complete." );
+							break;
+						}
+					}
+				}
+			
+				//Is it better to leave the parser now?
+				if( sstack.length > 1 && PCB.act != 60 )
+				{
+					//Ok, now try to shift on the next tokens
+					while( PCB.la != 38 )
+					{
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: " +
+								"Trying to shift on \""
+								+ labels[ PCB.la ] + "\"" );
 
-	if( jscc_dbg_withparsetree )
-	{
-		if( err_cnt == 0 )
-		{
-			__jsccdbg_print( "\n\n--- Parse tree ---" );
-			__jsccdbg_parsetree( 0, treenodes, tree );
+						PCB.act = 60;
+					
+						for( var i = 0;
+							i < act_tab[sstack[sstack.length-1]].length;
+							i+=2 )
+						{
+							if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
+							{
+								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+								break;
+							}
+						}
+					
+						if( PCB.act != 60 )
+							break;
+						
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: Discarding \""
+								+ labels[ PCB.la ] + "\"" );
+					
+						while( ( PCB.la = lex( PCB ) ) < 0 )
+							PCB.offset++;
+				
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: New token \""
+								+ labels[ PCB.la ] + "\"" );
+					}
+					while( PCB.la != 38 && PCB.act == 60 );
+				}
+			
+				if( PCB.act == 60 || PCB.la == 38 )
+				{
+					if( dbg_withtrace )
+						dbg_print( "\tError recovery failed, " +
+							"terminating parse process..." );
+					break;
+				}
+
+				if( dbg_withtrace )
+					dbg_print( "\tError recovery succeeded, " +
+											"continuing" );
+			
+				//Try to parse the next three tokens successfully...
+				PCB.error_step = 3;
+			}
+
+			//Shift
+			if( PCB.act > 0 )
+			{
+				//Parse tree generation
+				if( dbg_withparsetree )
+				{
+					tree.push( treenodes.length );
+					treenodes.push({
+						sym:labels[ PCB.la ],
+						att:PCB.att,
+						child:[]
+					});
+				}
+			
+				if( dbg_withtrace )
+					dbg_print( "Shifting symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
+		
+				sstack.push( PCB.act );
+				vstack.push( PCB.att );
+			
+				PCB.la = lex( PCB );
+			
+				if( dbg_withtrace )
+					dbg_print( "\tNew lookahead symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
+				
+				//Successfull shift and right beyond error recovery?
+				if( PCB.error_step > 0 )
+					PCB.error_step--;
+			}
+			//Reduce
+			else
+			{		
+				act = PCB.act * -1;
+			
+				if( dbg_withtrace )
+					dbg_print( "Reducing by production: " + act );
+			
+				rval = void( 0 );
+			
+				if( dbg_withtrace )
+					dbg_print( "\tPerforming semantic action..." );
+			
+				rval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage	
+	
+				if( dbg_withparsetree )
+					tmptree = [];
+
+				if( dbg_withtrace )
+					dbg_print( "\tPopping " + 
+									pop_tab[act][1] +  " off the stack..." );
+				
+				for( var i = 0; i < pop_tab[act][1]; i++ )
+				{
+					if( dbg_withparsetree )
+						tmptree.push( tree.pop() );
+					
+					sstack.pop();
+					vstack.pop();
+				}
+
+				//Get goto-table entry
+				PCB.act = 60;
+				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
+				{
+					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
+					{
+						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+						break;
+					}
+				}
+			
+				//Do some parse tree construction if desired
+				if( dbg_withparsetree )
+				{
+					tree.push( treenodes.length );
+					treenodes.push( {
+						sym:labels[ pop_tab[act][0] ],
+						att:rval,
+						child:tmptree.reverse()
+						} );
+				}
+			
+				//Goal symbol match?
+				if( act == 0 ) //Don't use PCB.act here!
+					break;
+				
+				if( dbg_withtrace )
+					dbg_print( "\tPushing non-terminal " + 
+						labels[ pop_tab[act][0] ] );
+			
+				//...and push it!
+				sstack.push( PCB.act );
+				vstack.push( rval );
+			}
 		}
-		else
+
+		if( dbg_withtrace )
 		{
-			__jsccdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+			dbg_print( "\nParse complete." );
+		
+			//This function is used for parser drivers that will output
+			//the entire debug messages in a row.
+			dbg_flush();
 		}
+
+		if( dbg_withparsetree )
+		{
+			if( err_cnt == 0 )
+			{
+				dbg_print( "\n\n--- Parse tree ---" );
+				dbg_parsetree( 0, treenodes, tree );
+			}
+			else
+			{
+				dbg_print( "\n\nParse tree cannot be viewed. " +
+									"There where parse errors." );
+			}
+		}
+	
+		return err_cnt;
 	}
 	
-	return err_cnt;
-}
-
-
-function __jsccdbg_parsetree( indent, nodes, tree )
-{
-	var str = new String();
-	for( var i = 0; i < tree.length; i++ )
-	{
-		str = "";
-		for( var j = indent; j > 0; j-- )
-			str += "\t";
-		
-		str += nodes[ tree[i] ].sym;
-		if( nodes[ tree[i] ].att != "" )
-			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
-		__jsccdbg_print( str );
-		if( nodes[ tree[i] ].child.length > 0 )
-			__jsccdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
-	}
-}
+	return parse;
+})(__jscc_debug);
 
 
 
 function parse_grammar( str, filename )
 {
-	var error_offsets = new Array();
-	var error_expects = new Array();
+	var error_offsets = [];
+	var error_expects = [];
 	var parse_error = 0;
 	
 	first_lhs = true;
@@ -3899,23 +4139,75 @@ function parse_grammar( str, filename )
 }
 	
 
+
 /*
 	Default driver template for JS/CC generated parsers for Mozilla/Rhino
 	
-	Features:
-	- Parser trace messages
-	- Step-by-step parsing
-	- Integrated error recovery
-	- Pseudo-graphical parse tree generation
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
+	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2007 from driver.js_ to support Mozilla/Rhino
            by Louis P.Santillan <lpsantil@gmail.com>
 	
 	This is in the public domain.
 */
+var __regex_debug=(function(){
+	var _dbg_withparsetree	= false;
+	var _dbg_withtrace		= false;
+	var _dbg_withstepbystep	= false;
+	
+	function __dbg_print( text )
+	{
+		print( text );
+	}
+	
+	function __dbg_flush()
+	{
+		//Not required here.
+	}
+	
+	function __dbg_wait()
+	{
+	   var kbd = new java.io.BufferedReader(
+	                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
+	
+	   kbd.readLine();
+	}
+	
+	function __dbg_parsetree( indent, nodes, tree )
+	{
+		var str = "";
+		for( var i = 0; i < tree.length; i++ )
+		{
+			str = "";
+			for( var j = indent; j > 0; j-- )
+				str += "\t";
+			
+			str += nodes[ tree[i] ].sym;
+			if( nodes[ tree[i] ].att != "" )
+				str += " >" + nodes[ tree[i] ].att + "<" ;
+				
+			__dbg_print( str );
+			if( nodes[ tree[i] ].child.length > 0 )
+				__dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
+		}
+	}
+	return {
+		__dbg_print:__dbg_print,
+		_dbg_withtrace:_dbg_withtrace,
+		__dbg_wait:__dbg_wait,
+		_dbg_withparsetree:_dbg_withparsetree,
+		_dbg_withstepbystep:_dbg_withstepbystep,
+		__dbg_flush:__dbg_flush,
+		__dbg_parsetree:__dbg_parsetree
+		};
+})();
+/* Code of driver.js will go here... */
 
+/*
+	This is the general, platform-independent part of every parser driver;
+	Input-/Output and Feature-Functions are done by the particular drivers
+	created for the particular platform.
+*/
+	
 var first_nfa;
 var last_nfa;
 var created_nfas; //Must always be initialized by compile_regex()...
@@ -3941,7 +4233,8 @@ function create_nfa( where )
 	}
 	
 	where[i].edge = EDGE_EPSILON;
-	where[i].ccl = bitset_create( MAX_CHAR );
+	where[i].ccl=new BitSet(MAX_CHAR);
+	where[i].ccl_ = {};///SV0L0CH: try to reblace array to object
 	where[i].accept = -1;
 	where[i].follow = -1;
 	where[i].follow2 = -1;
@@ -3953,514 +4246,212 @@ function create_nfa( where )
 }
 
 
+var __regexparse=(function(debug){
+	with(debug){
+		var dbg_print = __dbg_print;
+		var dbg_withtrace = _dbg_withtrace;
+		var dbg_wait = __dbg_wait;
+		var dbg_withparsetree = _dbg_withparsetree;
+		var dbg_withstepbystep = _dbg_withstepbystep;
+		var dbg_flush = __dbg_flush;
+		var dbg_parsetree = __dbg_parsetree;
+	}
 
-var regex_dbg_withparsetree	= false;
-var regex_dbg_withtrace		= false;
-var regex_dbg_withstepbystep	= false;
-
-function __regexdbg_print( text )
-{
-	print( text );
-}
-
-function __regexdbg_wait()
-{
-   var kbd = new java.io.BufferedReader(
-                new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
-
-   kbd.readLine();
-}
-
-function __regexlex( PCB )
-{
-	var state;
-	var match		= -1;
-	var match_pos	= 0;
-	var start		= 0;
-	var pos;
-	var chr;
-
-	while( 1 )
-	{
-		state = 0;
-		match = -1;
-		match_pos = 0;
-		start = 0;
-		pos = PCB.offset + 1 + ( match_pos - start );
-
-		do
-		{
-			pos--;
-			state = 0;
-			match = -2;
-			start = pos;
-	
-			if( PCB.src.length <= start )
-				return 22;
-	
-			do
-			{
-				chr = PCB.src.charCodeAt( pos );
-
+function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 switch( state )
 {
 	case 0:
-		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) state = 1;
-		else if( chr == 40 ) state = 2;
-		else if( chr == 41 ) state = 3;
-		else if( chr == 42 ) state = 4;
-		else if( chr == 43 ) state = 5;
-		else if( chr == 46 ) state = 6;
-		else if( chr == 63 ) state = 7;
-		else if( chr == 91 ) state = 8;
-		else if( chr == 93 ) state = 9;
-		else if( chr == 124 ) state = 10;
-		else if( chr == 92 ) state = 13;
-		else state = -1;
+		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) set_state(1);
+		else if( chr == 40 ) set_state(2);
+		else if( chr == 41 ) set_state(3);
+		else if( chr == 42 ) set_state(4);
+		else if( chr == 43 ) set_state(5);
+		else if( chr == 46 ) set_state(6);
+		else if( chr == 63 ) set_state(7);
+		else if( chr == 91 ) set_state(8);
+		else if( chr == 93 ) set_state(9);
+		else if( chr == 124 ) set_state(10);
+		else if( chr == 92 ) set_state(13);
+		else set_state(-1);
 		break;
 
 	case 1:
-		state = -1;
-		match = 13;
-		match_pos = pos;
+		set_state(-1);
+		set_match(13);
+		set_match_pos(pos);
 		break;
 
 	case 2:
-		state = -1;
-		match = 6;
-		match_pos = pos;
+		set_state(-1);
+		set_match(6);
+		set_match_pos(pos);
 		break;
 
 	case 3:
-		state = -1;
-		match = 7;
-		match_pos = pos;
+		set_state(-1);
+		set_match(7);
+		set_match_pos(pos);
 		break;
 
 	case 4:
-		state = -1;
-		match = 3;
-		match_pos = pos;
+		set_state(-1);
+		set_match(3);
+		set_match_pos(pos);
 		break;
 
 	case 5:
-		state = -1;
-		match = 4;
-		match_pos = pos;
+		set_state(-1);
+		set_match(4);
+		set_match_pos(pos);
 		break;
 
 	case 6:
-		state = -1;
-		match = 10;
-		match_pos = pos;
+		set_state(-1);
+		set_match(10);
+		set_match_pos(pos);
 		break;
 
 	case 7:
-		state = -1;
-		match = 5;
-		match_pos = pos;
+		set_state(-1);
+		set_match(5);
+		set_match_pos(pos);
 		break;
 
 	case 8:
-		state = -1;
-		match = 8;
-		match_pos = pos;
+		set_state(-1);
+		set_match(8);
+		set_match_pos(pos);
 		break;
 
 	case 9:
-		state = -1;
-		match = 9;
-		match_pos = pos;
+		set_state(-1);
+		set_match(9);
+		set_match_pos(pos);
 		break;
 
 	case 10:
-		state = -1;
-		match = 2;
-		match_pos = pos;
+		set_state(-1);
+		set_match(2);
+		set_match_pos(pos);
 		break;
 
 	case 11:
-		state = -1;
-		match = 12;
-		match_pos = pos;
+		set_state(-1);
+		set_match(12);
+		set_match_pos(pos);
 		break;
 
 	case 12:
-		if( ( chr >= 48 && chr <= 57 ) ) state = 12;
-		else state = -1;
-		match = 11;
-		match_pos = pos;
+		if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
+		else set_state(-1);
+		set_match(11);
+		set_match_pos(pos);
 		break;
 
 	case 13:
-		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) state = 11;
-		else if( ( chr >= 48 && chr <= 57 ) ) state = 12;
-		else state = -1;
-		match = 13;
-		match_pos = pos;
+		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) set_state(11);
+		else if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
+		else set_state(-1);
+		set_match(13);
+		set_match_pos(pos);
 		break;
 
 }
 
+}
 
 
-				//Line- and column-counter
-				if( state > -1 )
+	function lex( PCB )
+	{
+		var state;
+		var match		= -1;
+		var match_pos	= 0;
+		var start		= 0;
+		var pos;
+		var chr;
+
+		while(true)
+		{
+			state = 0;
+			match = -1;
+			match_pos = 0;
+			start = 0;
+			pos = PCB.offset + 1 + ( match_pos - start );
+			///Functions for manipulation of variables
+			function set_match(v){match=v;}
+			function set_state(v){state=v;}
+			function set_match_pos(v){match_pos=v;}
+			do
+			{
+				pos--;
+				state = 0;
+				match = -2;
+				start = pos;
+	
+				if( PCB.src.length <= start )
+					return 22;
+	
+				do
 				{
-					if( chr == 10 )
-					{
-						PCB.line++;
-						PCB.column = 0;
-					}
-					PCB.column++;
-				}
+					chr = PCB.src.charCodeAt( pos );
 
-				pos++;
+
+					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					//Line- and column-counter
+					if( state > -1 )
+					{
+						if( chr == 10 )
+						{
+							PCB.line++;
+							PCB.column = 0;
+						}
+						PCB.column++;
+					}
+
+					pos++;
+	
+				}
+				while( state > -1 );
 	
 			}
-			while( state > -1 );
+			while( -1 > -1 && match == -1 );
 	
-		}
-		while( -1 > -1 && match == -1 );
-	
-		if( match > -1 )
-		{
-			PCB.att = PCB.src.substr( start, match_pos - start );
-			PCB.offset = match_pos;
-			
+			if( match > -1 )
+			{
+				PCB.att = PCB.src.substr( start, match_pos - start );
+				PCB.offset = match_pos;
 
-		}
-		else
-		{
-			PCB.att = new String();
-			match = -1;
-		}
+
+
+			}
+			else
+			{
+				PCB.att = "";
+				match = -1;
+			}
 		
-		break;
+			break;
+		}
+
+		return match;
 	}
 
-	return match;
-}
 
-function __regexparse( src, err_off, err_la )
-{
-	var		sstack			= new Array();
-	var		vstack			= new Array();
-	var 	err_cnt			= 0;
-	var		rval;
-	var		act;
-	
-	//PCB: Parser Control Block
-	var 	parsercontrol	= new Function( "",
-								"var la;" +
-								"var act;" +
-								"var offset;" +
-								"var src;" +
-								"var att;" +
-								"var line;" +
-								"var column;" +
-								"var error_step;" );
-	var		PCB	= new parsercontrol();
-	
-	//Visual parse tree generation
-	var 	treenode		= new Function( "",
-								"var sym;"+
-								"var att;"+
-								"var child;" );
-	var		treenodes		= new Array();
-	var		tree			= new Array();
-	var		tmptree			= null;
+var pop_tab =[[0,1],[15,1],[14,3],[14,1],[16,2],[16,1],[17,2],[17,2],[17,2],[17,1],[18,1],[18,1],[18,3],[20,3],[20,1],[21,2],[21,0],[19,1],[19,1],[19,1]];
 
-/* Pop-Table */
-var pop_tab = new Array(
-	new Array( 0/* RegEx' */, 1 ),
-	new Array( 15/* RegEx */, 1 ),
-	new Array( 14/* Expression */, 3 ),
-	new Array( 14/* Expression */, 1 ),
-	new Array( 16/* Catenation */, 2 ),
-	new Array( 16/* Catenation */, 1 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 1 ),
-	new Array( 18/* Term */, 1 ),
-	new Array( 18/* Term */, 1 ),
-	new Array( 18/* Term */, 3 ),
-	new Array( 20/* CharacterSet */, 3 ),
-	new Array( 20/* CharacterSet */, 1 ),
-	new Array( 21/* CharClass */, 2 ),
-	new Array( 21/* CharClass */, 0 ),
-	new Array( 19/* Character */, 1 ),
-	new Array( 19/* Character */, 1 ),
-	new Array( 19/* Character */, 1 )
-);
+var act_tab =[[6,8,11,9,12,10,13,11,8,12,10,13],[],[2,14],[6,8,11,9,12,10,13,11,8,12,10,13],[],[5,16,4,17,3,18],[],[],[6,8,11,9,12,10,13,11,8,12,10,13],[],[],[],[],[],[6,8,11,9,12,10,13,11,8,12,10,13],[],[],[],[],[7,22,2,14],[9,24,11,9,12,10,13,11],[6,8,11,9,12,10,13,11,8,12,10,13],[],[],[]];
 
-/* Action-Table */
-var act_tab = new Array(
-	/* State 0 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 1 */ new Array( 22/* "$" */,0 ),
-	/* State 2 */ new Array( 2/* "|" */,14 , 22/* "$" */,-1 ),
-	/* State 3 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "$" */,-3 , 2/* "|" */,-3 , 7/* ")" */,-3 ),
-	/* State 4 */ new Array( 22/* "$" */,-5 , 2/* "|" */,-5 , 6/* "(" */,-5 , 11/* "ASCII_CODE" */,-5 , 12/* "ESCAPED_CHAR" */,-5 , 13/* "ANY" */,-5 , 8/* "[" */,-5 , 10/* "ANY_CHAR" */,-5 , 7/* ")" */,-5 ),
-	/* State 5 */ new Array( 5/* "?" */,16 , 4/* "+" */,17 , 3/* "*" */,18 , 22/* "$" */,-9 , 2/* "|" */,-9 , 6/* "(" */,-9 , 11/* "ASCII_CODE" */,-9 , 12/* "ESCAPED_CHAR" */,-9 , 13/* "ANY" */,-9 , 8/* "[" */,-9 , 10/* "ANY_CHAR" */,-9 , 7/* ")" */,-9 ),
-	/* State 6 */ new Array( 3/* "*" */,-10 , 4/* "+" */,-10 , 5/* "?" */,-10 , 22/* "$" */,-10 , 2/* "|" */,-10 , 6/* "(" */,-10 , 11/* "ASCII_CODE" */,-10 , 12/* "ESCAPED_CHAR" */,-10 , 13/* "ANY" */,-10 , 8/* "[" */,-10 , 10/* "ANY_CHAR" */,-10 , 7/* ")" */,-10 ),
-	/* State 7 */ new Array( 3/* "*" */,-11 , 4/* "+" */,-11 , 5/* "?" */,-11 , 22/* "$" */,-11 , 2/* "|" */,-11 , 6/* "(" */,-11 , 11/* "ASCII_CODE" */,-11 , 12/* "ESCAPED_CHAR" */,-11 , 13/* "ANY" */,-11 , 8/* "[" */,-11 , 10/* "ANY_CHAR" */,-11 , 7/* ")" */,-11 ),
-	/* State 8 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 9 */ new Array( 3/* "*" */,-17 , 4/* "+" */,-17 , 5/* "?" */,-17 , 22/* "$" */,-17 , 2/* "|" */,-17 , 6/* "(" */,-17 , 11/* "ASCII_CODE" */,-17 , 12/* "ESCAPED_CHAR" */,-17 , 13/* "ANY" */,-17 , 8/* "[" */,-17 , 10/* "ANY_CHAR" */,-17 , 7/* ")" */,-17 , 9/* "]" */,-17 ),
-	/* State 10 */ new Array( 3/* "*" */,-18 , 4/* "+" */,-18 , 5/* "?" */,-18 , 22/* "$" */,-18 , 2/* "|" */,-18 , 6/* "(" */,-18 , 11/* "ASCII_CODE" */,-18 , 12/* "ESCAPED_CHAR" */,-18 , 13/* "ANY" */,-18 , 8/* "[" */,-18 , 10/* "ANY_CHAR" */,-18 , 7/* ")" */,-18 , 9/* "]" */,-18 ),
-	/* State 11 */ new Array( 3/* "*" */,-19 , 4/* "+" */,-19 , 5/* "?" */,-19 , 22/* "$" */,-19 , 2/* "|" */,-19 , 6/* "(" */,-19 , 11/* "ASCII_CODE" */,-19 , 12/* "ESCAPED_CHAR" */,-19 , 13/* "ANY" */,-19 , 8/* "[" */,-19 , 10/* "ANY_CHAR" */,-19 , 7/* ")" */,-19 , 9/* "]" */,-19 ),
-	/* State 12 */ new Array( 9/* "]" */,-16 , 11/* "ASCII_CODE" */,-16 , 12/* "ESCAPED_CHAR" */,-16 , 13/* "ANY" */,-16 ),
-	/* State 13 */ new Array( 3/* "*" */,-14 , 4/* "+" */,-14 , 5/* "?" */,-14 , 22/* "$" */,-14 , 2/* "|" */,-14 , 6/* "(" */,-14 , 11/* "ASCII_CODE" */,-14 , 12/* "ESCAPED_CHAR" */,-14 , 13/* "ANY" */,-14 , 8/* "[" */,-14 , 10/* "ANY_CHAR" */,-14 , 7/* ")" */,-14 ),
-	/* State 14 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 15 */ new Array( 22/* "$" */,-4 , 2/* "|" */,-4 , 6/* "(" */,-4 , 11/* "ASCII_CODE" */,-4 , 12/* "ESCAPED_CHAR" */,-4 , 13/* "ANY" */,-4 , 8/* "[" */,-4 , 10/* "ANY_CHAR" */,-4 , 7/* ")" */,-4 ),
-	/* State 16 */ new Array( 22/* "$" */,-8 , 2/* "|" */,-8 , 6/* "(" */,-8 , 11/* "ASCII_CODE" */,-8 , 12/* "ESCAPED_CHAR" */,-8 , 13/* "ANY" */,-8 , 8/* "[" */,-8 , 10/* "ANY_CHAR" */,-8 , 7/* ")" */,-8 ),
-	/* State 17 */ new Array( 22/* "$" */,-7 , 2/* "|" */,-7 , 6/* "(" */,-7 , 11/* "ASCII_CODE" */,-7 , 12/* "ESCAPED_CHAR" */,-7 , 13/* "ANY" */,-7 , 8/* "[" */,-7 , 10/* "ANY_CHAR" */,-7 , 7/* ")" */,-7 ),
-	/* State 18 */ new Array( 22/* "$" */,-6 , 2/* "|" */,-6 , 6/* "(" */,-6 , 11/* "ASCII_CODE" */,-6 , 12/* "ESCAPED_CHAR" */,-6 , 13/* "ANY" */,-6 , 8/* "[" */,-6 , 10/* "ANY_CHAR" */,-6 , 7/* ")" */,-6 ),
-	/* State 19 */ new Array( 2/* "|" */,14 , 7/* ")" */,22 ),
-	/* State 20 */ new Array( 9/* "]" */,24 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 ),
-	/* State 21 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 , 22/* "$" */,-2 , 2/* "|" */,-2 , 7/* ")" */,-2 ),
-	/* State 22 */ new Array( 3/* "*" */,-12 , 4/* "+" */,-12 , 5/* "?" */,-12 , 22/* "$" */,-12 , 2/* "|" */,-12 , 6/* "(" */,-12 , 11/* "ASCII_CODE" */,-12 , 12/* "ESCAPED_CHAR" */,-12 , 13/* "ANY" */,-12 , 8/* "[" */,-12 , 10/* "ANY_CHAR" */,-12 , 7/* ")" */,-12 ),
-	/* State 23 */ new Array( 9/* "]" */,-15 , 11/* "ASCII_CODE" */,-15 , 12/* "ESCAPED_CHAR" */,-15 , 13/* "ANY" */,-15 ),
-	/* State 24 */ new Array( 3/* "*" */,-13 , 4/* "+" */,-13 , 5/* "?" */,-13 , 22/* "$" */,-13 , 2/* "|" */,-13 , 6/* "(" */,-13 , 11/* "ASCII_CODE" */,-13 , 12/* "ESCAPED_CHAR" */,-13 , 13/* "ANY" */,-13 , 8/* "[" */,-13 , 10/* "ANY_CHAR" */,-13 , 7/* ")" */,-13 )
-);
+var goto_tab =[[15,1,14,2,16,3,17,4,18,5,19,6,20,7],[],[],[17,15,18,5,19,6,20,7],[],[],[],[],[14,19,16,3,17,4,18,5,19,6,20,7],[],[],[],[21,20],[],[16,21,17,4,18,5,19,6,20,7],[],[],[],[],[],[19,23],[17,15,18,5,19,6,20,7],[],[],[]];
 
-/* Goto-Table */
-var goto_tab = new Array(
-	/* State 0 */ new Array( 15/* RegEx */,1 , 14/* Expression */,2 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array(  ),
-	/* State 3 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 4 */ new Array(  ),
-	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array(  ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 14/* Expression */,19 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 9 */ new Array(  ),
-	/* State 10 */ new Array(  ),
-	/* State 11 */ new Array(  ),
-	/* State 12 */ new Array( 21/* CharClass */,20 ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 16/* Catenation */,21 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array(  ),
-	/* State 20 */ new Array( 19/* Character */,23 ),
-	/* State 21 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 22 */ new Array(  ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  )
-);
+var defact_tab =[-1,0,1,3,5,9,10,11,-1,17,18,19,16,14,-1,4,8,7,6,-1,-1,2,12,15,13];
+
+
+var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"*","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":"+","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"?","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"(","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":")","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":"[","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"]","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":1,"prods":[],"nullable":false,"id":12,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"ANY","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"Expression","kind":0,"prods":[2,3],"nullable":0,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":0,"prods":[1],"nullable":0,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":0,"prods":[4,5],"nullable":0,"id":16,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":0,"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":0,"prods":[10,11,12],"nullable":0,"id":18,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":0,"prods":[17,18,19],"nullable":0,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":0,"prods":[13,14],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[8,10]},{"label":"CharClass","kind":0,"prods":[15,16],"nullable":1,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":22,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[22]}];
 
 
 
-/* Symbol labels */
-var labels = new Array(
-	"RegEx'" /* Non-terminal symbol */,
-	"ERROR_RESYNC" /* Terminal symbol */,
-	"|" /* Terminal symbol */,
-	"*" /* Terminal symbol */,
-	"+" /* Terminal symbol */,
-	"?" /* Terminal symbol */,
-	"(" /* Terminal symbol */,
-	")" /* Terminal symbol */,
-	"[" /* Terminal symbol */,
-	"]" /* Terminal symbol */,
-	"ANY_CHAR" /* Terminal symbol */,
-	"ASCII_CODE" /* Terminal symbol */,
-	"ESCAPED_CHAR" /* Terminal symbol */,
-	"ANY" /* Terminal symbol */,
-	"Expression" /* Non-terminal symbol */,
-	"RegEx" /* Non-terminal symbol */,
-	"Catenation" /* Non-terminal symbol */,
-	"Factor" /* Non-terminal symbol */,
-	"Term" /* Non-terminal symbol */,
-	"Character" /* Non-terminal symbol */,
-	"CharacterSet" /* Non-terminal symbol */,
-	"CharClass" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
-);
-
-
-	
-	PCB.line = 1;
-	PCB.column = 1;
-	PCB.offset = 0;
-	PCB.error_step = 0;
-	PCB.src = src;
-	PCB.att = new String();
-
-	if( !err_off )
-		err_off	= new Array();
-	if( !err_la )
-		err_la = new Array();
-	
-	sstack.push( 0 );
-	vstack.push( 0 );
-	
-	PCB.la = __regexlex( PCB );
-			
-	while( true )
-	{
-		PCB.act = 26;
-		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-		{
-			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-			{
-				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-				break;
-			}
-		}
-
-		/*
-		_print( "state " + sstack[sstack.length-1] +
-				" la = " +
-				PCB.la + " att = >" +
-				PCB.att + "< act = " +
-				PCB.act + " src = >" +
-				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-				" sstack = " + sstack.join() );
-		*/
-		
-		if( regex_dbg_withtrace && sstack.length > 0 )
-		{
-			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-			
-			if( regex_dbg_withstepbystep )
-				__regexdbg_wait();
-		}
-		
-			
-		//Parse error? Try to recover!
-		if( PCB.act == 26 )
-		{
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
-			//Report errors only when error_step is 0, and this is not a
-			//subsequent error from a previous parse
-			if( PCB.error_step == 0 )
-			{
-				err_cnt++;
-				err_off.push( PCB.offset - PCB.att.length );
-				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			}
-			
-			//Perform error recovery			
-			while( sstack.length > 1 && PCB.act == 26 )
-			{
-				sstack.pop();
-				vstack.pop();
-				
-				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( act_tab[sstack[sstack.length-1]][i] == 1 )
-					{
-						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
-						sstack.push( PCB.act );
-						vstack.push( new String() );
-
-						break;
-					}
-				}
-			}
-			
-			//Is it better to leave the parser now?
-			if( sstack.length > 1 && PCB.act != 26 )
-			{
-				//Ok, now try to shift on the next tokens
-				while( PCB.la != 22 )
-				{
-					PCB.act = 26;
-					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-						{
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-							break;
-						}
-					}
-					
-					if( PCB.act != 26 )
-						break;
-					
-					while( ( PCB.la = __regexlex( PCB ) )
-								< 0 )
-						PCB.offset++;
-				}
-				while( PCB.la != 22 && PCB.act == 26 );
-			}
-			
-			if( PCB.act == 26 || PCB.la == 22 )
-			{
-				if( regex_dbg_withtrace )
-					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
-				break;
-			}
-
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tError recovery succeeded, continuing" );
-			
-			//Try to parse the next three tokens successfully...
-			PCB.error_step = 3;
-		}
-
-		//Shift
-		if( PCB.act > 0 )
-		{
-			//Parse tree generation
-			if( regex_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ PCB.la ];
-				node.att = PCB.att;
-				node.child = new Array();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
-			sstack.push( PCB.act );
-			vstack.push( PCB.att );
-			
-			PCB.la = __regexlex( PCB );
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
-			//Successfull shift and right beyond error recovery?
-			if( PCB.error_step > 0 )
-				PCB.error_step--;
-		}
-		//Reduce
-		else
-		{		
-			act = PCB.act * -1;
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Reducing by production: " + act );
-			
-			rval = void( 0 );
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPerforming semantic action..." );
-			
+	function ACTIONS(act,sstack,vstack){
+		var rval;
 switch( act )
 {
 	case 0:
@@ -4478,9 +4469,11 @@ switch( act )
 	break;
 	case 2:
 	{
-			rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
+			
+													rval = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+														});
 													nfa_states[rval.start].follow = vstack[ vstack.length - 3 ].start;
 													nfa_states[rval.start].follow2 = vstack[ vstack.length - 1 ].start;
 													
@@ -4496,15 +4489,10 @@ switch( act )
 	break;
 	case 4:
 	{
-			/*
-														(As a C-junkie, I miss memcpy() here ;P)
-													*/
-													nfa_states[vstack[ vstack.length - 2 ].end].edge		= nfa_states[vstack[ vstack.length - 1 ].start].edge;
-													nfa_states[vstack[ vstack.length - 2 ].end].ccl		= nfa_states[vstack[ vstack.length - 1 ].start].ccl;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow	= nfa_states[vstack[ vstack.length - 1 ].start].follow;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2	= nfa_states[vstack[ vstack.length - 1 ].start].follow2;
-													nfa_states[vstack[ vstack.length - 2 ].end].accept	= nfa_states[vstack[ vstack.length - 1 ].start].accept;
-													
+			
+													var weight=nfa_states[vstack[ vstack.length - 2 ].end].weight;///SV0L0CH: if weight unused - delete this
+													nfa_states[vstack[ vstack.length - 2 ].end]=new NFA(nfa_states[vstack[ vstack.length - 1 ].start]);///SV0L0CH: we can use copy constructor
+													nfa_states[vstack[ vstack.length - 2 ].end].weight=weight;///SV0L0CH: if weight unused - delete this
 													nfa_states[vstack[ vstack.length - 1 ].start].edge = EDGE_FREE;
 													
 													vstack[ vstack.length - 2 ].end = vstack[ vstack.length - 1 ].end;
@@ -4521,10 +4509,10 @@ switch( act )
 	case 6:
 	{
 		
-													rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													
+													rval = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+													});
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 
@@ -4535,10 +4523,11 @@ switch( act )
 	break;
 	case 7:
 	{
-		 	rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													
+		 	
+													rval = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+													});
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 
@@ -4548,9 +4537,11 @@ switch( act )
 	break;
 	case 8:
 	{
-		 	rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
+		 	
+													rval = new PARAM({
+														start:create_nfa( nfa_states ),
+														end:create_nfa( nfa_states )
+														});
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[rval.start].follow2 = rval.end;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
@@ -4570,10 +4561,8 @@ switch( act )
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													
-													//_print( "SINGLE: >" + vstack[ vstack.length - 1 ] + "<" );
-													
-													bitset_set( nfa_states[rval.start].ccl,
-															vstack[ vstack.length - 1 ].charCodeAt( 0 ), 1 );
+													nfa_states[rval.start].ccl.set(vstack[ vstack.length - 1 ].charCodeAt( 0 ), 1 );
+													//nfa_states[rval.start].ccl_[vstack[ vstack.length - 1 ].charAt(0)]=true;///SV0L0CH:array to object
 												
 	}
 	break;
@@ -4590,10 +4579,7 @@ switch( act )
 	case 13:
 	{
 			var negate = false;
-													var i = 0, j, start;
-													
-													//_print( "CHARCLASS: >" + vstack[ vstack.length - 2 ] + "<" );
-													
+													var i = 0, j, start;													
 													rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
@@ -4603,8 +4589,10 @@ switch( act )
 													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' )
 													{
 														negate = true;
-														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
-															bitset_set( nfa_states[rval.start].ccl, j, 1 );
+														for( var j = MIN_CHAR; j < MAX_CHAR; j++ ){
+															nfa_states[rval.start].ccl.set(j,true);
+															///TODO:set all chars to true or replace to other construction
+														}
 														i++;
 													}
 
@@ -4631,7 +4619,6 @@ switch( act )
 	{
 			rval = new PARAM();
 				
-													//_print( "ANYCHAR: >" + vstack[ vstack.length - 1 ] + "<" );
 													
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
@@ -4644,12 +4631,12 @@ switch( act )
 	break;
 	case 15:
 	{
-			rval = new String( vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ] ); 
+			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
 	}
 	break;
 	case 16:
 	{
-			rval = new String(); 
+			rval = ""; 
 	}
 	break;
 	case 17:
@@ -4659,25 +4646,7 @@ switch( act )
 	break;
 	case 18:
 	{
-			switch( vstack[ vstack.length - 1 ].substr( 1 ) )
-													{
-														case 'n':
-															rval = '\n';
-															break;
-														case 'r':
-															rval = '\r';
-															break;
-														case 't':
-															rval = '\t';
-															break;
-														case 'a':
-															rval = '\a';
-															break;
-														default:
-															rval = vstack[ vstack.length - 1 ].substr( 1 );
-															break;
-													}
-												
+			rval={n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
 	}
 	break;
 	case 19:
@@ -4688,95 +4657,349 @@ switch( act )
 }
 
 
+		return rval;
+	}
+	function parse( src, err_off, err_la )
+	{
+		var		sstack			= [];
+		var		vstack			= [];
+		var 	err_cnt			= 0;
+		var		rval;
+		var		act;
+	
+		//Visual parse tree generation
+
+		var		treenodes		= [];
+		var		tree			= [];
+		var		tmptree			= null;
+		
+		/*
+			This is the parser control block (PCB);
+			It is used to hold the entire parser state
+			in one object, to be quickly accessed from
+			various functions.
+		*/ 
+		var PCB	= {
+			line:1,
+			column:1,
+			offset:0,
+			error_step:0,
+			src:src,
+			att:""
+		};
+
+		if( !err_off )
+			err_off	= [];
+		if( !err_la )
+			err_la = [];
+	
+		sstack.push( 0 );
+		vstack.push( 0 );
+	
+		PCB.la = lex( PCB );
 			
-			if( regex_dbg_withparsetree )
-				tmptree = new Array();
-
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
-			for( var i = 0; i < pop_tab[act][1]; i++ )
-			{
-				if( regex_dbg_withparsetree )
-					tmptree.push( tree.pop() );
-					
-				sstack.pop();
-				vstack.pop();
-			}
-
-			//Get goto-table entry
+		while( true )
+		{
 			PCB.act = 26;
-			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
+			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 			{
-				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
+				if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
 				{
-					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
-			
-			//Do some parse tree construction if desired
-			if( regex_dbg_withparsetree )
+		
+			if( PCB.act == 26 )
 			{
-				var node = new treenode();
-				node.sym = labels[ pop_tab[PCB.act][0] ];
-				node.att = rval;
-				node.child = tmptree.reverse();
-				tree.push( treenodes.length );
-				treenodes.push( node );
+				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+					PCB.act = 26;
+				else
+					PCB.act *= -1;
 			}
+
+			/*
+			_print( "state " + sstack[sstack.length-1] +
+					" la = " +
+					PCB.la + " att = >" +
+					PCB.att + "< act = " +
+					PCB.act + " src = >" +
+					PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
+					" sstack = " + sstack.join() );
+			*/
+		
+			if( dbg_withtrace && sstack.length > 0 )
+			{
+				dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
+							"\tLookahead: " + labels[PCB.la] +
+								" (\"" + PCB.att + "\")\n" +
+							"\tAction: " + PCB.act + "\n" + 
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
+									( ( PCB.offset + 30 < PCB.src.length ) ?
+										"..." : "" ) + "\"\n" +
+							"\tStack: " + sstack.join() + "\n" +
+							"\tValue stack: " + vstack.join() + "\n" );
 			
-			//Goal symbol match?
-			if( act == 0 ) //Don't use PCB.act here!
-				break;
+				if( dbg_withstepbystep )
+					dbg_wait();
+			}
+		
+			
+			//Parse error? Try to recover!
+			if( PCB.act == 26 )
+			{
+				if( dbg_withtrace )
+				{
+					var expect = "";
 				
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+					dbg_print( "Error detected: " +
+						"There is no reduce or shift on the symbol " +
+							labels[PCB.la] );
+				
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					{
+						if( expect != "" )
+							expect += ", ";
+						
+						expect += "\"" +
+								labels[ act_tab[sstack[sstack.length-1]][i] ]
+									+ "\"";
+					}
+				
+					dbg_print( "Expecting: " + expect );
+				}
 			
-			//...and push it!
-			sstack.push( PCB.act );
-			vstack.push( rval );
-		}
-	}
+				//Report errors only when error_step is 0, and this is not a
+				//subsequent error from a previous parse
+				if( PCB.error_step == 0 )
+				{
+					err_cnt++;
+					err_off.push( PCB.offset - PCB.att.length );
+					err_la.push([]);
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+						err_la[err_la.length-1].push(
+							labels[act_tab[sstack[sstack.length-1]][i]] );
+				}
+			
+				//Perform error recovery			
+				while( sstack.length > 1 && PCB.act == 26 )
+				{
+					sstack.pop();
+					vstack.pop();
+				
+					//Try to shift on error token
+					for( var i = 0;
+						i < act_tab[sstack[sstack.length-1]].length;
+						i+=2 )
+					{
+						if( act_tab[sstack[sstack.length-1]][i] == 1 )
+						{
+							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+						
+							sstack.push( PCB.act );
+							vstack.push("");
+						
+							if( dbg_withtrace )
+							{
+								dbg_print(
+									"Error recovery: error token " +
+									"could be shifted!" );
+								dbg_print( "Error recovery: " +
+									"current stack is " + sstack.join() );
+							}
 
-	if( regex_dbg_withtrace )
-		__regexdbg_print( "\nParse complete." );
+							break;
+						}
+					}
+				}
+			
+				//Is it better to leave the parser now?
+				if( sstack.length > 1 && PCB.act != 26 )
+				{
+					//Ok, now try to shift on the next tokens
+					while( PCB.la != 22 )
+					{
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: " +
+								"Trying to shift on \""
+								+ labels[ PCB.la ] + "\"" );
 
-	if( regex_dbg_withparsetree )
-	{
-		if( err_cnt == 0 )
-		{
-			__regexdbg_print( "\n\n--- Parse tree ---" );
-			__regexdbg_parsetree( 0, treenodes, tree );
+						PCB.act = 26;
+					
+						for( var i = 0;
+							i < act_tab[sstack[sstack.length-1]].length;
+							i+=2 )
+						{
+							if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
+							{
+								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+								break;
+							}
+						}
+					
+						if( PCB.act != 26 )
+							break;
+						
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: Discarding \""
+								+ labels[ PCB.la ] + "\"" );
+					
+						while( ( PCB.la = lex( PCB ) ) < 0 )
+							PCB.offset++;
+				
+						if( dbg_withtrace )
+							dbg_print( "Error recovery: New token \""
+								+ labels[ PCB.la ] + "\"" );
+					}
+					while( PCB.la != 22 && PCB.act == 26 );
+				}
+			
+				if( PCB.act == 26 || PCB.la == 22 )
+				{
+					if( dbg_withtrace )
+						dbg_print( "\tError recovery failed, " +
+							"terminating parse process..." );
+					break;
+				}
+
+				if( dbg_withtrace )
+					dbg_print( "\tError recovery succeeded, " +
+											"continuing" );
+			
+				//Try to parse the next three tokens successfully...
+				PCB.error_step = 3;
+			}
+
+			//Shift
+			if( PCB.act > 0 )
+			{
+				//Parse tree generation
+				if( dbg_withparsetree )
+				{
+					tree.push( treenodes.length );
+					treenodes.push({
+						sym:labels[ PCB.la ],
+						att:PCB.att,
+						child:[]
+					});
+				}
+			
+				if( dbg_withtrace )
+					dbg_print( "Shifting symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
+		
+				sstack.push( PCB.act );
+				vstack.push( PCB.att );
+			
+				PCB.la = lex( PCB );
+			
+				if( dbg_withtrace )
+					dbg_print( "\tNew lookahead symbol: " +
+						labels[PCB.la] + " (" + PCB.att + ")" );
+				
+				//Successfull shift and right beyond error recovery?
+				if( PCB.error_step > 0 )
+					PCB.error_step--;
+			}
+			//Reduce
+			else
+			{		
+				act = PCB.act * -1;
+			
+				if( dbg_withtrace )
+					dbg_print( "Reducing by production: " + act );
+			
+				rval = void( 0 );
+			
+				if( dbg_withtrace )
+					dbg_print( "\tPerforming semantic action..." );
+			
+				rval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage	
+	
+				if( dbg_withparsetree )
+					tmptree = [];
+
+				if( dbg_withtrace )
+					dbg_print( "\tPopping " + 
+									pop_tab[act][1] +  " off the stack..." );
+				
+				for( var i = 0; i < pop_tab[act][1]; i++ )
+				{
+					if( dbg_withparsetree )
+						tmptree.push( tree.pop() );
+					
+					sstack.pop();
+					vstack.pop();
+				}
+
+				//Get goto-table entry
+				PCB.act = 26;
+				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
+				{
+					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
+					{
+						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+						break;
+					}
+				}
+			
+				//Do some parse tree construction if desired
+				if( dbg_withparsetree )
+				{
+					tree.push( treenodes.length );
+					treenodes.push( {
+						sym:labels[ pop_tab[act][0] ],
+						att:rval,
+						child:tmptree.reverse()
+						} );
+				}
+			
+				//Goal symbol match?
+				if( act == 0 ) //Don't use PCB.act here!
+					break;
+				
+				if( dbg_withtrace )
+					dbg_print( "\tPushing non-terminal " + 
+						labels[ pop_tab[act][0] ] );
+			
+				//...and push it!
+				sstack.push( PCB.act );
+				vstack.push( rval );
+			}
 		}
-		else
+
+		if( dbg_withtrace )
 		{
-			__regexdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+			dbg_print( "\nParse complete." );
+		
+			//This function is used for parser drivers that will output
+			//the entire debug messages in a row.
+			dbg_flush();
 		}
+
+		if( dbg_withparsetree )
+		{
+			if( err_cnt == 0 )
+			{
+				dbg_print( "\n\n--- Parse tree ---" );
+				dbg_parsetree( 0, treenodes, tree );
+			}
+			else
+			{
+				dbg_print( "\n\nParse tree cannot be viewed. " +
+									"There where parse errors." );
+			}
+		}
+	
+		return err_cnt;
 	}
 	
-	return err_cnt;
-}
-
-
-function __regexdbg_parsetree( indent, nodes, tree )
-{
-	var str = new String();
-	for( var i = 0; i < tree.length; i++ )
-	{
-		str = "";
-		for( var j = indent; j > 0; j-- )
-			str += "\t";
-		
-		str += nodes[ tree[i] ].sym;
-		if( nodes[ tree[i] ].att != "" )
-			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
-		__regexdbg_print( str );
-		if( nodes[ tree[i] ].child.length > 0 )
-			__regexdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
-	}
-}
+	return parse;
+})(__regex_debug);
 
 
 
@@ -4785,8 +5008,8 @@ function compile_regex( str, accept, case_insensitive )
 	var i, j;
 	var weight = 0;
 	var true_edges = 0;
-	var error_offsets = new Array();
-	var error_expects = new Array();
+	var error_offsets = [];
+	var error_expects = [];
 	var error_count = 0;
 	
 	if( str == "" )
@@ -4794,7 +5017,7 @@ function compile_regex( str, accept, case_insensitive )
 	
 	//_print( "str = >" + str + "< " + case_insensitive );
 	
-	created_nfas = new Array();
+	created_nfas = [];
 	
 	first_nfa = create_nfa( nfa_states );
 	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 )
@@ -4844,7 +5067,7 @@ function compile_regex( str, accept, case_insensitive )
 	{
 		for( i = 0; i < error_count; i++ )
 		{
-			var spaces = new String();
+			var spaces = '';
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
 			
@@ -4866,88 +5089,6 @@ function compile_regex( str, accept, case_insensitive )
 //print_dfa( d );
 
 
-/* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-Contibutions by Louis P. Santillan <lpsantil@gmail.com>
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
-
-File:	io_rhino.js
-Author:	Louis P. Santillan
-		Jan Max Meyer
-Usage:	Console-based wrapper function set for JS/CC to be executed
-		via Mozilla/Rhino.
-
-You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
------------------------------------------------------------------------------ */
-
-var DEFAULT_DRIVER = "driver_rhino.js_";
-
-function _error( msg )
-{
-	if( show_errors )
-		print( file + ": error: " + msg );
-	
-	errors++;
-}
-
-function _warning( msg )
-{
-	if( show_warnings )
-		print( file + ": warning: " + msg );
-	
-	warnings++;
-}
-
-function _print( txt )
-{
-	print( txt );
-}
-
-function _quit( exitcode )
-{
-	quit( exitcode );
-}
-
-function read_file( file )
-{
-	var src = new String();
-	
-	if( ( new java.io.File( file ).exists() ) )
-		src = readFile( file );
-	else
-	{
-		_error( "unable to open file '" + file + "'" );
-		quit( 1 );
-	}
-	
-	return src;
-}
-
-function write_file( file, content )
-{
-	var f = new java.io.PrintWriter( file );
-		
-	if( f )
-	{
-		f.write( content );
-		f.close();
-	}
-	else
-	{
-		_error( "unable to write '" + file + "'" );
-		return false;
-	}
-	
-	return true;
-}
-
-var args_global_var = arguments;
-function get_arguments()
-{
-   return args_global_var;
-}
 
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
@@ -4964,7 +5105,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 
 function version()
 {
-	var info = new String();
+	var info = "";
 
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
 				"Generator written in JavaScript\n";
@@ -4982,7 +5123,7 @@ function version()
 
 function help()
 {
-	var help = new String();
+	var help = "";
 
 	help += "usage: jscc [options] filename\n\n";
 
@@ -5005,10 +5146,10 @@ function help()
 reset_all( EXEC_CONSOLE );
 
 //Processing the command line arguments
-var out_file	= new String();
-var src_file	= new String();
+var out_file	= "";
+var src_file	= "";
 var tpl_file	= DEFAULT_DRIVER;
-var code_prefix	= new String();
+var code_prefix	= "";
 var dump_nfa	= false;
 var dump_dfa	= false;
 var verbose		= false;
@@ -5100,7 +5241,22 @@ if( src_file != "" )
 				
 				if( dump_dfa )
 					print_dfa( dfa_table );	
-
+					
+				//Here, we read the template from file.
+				//I think in this case it is useful to choose the
+				//way used in main_sm.js.
+				//we can read 2 files here
+				//driver and parse.js
+				
+				//No! parse.js is the driver!
+				//driver and debugger for current platform
+				//ah ok - so you think the Make target "driver" should be removed, and we put the platform selection logic here.
+				//yes
+				//and where is the decision done which
+				//platform is selected? New command line
+				//parameter?
+				
+				// tpl_file <_< what is this variable?
 				var driver = read_file( tpl_file );
 									
 				driver = driver.replace( /##HEADER##/gi, code_head );

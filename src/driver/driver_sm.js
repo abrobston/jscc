@@ -4,31 +4,39 @@
 	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
 	This is in the public domain.
 */
-##HEADER##
+var __##PREFIX##_debug=(function(){///@TODO: create this variable without function
 
-var ##PREFIX##_dbg_withparsetree	= false;
-var ##PREFIX##_dbg_withtrace		= false;
-var ##PREFIX##_dbg_withstepbystep	= false;
+	var _dbg_withparsetree	= false;
+	var _dbg_withtrace		= false;
+	var _dbg_withstepbystep	= false;
+	
+	function __dbg_print( text )
+	{
+		print( text );
+	}
+	
+	function __dbg_flush()
+	{
+		//Not required here.
+	}
+	
+	function __dbg_wait()
+	{
+		// Not implemented for Spidermonkey.
+	}
+	
+	function __dbg_parsetree( indent, nodes, tree )
+	{
+		// Not implemented for Spidermonkey.
+	}
 
-function __##PREFIX##dbg_print( text )
-{
-	print( text );
-}
-
-function __##PREFIX##dbg_flush()
-{
-	//Not required here.
-}
-
-function __##PREFIX##dbg_wait()
-{
-	// Not implemented for Spidermonkey.
-}
-
-function __##PREFIX##dbg_parsetree( indent, nodes, tree )
-{
-	// Not implemented for Spidermonkey.
-}
-
-/* Code of driver.js will go here... */
-
+	return {
+		__dbg_print:__dbg_print,
+		_dbg_withtrace:_dbg_withtrace,
+		__dbg_wait:__dbg_wait,
+		_dbg_withparsetree:_dbg_withparsetree,
+		_dbg_withstepbystep:_dbg_withstepbystep,
+		__dbg_flush:__dbg_flush,
+		__dbg_parsetree:__dbg_parsetree
+	};
+})();

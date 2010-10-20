@@ -5,6 +5,56 @@ JS/CC: A LALR(1) Parser Generator written in JavaScript
 [-] Bugfix
 
 -------------------------------------------------------
+JS/CC v0.35 (not released)
+-------------------------------------------------------
+Inserted many changes and improvement contributions
+written by Sergiy Shatunov. This is a testing stage
+only, there will be many greater changes also in
+future.
+
+WARNING:
+This version is under heavy development, and defines
+a snapshot used for several revision processes.
+Not all features will work properly or had been
+tested!
+
+[+] Changed all "new Array()", "new Object()" and
+	"new String()" calls into a syntax-specified format
+[+] Added create_constructor function for creating copy
+	constructors for types used in code
+[+] Replaced bitset-Functions with a new BitSet type
+	(Constructor+Prototype)
+[+] Moved parser function, debug functions and data
+	into (function(){...})(); block
+[+] Moved some of generated parts of data and code
+	outside lexer and parser functions
+[+] Added json2.js for support on Mozilla platforms
+	(Rhino/Spidermonkey)
+[+] Added nodejs platform
+
+-------------------------------------------------------
+JS/CC v0.34 (formerly called 0.33.1, not released)
+-------------------------------------------------------
+[+] Rewritten style of parser template generation,
+	so it is not required anymore to maintain five
+	single parser templates; The logic is now general,
+	and input/output functions are implemented for
+	all platforms in its own file.
+
+	You can find the new parser generation system in
+	jscc/src/driver
+
+-------------------------------------------------------
+JS/CC v0.33 (not released)
+-------------------------------------------------------
+[+] Adds a new feature "default production" for testing
+	purposes into JS/CC. This feature allows for better
+	error reporting and recovery, because on wrong
+	tokens, the parsers will continue reducing until a
+	final shift is required - and this invokes error
+	recovery and reporting.
+
+-------------------------------------------------------
 JS/CC v0.32 (build Dec 29, 2008 - not released)
 -------------------------------------------------------
 [+] Rewritten parser drivers with new Parser Control

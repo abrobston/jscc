@@ -11,12 +11,26 @@ You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
+/// constructors generator:
+function createConstructor(a){
+    var arr={};
+    for(var i = 0;i<a.length;i++)
+        arr[a[i]]=true;
+    return function(o){
+        o=o||{};
+        for(var f in o)
+            if(f in arr)
+                this[f]=o[f];
+    }
+}
+/// there was "continue" in code, we must to replace it
+function Continue(){}
 /*
 	Constants
 */
 
 //Program version info 
-var JSCC_VERSION			= "0.33.1";
+var JSCC_VERSION			= "0.35";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -71,86 +85,15 @@ var EDGE_CHAR				= 2;
 /*
 	Structs
 */
-function SYMBOL()
-{
-	var kind;			//Symbol kind (SYM_TERM, SYM_NONTERM)
-	var label;			//Symbol label/name
-	var prods;			//Array of associated productions (SYM_NONTERM only)
-	var first;			//Array of first symbols
-	
-	var associativity;	//Associativity mode (SYM_TERM only)
-	var level;			//Association level (SYM_TERM only)
-	
-	var code;			//Code to be executed at token recognition (SYM_TERM only)
-	var special;		//Special symbol
-	
-	/* --- Flags & Information --- */
-	var nullable;		//Nullable-flag
-	var defined;		//Defined flag
-	
-	var defined_at;		//Line of definition
-	var used_at;		//Line of use
-}
 
-function PROD()
-{
-	var lhs;
-	var rhs;
-	var level;
-	var code;
-}
-
-function ITEM()
-{
-	var prod;
-	var dot_offset;
-	var lookahead;
-}
-
-function STATE()
-{
-	var kernel;
-	var epsilon;
-
-	var def_act;
-
-	var done;
-	var closed;
-
-	var actionrow;
-	var	gotorow;
-}
-
-function NFA()
-{
-	var		edge;
-	var		ccl;
-	var		follow;
-	var		follow2;
-	var		accept;
-	var		weight;
-}
-
-function DFA()
-{
-	var		line;
-	var		nfa_set;
-	var		accept;
-	var		done;
-	var		group;
-}
-
-function PARAM()
-{
-	var start;
-	var end;
-}
-
-function TOKEN()
-{
-	var token;
-	var lexeme;
-}
+var SYMBOL=createConstructor(['kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
+var PROD=createConstructor(['id','lhs','rhs','level','code']);
+var ITEM=createConstructor(['prod','dot_offset','lookahead']);
+var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
+var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
+var PARAM=createConstructor(['start','end']);
+var TOKEN=createConstructor(['token','lexeme']);
 
 /*
 	Globals (will be initialized via reset_all()!)

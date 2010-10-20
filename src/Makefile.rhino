@@ -61,13 +61,13 @@ driver: ../driver_$(PLATFORM).js_
 	cat driver/driver_$(PLATFORM).js driver/parser.js >../driver_$(PLATFORM).js_
 
 $(JSCC):		$(SRC_FINAL)
-	cat $(SRC_FINAL) >$@
+	cat json2.js $(SRC_FINAL) >$@
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
 	$(RHINO) $(JSCC_BOOTSTRAP) -w -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
 	
 $(SRC_REGEX_JS):$(SRC_REGEX)
-	$(RHINO) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
+	$(RHINO) $(JSCC_BOOTSTRAP) -w -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
 
 clean:
 	-rm $(SRC_PARSE_JS)
