@@ -11,16 +11,14 @@ You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 ///SV: it is no reason to optimize data size, so we may use array of bool directly in code
-
 function BitSetBool(size)
 {
-	this.data=new Array((size>0)?size:0);
+	this.data=[];
 }
-
 BitSetBool.prototype={
 	set:function(bit,state)
 	{
-		return this.data[bit]=state;
+		return this.data[bit]=(state&&true)||false;
 	},
 	get:function(bit)
 	{
@@ -36,24 +34,83 @@ BitSetBool.prototype={
 		return c;
 	}
 }
+function BitSet32()
+{
+  this.data=[];
+}
+BitSet32.prototype={
+  set:function(bit,state)
+  {///@TODO simplify this if possible
+    this.data[bit >> 5] = (state ? (this.data[bit >> 5] | (1 << (bit & 31))) : (this.data[bit >> 5] & ~(1 << (bit & 31))));
+  },
+  get:function(bit)
+  {
+    return ((this.data[bit >> 5] & (1 << (bit & 31)))==0) ? false : true;
+  },
+  count:function()
+  {
+    var i,l,c=0;
+    for(i=0,l=this.data.length*32;i<l;i++)
+      if(this.get(i))c++;
+    return c;
+  }
+};
 
-var BitSet=BitSetBool;
-
-///SV: this functions used before deleting them call from code
-function bitset_create(size)
-{
-	return new BitSet(size);
-}
-function bitset_set( bitset, bit, state )
-{
-	return bitset.set(bit,state);
-}
-function bitset_get( bitset, bit )
-{
-	return bitset.get(bit);
-}
-function bitset_count(bitset)
-{
-	return bitset.count();
-}
+function BitSetTest(size){
+	this.size=size;
+	this.b=new BitSetBool(size);
+	this.i32=new BitSet32(size);
+	}
+BitSetTest.prototype={
+	set:function(bit,state){
+		var b=this.b.set(bit,state);
+		this.i32.set(bit,state);
+		this.test();
+		return b;},
+	get:function(bit){return this.b.get(bit);},
+	count:function(){return this.b.count();},
+	test:function(){
+		for(var i=0;i<this.size;i++)
+			if(((this.b.get(i)&&true)||false)!==((this.i32.get(i)&&true)||false)){
+				_print("\nDifference: index="+i+"\tBooL="+this.b.get(i)+"\t I32="+this.i32.get(i));
+				throw new Error("BITSET");}
+		if(this.b.count()!==this.i32.count()){
+			_print("\nDifferent Counts \t Bool="+this.b.count()+"\tI32="+this.i32.count());
+			throw new Error("BITSET");}
+		}
+	}
+var BitSet=(function(){
+	if((DEFAULT_DRIVER === "driver_node.js_") && false){
+		var Buffer = require('buffer').Buffer;
+		var DBG=require('sys').debug;
+		function BitSetBuffer(size){
+			//DBG("\nBuffer "+size);
+			this.data=new Buffer((size+7)>>3);
+		}
+		BitSetBuffer.prototype={
+		  set:function(bit,state)
+		  {///@TODO simplify this if possible
+		    this.data[bit >> 3] = (state ? (this.data[bit >> 3] | (1 << (bit & 7))) : (this.data[bit >> 3] & ~(1 << (bit & 7))));
+		    //DBG("\nSet "+ bit +" to "+state);
+		  },
+		  get:function(bit)
+		  {
+			//DBG("\nGet bit "+bit);
+			if(this.gets>10000)throw new Error("LIMIT");
+			else this.gets++;
+		    return ((this.data[bit >> 3] & (1 << (bit & 7)))==0) ? false : true;
+		  },
+		  count:function()
+		  {
+			//DBG("Count");  
+			var i,l,c=0;
+		    for(i=0,l=this.data.length*8;i<l;i++)
+		      if(this.get(i))c++;
+		    return c;
+		  },
+		  gets:0
+		};
+		return BitSetBuffer;}
+	else return BitSet32;
+})();
 

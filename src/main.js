@@ -17,9 +17,9 @@ function version()
 
 	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
 				"Generator written in JavaScript\n";
-	info += "Copyright (C) 2007-2010 by J.M.K S.F. Software Technologies," +
+	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
 				"Jan Max Meyer\n";
-	info += "http://jscc.jmksf.com ++ jscc<at>jmksf<dot>com\n\n";
+	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
 	
 	info += "You may use, modify and distribute this software under the " +
 				"terms and conditions\n";
@@ -149,7 +149,22 @@ if( src_file != "" )
 				
 				if( dump_dfa )
 					print_dfa( dfa_table );	
-
+					
+				//Here, we read the template from file.
+				//I think in this case it is useful to choose the
+				//way used in main_sm.js.
+				//we can read 2 files here
+				//driver and parse.js
+				
+				//No! parse.js is the driver!
+				//driver and debugger for current platform
+				//ah ok - so you think the Make target "driver" should be removed, and we put the platform selection logic here.
+				//yes
+				//and where is the decision done which
+				//platform is selected? New command line
+				//parameter?
+				
+				// tpl_file <_< what is this variable?
 				var driver = read_file( tpl_file );
 									
 				driver = driver.replace( /##HEADER##/gi, code_head );
