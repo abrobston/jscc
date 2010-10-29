@@ -103,17 +103,13 @@ function first()
 ----------------------------------------------------------------------------- */
 function rhs_first( item, p, begin )
 {
-	var f, i, nullable = true;
+	var f, i;
 	for( i = begin; i < p.rhs.length; i++ )
 	{
 		item.lookahead = union( item.lookahead, symbols[p.rhs[i]].first );
 		
 		if( !symbols[p.rhs[i]].nullable )
-			nullable = false;
-		
-		if( !nullable )
-			break;
+			return false;
 	}
-	
-	return nullable;
+	return true;
 }

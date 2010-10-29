@@ -95,9 +95,9 @@ Expression:		Expression '|' Catenation		[*
 				;
 				
 Catenation:		Catenation Factor				[*	
-													var weight=nfa_states[%1.end].weight;///SV0L0CH: if weight unused - delete this
-													nfa_states[%1.end]=new NFA(nfa_states[%2.start]);///SV0L0CH: we can use copy constructor
-													nfa_states[%1.end].weight=weight;///SV0L0CH: if weight unused - delete this
+													var weight=nfa_states[%1.end].weight;///SV: if weight unused - delete this
+													nfa_states[%1.end]=new NFA(nfa_states[%2.start]);
+													nfa_states[%1.end].weight=weight;///SV: if weight unused - delete this
 													nfa_states[%2.start].edge = EDGE_FREE;
 													
 													%1.end = %2.end;
@@ -146,8 +146,7 @@ Term:			Character						[*	%% = new PARAM();
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
 													
-													nfa_states[%%.start].ccl.set(%1.charCodeAt( 0 ), 1 );
-													//nfa_states[%%.start].ccl_[%1.charAt(0)]=true;///SV:array to object
+													nfa_states[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
 												*]
 				| CharacterSet
 				| '(' Expression ')'			[*	%% = %2; *]
@@ -164,10 +163,8 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 													if( %2.charAt( i ) == '^' )
 													{
 														negate = true;
-														for( var j = MIN_CHAR; j < MAX_CHAR; j++ ){
+														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
 															nfa_states[%%.start].ccl.set(j,true);
-															///TODO:set all chars to true or replace to other construction
-														}
 														i++;
 													}
 
@@ -180,12 +177,10 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 															for( j = %2.charCodeAt( i-1 );
 																	j < %2.charCodeAt( i+1 );
 																		j++ )		
-																bitset_set( nfa_states[%%.start].ccl,
-																	j, negate ? 0 : 1 );
+																nfa_states[%%.start].ccl.set(j, !negate);
 														}
 														else
-															bitset_set( nfa_states[%%.start].ccl,
-																%2.charCodeAt( i ), negate ? 0 : 1 );
+															nfa_states[%%.start].ccl.set(%2.charCodeAt(i), !negate);
 													}
 												*]
 				| ANY_CHAR							[*	%% = new PARAM();
@@ -196,7 +191,7 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
 													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-														bitset_set( nfa_states[%%.start].ccl, i, 1 );
+														nfa_states[%%.start].ccl.set(i, true);
 												*]
 				;
 												
@@ -241,12 +236,10 @@ function compile_regex( str, accept, case_insensitive )
 				{
 					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
 					{
-						if( bitset_get( nfa_states[ created_nfas[i] ].ccl, j ) )
+						if( nfa_states[ created_nfas[i] ].ccl.get( j ) )
 						{
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), 1 );
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), 1 );
+							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
+							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
 					}
 				}

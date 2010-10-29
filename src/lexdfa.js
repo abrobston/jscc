@@ -14,15 +14,14 @@ of the Artistic License. Please see ARTISTIC for more information.
 //Utility functions; I think there is no documentation required about them.
 
 function create_dfa( where )
-{///SV: this array better to replace by object with single characters like indexes
-	var dfa = new DFA();
-	
-	dfa.line = new Array( MAX_CHAR );
-	dfa.accept = -1;
-	dfa.nfa_set = [];
-	dfa.done = false;
-	dfa.group = -1;
-	
+{
+	var dfa = new DFA({
+		line:new Array( MAX_CHAR ),
+		accept:-1,
+		nfa_set:[],
+		done:false,
+		group:-1
+		});
 	where.push( dfa );
 	return where.length - 1;
 }
@@ -112,16 +111,18 @@ function move( state_set, machine, ch )
 {
 	var hits	= [];
 	var tos		= -1;
-	
+	try{
 	do
 	{
 		tos = state_set.pop();
 		if( machine[ tos ].edge == EDGE_CHAR )
-			if( bitset_get( machine[ tos ].ccl, ch ) )
+			if( machine[ tos ].ccl.get( ch ) )
 				hits.push( machine[ tos ].follow );		
 	}
 	while( state_set.length > 0 );
-	
+	}catch(e){
+		_print("\n state_set= " + state_set + " machine= " + machine + " ch= "+ch);
+		throw e;}
 	return hits;
 }
 
@@ -190,7 +191,6 @@ function epsilon_closure( state_set, machine )
 		}
 	}
 	while( stack.length > 0 );
-	
 	return accept.sort();
 }
 
@@ -273,7 +273,7 @@ function create_subset( nfa_states )
 			dfa_states[ current ].line[ i ] = next;
 		}
 	}
-	
+	//_print("\ndfa_states = "+dfa_states);
 	return dfa_states;
 }
 
