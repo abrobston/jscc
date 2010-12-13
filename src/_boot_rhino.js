@@ -421,7 +421,7 @@ function _quit( exitcode )
 
 function read_file( file )
 {
-	var src = new String();
+	var src = "";
 	
 	if( ( new java.io.File( file ).exists() ) )
 		src = readFile( file );
@@ -835,19 +835,15 @@ function first()
 ----------------------------------------------------------------------------- */
 function rhs_first( item, p, begin )
 {
-	var f, i, nullable = true;
+	var f, i;
 	for( i = begin; i < p.rhs.length; i++ )
 	{
 		item.lookahead = union( item.lookahead, symbols[p.rhs[i]].first );
 		
 		if( !symbols[p.rhs[i]].nullable )
-			nullable = false;
-		
-		if( !nullable )
-			break;
+			return false;
 	}
-	
-	return nullable;
+	return true;
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
@@ -2342,12 +2338,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 ///SV: it is no reason to optimize data size, so we may use array of bool directly in code
 function BitSetBool(size)
 {
-	this.data=new Array((size>0)?size:0);
+	this.data=[];
 }
 BitSetBool.prototype={
 	set:function(bit,state)
 	{
-		return this.data[bit]=state;
+		return this.data[bit]=(state&&true)||false;
 	},
 	get:function(bit)
 	{
@@ -2363,25 +2359,85 @@ BitSetBool.prototype={
 		return c;
 	}
 }
+function BitSet32()
+{
+  this.data=[];
+}
+BitSet32.prototype={
+  set:function(bit,state)
+  {///@TODO simplify this if possible
+    this.data[bit >> 5] = (state ? (this.data[bit >> 5] | (1 << (bit & 31))) : (this.data[bit >> 5] & ~(1 << (bit & 31))));
+  },
+  get:function(bit)
+  {
+    return ((this.data[bit >> 5] & (1 << (bit & 31)))==0) ? false : true;
+  },
+  count:function()
+  {
+    var i,l,c=0;
+    for(i=0,l=this.data.length*32;i<l;i++)
+      if(this.get(i))c++;
+    return c;
+  }
+};
 
-var BitSet=BitSetBool;
-///SV: this functions used before deleting them call from code
-function bitset_create(size)
-{
-	return new BitSet(size);
-}
-function bitset_set( bitset, bit, state )
-{
-	return bitset.set(bit,state);
-}
-function bitset_get( bitset, bit )
-{
-	return bitset.get(bit);
-}
-function bitset_count(bitset)
-{
-	return bitset.count();
-}
+function BitSetTest(size){
+	this.size=size;
+	this.b=new BitSetBool(size);
+	this.i32=new BitSet32(size);
+	}
+BitSetTest.prototype={
+	set:function(bit,state){
+		var b=this.b.set(bit,state);
+		this.i32.set(bit,state);
+		this.test();
+		return b;},
+	get:function(bit){return this.b.get(bit);},
+	count:function(){return this.b.count();},
+	test:function(){
+		for(var i=0;i<this.size;i++)
+			if(((this.b.get(i)&&true)||false)!==((this.i32.get(i)&&true)||false)){
+				_print("\nDifference: index="+i+"\tBooL="+this.b.get(i)+"\t I32="+this.i32.get(i));
+				throw new Error("BITSET");}
+		if(this.b.count()!==this.i32.count()){
+			_print("\nDifferent Counts \t Bool="+this.b.count()+"\tI32="+this.i32.count());
+			throw new Error("BITSET");}
+		}
+	}
+var BitSet=(function(){
+	if((DEFAULT_DRIVER === "driver_node.js_") && false){
+		var Buffer = require('buffer').Buffer;
+		var DBG=require('sys').debug;
+		function BitSetBuffer(size){
+			//DBG("\nBuffer "+size);
+			this.data=new Buffer((size+7)>>3);
+		}
+		BitSetBuffer.prototype={
+		  set:function(bit,state)
+		  {///@TODO simplify this if possible
+		    this.data[bit >> 3] = (state ? (this.data[bit >> 3] | (1 << (bit & 7))) : (this.data[bit >> 3] & ~(1 << (bit & 7))));
+		    //DBG("\nSet "+ bit +" to "+state);
+		  },
+		  get:function(bit)
+		  {
+			//DBG("\nGet bit "+bit);
+			if(this.gets>10000)throw new Error("LIMIT");
+			else this.gets++;
+		    return ((this.data[bit >> 3] & (1 << (bit & 7)))==0) ? false : true;
+		  },
+		  count:function()
+		  {
+			//DBG("Count");  
+			var i,l,c=0;
+		    for(i=0,l=this.data.length*8;i<l;i++)
+		      if(this.get(i))c++;
+		    return c;
+		  },
+		  gets:0
+		};
+		return BitSetBuffer;}
+	else return BitSet32;
+})();
 
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
@@ -2538,15 +2594,14 @@ of the Artistic License. Please see ARTISTIC for more information.
 //Utility functions; I think there is no documentation required about them.
 
 function create_dfa( where )
-{///SV0L0CH: this array better to replace by object with single characters like indexes
-	var dfa = new DFA();
-	
-	dfa.line = new Array( MAX_CHAR );
-	dfa.accept = -1;
-	dfa.nfa_set = [];
-	dfa.done = false;
-	dfa.group = -1;
-	
+{
+	var dfa = new DFA({
+		line:new Array( MAX_CHAR ),
+		accept:-1,
+		nfa_set:[],
+		done:false,
+		group:-1
+		});
 	where.push( dfa );
 	return where.length - 1;
 }
@@ -2636,16 +2691,18 @@ function move( state_set, machine, ch )
 {
 	var hits	= [];
 	var tos		= -1;
-	
+	try{
 	do
 	{
 		tos = state_set.pop();
 		if( machine[ tos ].edge == EDGE_CHAR )
-			if( bitset_get( machine[ tos ].ccl, ch ) )
+			if( machine[ tos ].ccl.get( ch ) )
 				hits.push( machine[ tos ].follow );		
 	}
 	while( state_set.length > 0 );
-	
+	}catch(e){
+		_print("\n state_set= " + state_set + " machine= " + machine + " ch= "+ch);
+		throw e;}
 	return hits;
 }
 
@@ -2714,7 +2771,6 @@ function epsilon_closure( state_set, machine )
 		}
 	}
 	while( stack.length > 0 );
-	
 	return accept.sort();
 }
 
@@ -2797,7 +2853,7 @@ function create_subset( nfa_states )
 			dfa_states[ current ].line[ i ] = next;
 		}
 	}
-	
+	//_print("\ndfa_states = "+dfa_states);
 	return dfa_states;
 }
 
@@ -2962,7 +3018,7 @@ function print_nfa( ta )
 						
 		if( nfa_states[i].edge == EDGE_CHAR )
 		{
-			var chars = new String();
+			var chars = "";
 			for( var j = MIN_CHAR; j < MAX_CHAR; j++)
 			{
 				if( bitset_get( nfa_states[i].ccl, j ) )
@@ -2986,7 +3042,7 @@ function print_nfa( ta )
 
 function print_dfa( dfa_states )
 {
-	var str = new String();
+	var str = "";
 	var chr_cnt = 0;
 	for( var i = 0; i < dfa_states.length; i++ )
 	{
@@ -3018,7 +3074,7 @@ function print_dfa( dfa_states )
 	
 	This is in the public domain.
 */
-var __jscc_debug=(function(){
+var __jscc_debug=(function(){///@TODO: create this variable without function
 	var _dbg_withparsetree	= false;
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
@@ -3067,9 +3123,9 @@ var __jscc_debug=(function(){
 		_dbg_withstepbystep:_dbg_withstepbystep,
 		__dbg_flush:__dbg_flush,
 		__dbg_parsetree:__dbg_parsetree
-		};
+	};
 })();
-/* Code of driver.js will go here... */
+
 
 /*
 	This is the general, platform-independent part of every parser driver;
@@ -3423,15 +3479,15 @@ switch( state )
 		}
 	else if( match == 16 )
 	{
-		 continue;	/*throw new Continue();*/	
+		 continue; 
 		}
 	else if( match == 17 )
 	{
-		 continue;	/*throw new Continue();*/	
+		 continue; 
 		}
 	else if( match == 18 )
 	{
-		 continue;	/*throw new Continue();*/	
+		 continue; 
 		}
 
 
@@ -3458,7 +3514,7 @@ var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[
 var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
 
 
-var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t2, %match.length - 4 );\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" continue;\t/*throw new Continue();*/\t","assoc":0,"level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[38]}];
+var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t2, %match.length - 4 );\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[38]}];
 
 
 
@@ -3616,7 +3672,7 @@ switch( act )
 	break;
 	case 19:
 	{
-			///SV0L0CH: why you create new array and not use the same?
+			///SV: why you create new array and not use the same?
 														rval = [];
 														rval = rval.concat( vstack[ vstack.length - 3 ] );
 														rval.push( vstack[ vstack.length - 1 ] );
@@ -3966,7 +4022,6 @@ switch( act )
 							dbg_print( "Error recovery: New token \""
 								+ labels[ PCB.la ] + "\"" );
 					}
-					while( PCB.la != 38 && PCB.act == 60 );
 				}
 			
 				if( PCB.act == 60 || PCB.la == 38 )
@@ -4029,7 +4084,7 @@ switch( act )
 				if( dbg_withtrace )
 					dbg_print( "\tPerforming semantic action..." );
 			
-				rval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage	
+				rval=ACTIONS(act,sstack,vstack);
 	
 				if( dbg_withparsetree )
 					tmptree = [];
@@ -4149,7 +4204,7 @@ function parse_grammar( str, filename )
 	
 	This is in the public domain.
 */
-var __regex_debug=(function(){
+var __regex_debug=(function(){///@TODO: create this variable without function
 	var _dbg_withparsetree	= false;
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
@@ -4198,9 +4253,9 @@ var __regex_debug=(function(){
 		_dbg_withstepbystep:_dbg_withstepbystep,
 		__dbg_flush:__dbg_flush,
 		__dbg_parsetree:__dbg_parsetree
-		};
+	};
 })();
-/* Code of driver.js will go here... */
+
 
 /*
 	This is the general, platform-independent part of every parser driver;
@@ -4234,7 +4289,7 @@ function create_nfa( where )
 	
 	where[i].edge = EDGE_EPSILON;
 	where[i].ccl=new BitSet(MAX_CHAR);
-	where[i].ccl_ = {};///SV0L0CH: try to reblace array to object
+	where[i].ccl_ = {};///SV: try to reblace array to object
 	where[i].accept = -1;
 	where[i].follow = -1;
 	where[i].follow2 = -1;
@@ -4490,9 +4545,9 @@ switch( act )
 	case 4:
 	{
 			
-													var weight=nfa_states[vstack[ vstack.length - 2 ].end].weight;///SV0L0CH: if weight unused - delete this
-													nfa_states[vstack[ vstack.length - 2 ].end]=new NFA(nfa_states[vstack[ vstack.length - 1 ].start]);///SV0L0CH: we can use copy constructor
-													nfa_states[vstack[ vstack.length - 2 ].end].weight=weight;///SV0L0CH: if weight unused - delete this
+													var weight=nfa_states[vstack[ vstack.length - 2 ].end].weight;///SV: if weight unused - delete this
+													nfa_states[vstack[ vstack.length - 2 ].end]=new NFA(nfa_states[vstack[ vstack.length - 1 ].start]);
+													nfa_states[vstack[ vstack.length - 2 ].end].weight=weight;///SV: if weight unused - delete this
 													nfa_states[vstack[ vstack.length - 1 ].start].edge = EDGE_FREE;
 													
 													vstack[ vstack.length - 2 ].end = vstack[ vstack.length - 1 ].end;
@@ -4561,8 +4616,7 @@ switch( act )
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													
-													nfa_states[rval.start].ccl.set(vstack[ vstack.length - 1 ].charCodeAt( 0 ), 1 );
-													//nfa_states[rval.start].ccl_[vstack[ vstack.length - 1 ].charAt(0)]=true;///SV0L0CH:array to object
+													nfa_states[rval.start].ccl.set(vstack[ vstack.length - 1 ].charCodeAt( 0 ), true );
 												
 	}
 	break;
@@ -4589,10 +4643,8 @@ switch( act )
 													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' )
 													{
 														negate = true;
-														for( var j = MIN_CHAR; j < MAX_CHAR; j++ ){
+														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
 															nfa_states[rval.start].ccl.set(j,true);
-															///TODO:set all chars to true or replace to other construction
-														}
 														i++;
 													}
 
@@ -4605,12 +4657,10 @@ switch( act )
 															for( j = vstack[ vstack.length - 2 ].charCodeAt( i-1 );
 																	j < vstack[ vstack.length - 2 ].charCodeAt( i+1 );
 																		j++ )		
-																bitset_set( nfa_states[rval.start].ccl,
-																	j, negate ? 0 : 1 );
+																nfa_states[rval.start].ccl.set(j, !negate);
 														}
 														else
-															bitset_set( nfa_states[rval.start].ccl,
-																vstack[ vstack.length - 2 ].charCodeAt( i ), negate ? 0 : 1 );
+															nfa_states[rval.start].ccl.set(vstack[ vstack.length - 2 ].charCodeAt(i), !negate);
 													}
 												
 	}
@@ -4625,7 +4675,7 @@ switch( act )
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-														bitset_set( nfa_states[rval.start].ccl, i, 1 );
+														nfa_states[rval.start].ccl.set(i, true);
 												
 	}
 	break;
@@ -4855,7 +4905,6 @@ switch( act )
 							dbg_print( "Error recovery: New token \""
 								+ labels[ PCB.la ] + "\"" );
 					}
-					while( PCB.la != 22 && PCB.act == 26 );
 				}
 			
 				if( PCB.act == 26 || PCB.la == 22 )
@@ -4918,7 +4967,7 @@ switch( act )
 				if( dbg_withtrace )
 					dbg_print( "\tPerforming semantic action..." );
 			
-				rval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage	
+				rval=ACTIONS(act,sstack,vstack);
 	
 				if( dbg_withparsetree )
 					tmptree = [];
@@ -5032,12 +5081,10 @@ function compile_regex( str, accept, case_insensitive )
 				{
 					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
 					{
-						if( bitset_get( nfa_states[ created_nfas[i] ].ccl, j ) )
+						if( nfa_states[ created_nfas[i] ].ccl.get( j ) )
 						{
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), 1 );
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), 1 );
+							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
+							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
 					}
 				}
