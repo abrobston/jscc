@@ -49,7 +49,7 @@ SRC_FINAL		=	$(SRC_GLOBAL) \
 					$(SRC_REGEX_JS) \
 					main_$(PLATFORM).js
 
-all: 			$(JSCC) clean
+all: 			$(JSCC) 
 	@echo
 	@echo --- Compilation succeeded! ---
 	
@@ -63,7 +63,7 @@ driver: ../driver_$(PLATFORM).js_
 $(JSCC):		$(SRC_FINAL)
 	echo "#!/usr/bin/js" >$@
 	./js2str.js driver "`cat ../driver_$(PLATFORM).js_`" >>$@
-	cat $(SRC_FINAL) >>$@
+	cat json2.js $(SRC_FINAL) >>$@
 	chmod 755 $@
 
 $(SRC_PARSE_JS):$(SRC_PARSE)

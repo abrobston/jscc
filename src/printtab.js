@@ -213,25 +213,30 @@ function print_parse_tables( mode ){
 function print_dfa_table( dfa_states )
 {	
 	var code ="";
-	code += "\nvar DFA_DATA=[];\n\n";
-	var json=[],ii,jj;
-	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
-		var line={};
-		for(jj=0;jj<dfa_states[ii].line.length;jj++)
-			if(dfa_states[ii].line[jj]!=-1)
-				line[jj]=dfa_states[ii].line[jj];
+	//code += "\nvar DFA_DATA=[];\n\n";
+	//var json=[],ii,jj;
+	
+	//This is how I would format it
+	/*for( ii=0; ii < dfa_states.length; ii++)
+	(
+		function( ii )
+		{
+			var line = {};
+			for( jj = 0; jj < dfa_states[ii].line.length; jj++ )
+				if(dfa_states[ii].line[jj]!=-1)
+					line[jj] = dfa_states[ii].line[jj];
+					
+		//and so on... ;)
+		
 		json.push({
 			line:line,
-			//nfa_set:dfa_states[ii].nfa_set,
 			accept:dfa_states[ii].accept,
-			//done:dfa_states[ii].done,
-			//group:dfa_states[ii].group
 			});
 		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
 		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
-	})(ii);
-	var json_str=JSON.stringify(json);
-	json_str=json_str.replace(/,/g,",\n\t");
+	})(ii);*/
+	//var json_str = JSON.stringify( json );
+	//json_str=json_str.replace( /,/g , ",\n\t" );
 	//code+="\nvar DFA_DATA="+json_str+";\n\n";
 	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	/*
@@ -335,9 +340,9 @@ function print_dfa_table( dfa_states )
 ----------------------------------------------------------------------------- */
 function print_symbol_labels(){//Generate code without comments
 	var i,arr
-	for(var i=0,arr=[];i<symbols.length;i++)
-		arr.push(symbols[i].label);
-	return "var labels = "+JSON.stringify(symbols)+";\n\n";
+	for(var i = 0, arr= []; i < symbols.length ; i++ )
+		arr.push( symbols[ i ].label );
+	return "var labels = "+JSON.stringify( symbols )+";\n\n";
 }
 
 /* -FUNCTION--------------------------------------------------------------------
