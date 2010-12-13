@@ -297,7 +297,6 @@ var __##PREFIX##parse=(function(debug){
 							dbg_print( "Error recovery: New token \""
 								+ labels[ PCB.la ] + "\"" );
 					}
-					while( PCB.la != ##EOF## && PCB.act == ##ERROR## );
 				}
 			
 				if( PCB.act == ##ERROR## || PCB.la == ##EOF## )
@@ -360,7 +359,7 @@ var __##PREFIX##parse=(function(debug){
 				if( dbg_withtrace )
 					dbg_print( "\tPerforming semantic action..." );
 			
-				rval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage	
+				rval=ACTIONS(act,sstack,vstack);
 	
 				if( dbg_withparsetree )
 					tmptree = [];
