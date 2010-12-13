@@ -1,5 +1,253 @@
 #!/usr/bin/js
-var driver = "/*\n\tDefault driver template for JS/CC generated parsers for Mozilla/Spidermonkey\n\t\n\tFeatures:\n\t- Parser trace messages\n\t- Integrated error recovery\n\t- Pseudo-graphical parse tree generation\n\t- Line and column counter variables\n\t\n\tWritten 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies\n\t\n\tThis is in the public domain.\n*/\n##HEADER##\n\nvar ##PREFIX##_dbg_withparsetree\t= false;\nvar ##PREFIX##_dbg_withtrace\t\t= false;\n\nfunction __##PREFIX##dbg_print( text )\n{\n\tprint( text );\n}\n\nfunction __##PREFIX##lex( PCB )\n{\n\tvar state;\n\tvar match\t\t= -1;\n\tvar match_pos\t= 0;\n\tvar start\t\t= 0;\n\tvar pos;\n\tvar chr;\n\n\twhile( 1 )\n\t{\n\t\tstate = 0;\n\t\tmatch = -1;\n\t\tmatch_pos = 0;\n\t\tstart = 0;\n\t\tpos = PCB.offset + 1 + ( match_pos - start );\n\n\t\tdo\n\t\t{\n\t\t\tpos--;\n\t\t\tstate = 0;\n\t\t\tmatch = -2;\n\t\t\tstart = pos;\n\t\n\t\t\tif( PCB.src.length <= start )\n\t\t\t\treturn ##EOF##;\n\t\n\t\t\tdo\n\t\t\t{\n\t\t\t\tchr = PCB.src.charCodeAt( pos );\n\n##DFA##\n\n\t\t\t\t//Line- and column-counter\n\t\t\t\tif( state > -1 )\n\t\t\t\t{\n\t\t\t\t\tif( chr == 10 )\n\t\t\t\t\t{\n\t\t\t\t\t\tPCB.line++;\n\t\t\t\t\t\tPCB.column = 0;\n\t\t\t\t\t}\n\t\t\t\t\tPCB.column++;\n\t\t\t\t}\n\n\t\t\t\tpos++;\n\t\n\t\t\t}\n\t\t\twhile( state > -1 );\n\t\n\t\t}\n\t\twhile( ##WHITESPACE## > -1 && match == ##WHITESPACE## );\n\t\n\t\tif( match > -1 )\n\t\t{\n\t\t\tPCB.att = PCB.src.substr( start, match_pos - start );\n\t\t\tPCB.offset = match_pos;\n\t\t\t\n##TERMINAL_ACTIONS##\n\t\t}\n\t\telse\n\t\t{\n\t\t\tPCB.att = new String();\n\t\t\tmatch = -1;\n\t\t}\n\t\t\n\t\tbreak;\n\t}\n\n\treturn match;\n}\n\nfunction __##PREFIX##parse( src, err_off, err_la )\n{\n\tvar\t\tsstack\t\t\t= new Array();\n\tvar\t\tvstack\t\t\t= new Array();\n\tvar \terr_cnt\t\t\t= 0;\n\tvar\t\trval;\n\tvar\t\tact;\n\t\n\t//PCB: Parser Control Block\n\tvar \tparsercontrol\t= new Function( \"\",\n\t\t\t\t\t\t\t\t\"var la;\" +\n\t\t\t\t\t\t\t\t\"var act;\" +\n\t\t\t\t\t\t\t\t\"var offset;\" +\n\t\t\t\t\t\t\t\t\"var src;\" +\n\t\t\t\t\t\t\t\t\"var att;\" +\n\t\t\t\t\t\t\t\t\"var line;\" +\n\t\t\t\t\t\t\t\t\"var column;\" +\n\t\t\t\t\t\t\t\t\"var error_step;\" );\n\tvar\t\tPCB\t= new parsercontrol();\n\t\n\t//Visual parse tree generation\n\tvar \ttreenode\t\t= new Function( \"\",\n\t\t\t\t\t\t\t\t\"var sym;\"+\n\t\t\t\t\t\t\t\t\"var att;\"+\n\t\t\t\t\t\t\t\t\"var child;\" );\n\tvar\t\ttreenodes\t\t= new Array();\n\tvar\t\ttree\t\t\t= new Array();\n\tvar\t\ttmptree\t\t\t= null;\n\n##TABLES##\n\n##LABELS##\n\t\n\tPCB.line = 1;\n\tPCB.column = 1;\n\tPCB.offset = 0;\n\tPCB.error_step = 0;\n\tPCB.src = src;\n\tPCB.att = new String();\n\n\tif( !err_off )\n\t\terr_off\t= new Array();\n\tif( !err_la )\n\t\terr_la = new Array();\n\t\n\tsstack.push( 0 );\n\tvstack.push( 0 );\n\t\n\tPCB.la = __##PREFIX##lex( PCB );\n\t\t\t\n\twhile( true )\n\t{\n\t\tPCB.act = ##ERROR##;\n\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t{\n\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t{\n\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t\t\n\t\tif( PCB.act == ##ERROR## )\n\t\t{\n\t\t\tif( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )\n\t\t\t\tPCB.act = ##ERROR##;\n\t\t\telse\n\t\t\t\tPCB.act *= -1;\n\t\t}\n\n\t\t/*\n\t\t_print( \"state \" + sstack[sstack.length-1] +\n\t\t\t\t\" la = \" +\n\t\t\t\tPCB.la + \" att = >\" +\n\t\t\t\tPCB.att + \"< act = \" +\n\t\t\t\tPCB.act + \" src = >\" +\n\t\t\t\tPCB.src.substr( PCB.offset, 30 ) + \"...\" + \"<\" +\n\t\t\t\t\" sstack = \" + sstack.join() );\n\t\t*/\n\t\t\n\t\tif( ##PREFIX##_dbg_withtrace && sstack.length > 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\nState \" + sstack[sstack.length-1] + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tLookahead: \" + labels[PCB.la] +\n\t\t\t\t\t\t\t\t\" (\\\"\" + PCB.att + \"\\\")\\n\" +\n\t\t\t\t\t\t\t\"\\tAction: \" + PCB.act + \"\\n\" + \n\t\t\t\t\t\t\t\"\\tSource: \\\"\" + PCB.src.substr( PCB.offset, 30 ) +\n\t\t\t\t\t\t\t\t\t( ( PCB.offset + 30 < PCB.src.length ) ?\n\t\t\t\t\t\t\t\t\t\t\"...\" : \"\" ) + \"\\\"\\n\" +\n\t\t\t\t\t\t\t\"\\tStack: \" + sstack.join() + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tValue stack: \" + vstack.join() + \"\\n\" );\n\t\t}\n\t\t\n\t\t\t\n\t\t//Parse error? Try to recover!\n\t\tif( PCB.act == ##ERROR## )\n\t\t{\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Error detected: There is no reduce or shift on the symbol \" + labels[PCB.la] );\n\t\t\t\n\t\t\t//Report errors only when error_step is 0, and this is not a\n\t\t\t//subsequent error from a previous parse\n\t\t\tif( PCB.error_step == 0 )\n\t\t\t{\n\t\t\t\terr_cnt++;\n\t\t\t\terr_off.push( PCB.offset - PCB.att.length );\n\t\t\t\terr_la.push( new Array() );\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\terr_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );\n\t\t\t}\n\t\t\t\n\t\t\t//Perform error recovery\t\t\t\n\t\t\twhile( sstack.length > 1 && PCB.act == ##ERROR## )\n\t\t\t{\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t\t\n\t\t\t\t//Try to shift on error token\n\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t{\n\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == ##ERROR_TOKEN## )\n\t\t\t\t\t{\n\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\n\t\t\t\t\t\tsstack.push( PCB.act );\n\t\t\t\t\t\tvstack.push( new String() );\n\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\t//Is it better to leave the parser now?\n\t\t\tif( sstack.length > 1 && PCB.act != ##ERROR## )\n\t\t\t{\n\t\t\t\t//Ok, now try to shift on the next tokens\n\t\t\t\twhile( PCB.la != ##EOF## )\n\t\t\t\t{\n\t\t\t\t\tPCB.act = ##ERROR##;\n\t\t\t\t\t\n\t\t\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\tif( PCB.act != ##ERROR## )\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t\n\t\t\t\t\twhile( ( PCB.la = __##PREFIX##lex( PCB ) )\n\t\t\t\t\t\t\t\t< 0 )\n\t\t\t\t\t\tPCB.offset++;\n\t\t\t\t}\n\t\t\t\twhile( PCB.la != ##EOF## && PCB.act == ##ERROR## );\n\t\t\t}\n\t\t\t\n\t\t\tif( PCB.act == ##ERROR## || PCB.la == ##EOF## )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery failed, terminating parse process...\" );\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tError recovery succeeded, continuing\" );\n\t\t\t\n\t\t\t//Try to parse the next three tokens successfully...\n\t\t\tPCB.error_step = 3;\n\t\t}\n\n\t\t//Shift\n\t\tif( PCB.act > 0 )\n\t\t{\n\t\t\t//Parse tree generation\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ PCB.la ];\n\t\t\t\tnode.att = PCB.att;\n\t\t\t\tnode.child = new Array();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Shifting symbol: \" + labels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\n\t\t\tsstack.push( PCB.act );\n\t\t\tvstack.push( PCB.att );\n\t\t\t\n\t\t\tPCB.la = __##PREFIX##lex( PCB );\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tNew lookahead symbol: \" + labels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\t\t\n\t\t\t//Successfull shift and right beyond error recovery?\n\t\t\tif( PCB.error_step > 0 )\n\t\t\t\tPCB.error_step--;\n\t\t}\n\t\t//Reduce\n\t\telse\n\t\t{\t\t\n\t\t\tact = PCB.act * -1;\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"Reducing by production: \" + act );\n\t\t\t\n\t\t\trval = void( 0 );\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPerforming semantic action...\" );\n\t\t\t\n##ACTIONS##\n\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\ttmptree = new Array();\n\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPopping \" + pop_tab[act][1] + \" off the stack...\" );\n\t\t\t\t\n\t\t\tfor( var i = 0; i < pop_tab[act][1]; i++ )\n\t\t\t{\n\t\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t\t\ttmptree.push( tree.pop() );\n\t\t\t\t\t\n\t\t\t\tsstack.pop();\n\t\t\t\tvstack.pop();\n\t\t\t}\n\n\t\t\t//Get goto-table entry\n\t\t\tPCB.act = ##ERROR##;\n\t\t\tfor( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t{\n\t\t\t\tif( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )\n\t\t\t\t{\n\t\t\t\t\tPCB.act = goto_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\t\n\t\t\t//Do some parse tree construction if desired\n\t\t\tif( ##PREFIX##_dbg_withparsetree )\n\t\t\t{\n\t\t\t\tvar node = new treenode();\n\t\t\t\tnode.sym = labels[ pop_tab[PCB.act][0] ];\n\t\t\t\tnode.att = rval;\n\t\t\t\tnode.child = tmptree.reverse();\n\t\t\t\ttree.push( treenodes.length );\n\t\t\t\ttreenodes.push( node );\n\t\t\t}\n\t\t\t\n\t\t\t//Goal symbol match?\n\t\t\tif( act == 0 ) //Don't use PCB.act here!\n\t\t\t\tbreak;\n\t\t\t\t\n\t\t\tif( ##PREFIX##_dbg_withtrace )\n\t\t\t\t__##PREFIX##dbg_print( \"\\tPushing non-terminal \" + labels[ pop_tab[act][0] ] );\n\t\t\t\n\t\t\t//...and push it!\n\t\t\tsstack.push( PCB.act );\n\t\t\tvstack.push( rval );\n\t\t}\n\t}\n\n\tif( ##PREFIX##_dbg_withtrace )\n\t\t__##PREFIX##dbg_print( \"\\nParse complete.\" );\n\n\tif( ##PREFIX##_dbg_withparsetree )\n\t{\n\t\tif( err_cnt == 0 )\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\n--- Parse tree ---\" );\n\t\t\t__##PREFIX##dbg_parsetree( 0, treenodes, tree );\n\t\t}\n\t\telse\n\t\t{\n\t\t\t__##PREFIX##dbg_print( \"\\n\\nParse tree cannot be viewed. There where parse errors.\" );\n\t\t}\n\t}\n\t\n\treturn err_cnt;\n}\n\n\nfunction __##PREFIX##dbg_parsetree( indent, nodes, tree )\n{\n\tvar str = new String();\n\tfor( var i = 0; i < tree.length; i++ )\n\t{\n\t\tstr = \"\";\n\t\tfor( var j = indent; j > 0; j-- )\n\t\t\tstr += \"\\t\";\n\t\t\n\t\tstr += nodes[ tree[i] ].sym;\n\t\tif( nodes[ tree[i] ].att != \"\" )\n\t\t\tstr += \" >\" + nodes[ tree[i] ].att + \"<\" ;\n\t\t\t\n\t\t__##PREFIX##dbg_print( str );\n\t\tif( nodes[ tree[i] ].child.length > 0 )\n\t\t\t__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );\n\t}\n}\n\n##FOOTER##";
+var driver = "/*\n\tDefault driver template for JS/CC generated parsers for Mozilla/Spidermonkey\n\t\n\tWritten 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies\n\tThis is in the public domain.\n*/\nvar __##PREFIX##_debug=(function(){///@TODO: create this variable without function\n\n\tvar _dbg_withparsetree\t= false;\n\tvar _dbg_withtrace\t\t= false;\n\tvar _dbg_withstepbystep\t= false;\n\t\n\tfunction __dbg_print( text )\n\t{\n\t\tprint( text );\n\t}\n\t\n\tfunction __dbg_flush()\n\t{\n\t\t//Not required here.\n\t}\n\t\n\tfunction __dbg_wait()\n\t{\n\t\t// Not implemented for Spidermonkey.\n\t}\n\t\n\tfunction __dbg_parsetree( indent, nodes, tree )\n\t{\n\t\t// Not implemented for Spidermonkey.\n\t}\n\n\treturn {\n\t\t__dbg_print:__dbg_print,\n\t\t_dbg_withtrace:_dbg_withtrace,\n\t\t__dbg_wait:__dbg_wait,\n\t\t_dbg_withparsetree:_dbg_withparsetree,\n\t\t_dbg_withstepbystep:_dbg_withstepbystep,\n\t\t__dbg_flush:__dbg_flush,\n\t\t__dbg_parsetree:__dbg_parsetree\n\t};\n})();\n/*\n\tThis is the general, platform-independent part of every parser driver;\n\tInput-/Output and Feature-Functions are done by the particular drivers\n\tcreated for the particular platform.\n*/\n\t##HEADER##\nvar __##PREFIX##parse=(function(debug){\n\twith(debug){\n\t\tvar dbg_print = __dbg_print;\n\t\tvar dbg_withtrace = _dbg_withtrace;\n\t\tvar dbg_wait = __dbg_wait;\n\t\tvar dbg_withparsetree = _dbg_withparsetree;\n\t\tvar dbg_withstepbystep = _dbg_withstepbystep;\n\t\tvar dbg_flush = __dbg_flush;\n\t\tvar dbg_parsetree = __dbg_parsetree;\n\t}\n\n##DFA##\n\n\tfunction lex( PCB )\n\t{\n\t\tvar state;\n\t\tvar match\t\t= -1;\n\t\tvar match_pos\t= 0;\n\t\tvar start\t\t= 0;\n\t\tvar pos;\n\t\tvar chr;\n\n\t\twhile(true)\n\t\t{\n\t\t\tstate = 0;\n\t\t\tmatch = -1;\n\t\t\tmatch_pos = 0;\n\t\t\tstart = 0;\n\t\t\tpos = PCB.offset + 1 + ( match_pos - start );\n\t\t\t///Functions for manipulation of variables\n\t\t\tfunction set_match(v){match=v;}\n\t\t\tfunction set_state(v){state=v;}\n\t\t\tfunction set_match_pos(v){match_pos=v;}\n\t\t\tdo\n\t\t\t{\n\t\t\t\tpos--;\n\t\t\t\tstate = 0;\n\t\t\t\tmatch = -2;\n\t\t\t\tstart = pos;\n\t\n\t\t\t\tif( PCB.src.length <= start )\n\t\t\t\t\treturn ##EOF##;\n\t\n\t\t\t\tdo\n\t\t\t\t{\n\t\t\t\t\tchr = PCB.src.charCodeAt( pos );\n\n\n\t\t\t\t\tDFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##\n\t\t\t\t\t//Line- and column-counter\n\t\t\t\t\tif( state > -1 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( chr == 10 )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tPCB.line++;\n\t\t\t\t\t\t\tPCB.column = 0;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tPCB.column++;\n\t\t\t\t\t}\n\n\t\t\t\t\tpos++;\n\t\n\t\t\t\t}\n\t\t\t\twhile( state > -1 );\n\t\n\t\t\t}\n\t\t\twhile( ##WHITESPACE## > -1 && match == ##WHITESPACE## );\n\t\n\t\t\tif( match > -1 )\n\t\t\t{\n\t\t\t\tPCB.att = PCB.src.substr( start, match_pos - start );\n\t\t\t\tPCB.offset = match_pos;\n\n##TERMINAL_ACTIONS##\n\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tPCB.att = \"\";\n\t\t\t\tmatch = -1;\n\t\t\t}\n\t\t\n\t\t\tbreak;\n\t\t}\n\n\t\treturn match;\n\t}\n\n##TABLES##\n\n##LABELS##\n\n\tfunction ACTIONS(act,sstack,vstack){\n\t\tvar rval;\n##ACTIONS##\n\t\treturn rval;\n\t}\n\tfunction parse( src, err_off, err_la )\n\t{\n\t\tvar\t\tsstack\t\t\t= [];\n\t\tvar\t\tvstack\t\t\t= [];\n\t\tvar \terr_cnt\t\t\t= 0;\n\t\tvar\t\trval;\n\t\tvar\t\tact;\n\t\n\t\t//Visual parse tree generation\n\n\t\tvar\t\ttreenodes\t\t= [];\n\t\tvar\t\ttree\t\t\t= [];\n\t\tvar\t\ttmptree\t\t\t= null;\n\t\t\n\t\t/*\n\t\t\tThis is the parser control block (PCB);\n\t\t\tIt is used to hold the entire parser state\n\t\t\tin one object, to be quickly accessed from\n\t\t\tvarious functions.\n\t\t*/ \n\t\tvar PCB\t= {\n\t\t\tline:1,\n\t\t\tcolumn:1,\n\t\t\toffset:0,\n\t\t\terror_step:0,\n\t\t\tsrc:src,\n\t\t\tatt:\"\"\n\t\t};\n\n\t\tif( !err_off )\n\t\t\terr_off\t= [];\n\t\tif( !err_la )\n\t\t\terr_la = [];\n\t\n\t\tsstack.push( 0 );\n\t\tvstack.push( 0 );\n\t\n\t\tPCB.la = lex( PCB );\n\t\t\t\n\t\twhile( true )\n\t\t{\n\t\t\tPCB.act = ##ERROR##;\n\t\t\tfor( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t{\n\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t\t{\n\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\n\t\t\tif( PCB.act == ##ERROR## )\n\t\t\t{\n\t\t\t\tif( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )\n\t\t\t\t\tPCB.act = ##ERROR##;\n\t\t\t\telse\n\t\t\t\t\tPCB.act *= -1;\n\t\t\t}\n\n\t\t\t/*\n\t\t\t_print( \"state \" + sstack[sstack.length-1] +\n\t\t\t\t\t\" la = \" +\n\t\t\t\t\tPCB.la + \" att = >\" +\n\t\t\t\t\tPCB.att + \"< act = \" +\n\t\t\t\t\tPCB.act + \" src = >\" +\n\t\t\t\t\tPCB.src.substr( PCB.offset, 30 ) + \"...\" + \"<\" +\n\t\t\t\t\t\" sstack = \" + sstack.join() );\n\t\t\t*/\n\t\t\n\t\t\tif( dbg_withtrace && sstack.length > 0 )\n\t\t\t{\n\t\t\t\tdbg_print( \"\\nState \" + sstack[sstack.length-1] + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tLookahead: \" + labels[PCB.la] +\n\t\t\t\t\t\t\t\t\" (\\\"\" + PCB.att + \"\\\")\\n\" +\n\t\t\t\t\t\t\t\"\\tAction: \" + PCB.act + \"\\n\" + \n\t\t\t\t\t\t\t\"\\tSource: \\\"\" + PCB.src.substr( PCB.offset, 30 ) +\n\t\t\t\t\t\t\t\t\t( ( PCB.offset + 30 < PCB.src.length ) ?\n\t\t\t\t\t\t\t\t\t\t\"...\" : \"\" ) + \"\\\"\\n\" +\n\t\t\t\t\t\t\t\"\\tStack: \" + sstack.join() + \"\\n\" +\n\t\t\t\t\t\t\t\"\\tValue stack: \" + vstack.join() + \"\\n\" );\n\t\t\t\n\t\t\t\tif( dbg_withstepbystep )\n\t\t\t\t\tdbg_wait();\n\t\t\t}\n\t\t\n\t\t\t\n\t\t\t//Parse error? Try to recover!\n\t\t\tif( PCB.act == ##ERROR## )\n\t\t\t{\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t{\n\t\t\t\t\tvar expect = \"\";\n\t\t\t\t\n\t\t\t\t\tdbg_print( \"Error detected: \" +\n\t\t\t\t\t\t\"There is no reduce or shift on the symbol \" +\n\t\t\t\t\t\t\tlabels[PCB.la] );\n\t\t\t\t\n\t\t\t\t\tfor( var i = 0;\n\t\t\t\t\t\ti < act_tab[sstack[sstack.length-1]].length;\n\t\t\t\t\t\ti+=2 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( expect != \"\" )\n\t\t\t\t\t\t\texpect += \", \";\n\t\t\t\t\t\t\n\t\t\t\t\t\texpect += \"\\\"\" +\n\t\t\t\t\t\t\t\tlabels[ act_tab[sstack[sstack.length-1]][i] ]\n\t\t\t\t\t\t\t\t\t+ \"\\\"\";\n\t\t\t\t\t}\n\t\t\t\t\n\t\t\t\t\tdbg_print( \"Expecting: \" + expect );\n\t\t\t\t}\n\t\t\t\n\t\t\t\t//Report errors only when error_step is 0, and this is not a\n\t\t\t\t//subsequent error from a previous parse\n\t\t\t\tif( PCB.error_step == 0 )\n\t\t\t\t{\n\t\t\t\t\terr_cnt++;\n\t\t\t\t\terr_off.push( PCB.offset - PCB.att.length );\n\t\t\t\t\terr_la.push([]);\n\t\t\t\t\tfor( var i = 0;\n\t\t\t\t\t\ti < act_tab[sstack[sstack.length-1]].length;\n\t\t\t\t\t\ti+=2 )\n\t\t\t\t\t\terr_la[err_la.length-1].push(\n\t\t\t\t\t\t\tlabels[act_tab[sstack[sstack.length-1]][i]] );\n\t\t\t\t}\n\t\t\t\n\t\t\t\t//Perform error recovery\t\t\t\n\t\t\t\twhile( sstack.length > 1 && PCB.act == ##ERROR## )\n\t\t\t\t{\n\t\t\t\t\tsstack.pop();\n\t\t\t\t\tvstack.pop();\n\t\t\t\t\n\t\t\t\t\t//Try to shift on error token\n\t\t\t\t\tfor( var i = 0;\n\t\t\t\t\t\ti < act_tab[sstack[sstack.length-1]].length;\n\t\t\t\t\t\ti+=2 )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == ##ERROR_TOKEN## )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tsstack.push( PCB.act );\n\t\t\t\t\t\t\tvstack.push(\"\");\n\t\t\t\t\t\t\n\t\t\t\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\tdbg_print(\n\t\t\t\t\t\t\t\t\t\"Error recovery: error token \" +\n\t\t\t\t\t\t\t\t\t\"could be shifted!\" );\n\t\t\t\t\t\t\t\tdbg_print( \"Error recovery: \" +\n\t\t\t\t\t\t\t\t\t\"current stack is \" + sstack.join() );\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\n\t\t\t\t//Is it better to leave the parser now?\n\t\t\t\tif( sstack.length > 1 && PCB.act != ##ERROR## )\n\t\t\t\t{\n\t\t\t\t\t//Ok, now try to shift on the next tokens\n\t\t\t\t\twhile( PCB.la != ##EOF## )\n\t\t\t\t\t{\n\t\t\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\t\t\tdbg_print( \"Error recovery: \" +\n\t\t\t\t\t\t\t\t\"Trying to shift on \\\"\"\n\t\t\t\t\t\t\t\t+ labels[ PCB.la ] + \"\\\"\" );\n\n\t\t\t\t\t\tPCB.act = ##ERROR##;\n\t\t\t\t\t\n\t\t\t\t\t\tfor( var i = 0;\n\t\t\t\t\t\t\ti < act_tab[sstack[sstack.length-1]].length;\n\t\t\t\t\t\t\ti+=2 )\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tif( act_tab[sstack[sstack.length-1]][i] == PCB.la )\n\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\tPCB.act = act_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\n\t\t\t\t\t\tif( PCB.act != ##ERROR## )\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\n\t\t\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\t\t\tdbg_print( \"Error recovery: Discarding \\\"\"\n\t\t\t\t\t\t\t\t+ labels[ PCB.la ] + \"\\\"\" );\n\t\t\t\t\t\n\t\t\t\t\t\twhile( ( PCB.la = lex( PCB ) ) < 0 )\n\t\t\t\t\t\t\tPCB.offset++;\n\t\t\t\t\n\t\t\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\t\t\tdbg_print( \"Error recovery: New token \\\"\"\n\t\t\t\t\t\t\t\t+ labels[ PCB.la ] + \"\\\"\" );\n\t\t\t\t\t}\n\t\t\t\t\twhile( PCB.la != ##EOF## && PCB.act == ##ERROR## );\n\t\t\t\t}\n\t\t\t\n\t\t\t\tif( PCB.act == ##ERROR## || PCB.la == ##EOF## )\n\t\t\t\t{\n\t\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\t\tdbg_print( \"\\tError recovery failed, \" +\n\t\t\t\t\t\t\t\"terminating parse process...\" );\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"\\tError recovery succeeded, \" +\n\t\t\t\t\t\t\t\t\t\t\t\"continuing\" );\n\t\t\t\n\t\t\t\t//Try to parse the next three tokens successfully...\n\t\t\t\tPCB.error_step = 3;\n\t\t\t}\n\n\t\t\t//Shift\n\t\t\tif( PCB.act > 0 )\n\t\t\t{\n\t\t\t\t//Parse tree generation\n\t\t\t\tif( dbg_withparsetree )\n\t\t\t\t{\n\t\t\t\t\ttree.push( treenodes.length );\n\t\t\t\t\ttreenodes.push({\n\t\t\t\t\t\tsym:labels[ PCB.la ],\n\t\t\t\t\t\tatt:PCB.att,\n\t\t\t\t\t\tchild:[]\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"Shifting symbol: \" +\n\t\t\t\t\t\tlabels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\n\t\t\t\tsstack.push( PCB.act );\n\t\t\t\tvstack.push( PCB.att );\n\t\t\t\n\t\t\t\tPCB.la = lex( PCB );\n\t\t\t\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"\\tNew lookahead symbol: \" +\n\t\t\t\t\t\tlabels[PCB.la] + \" (\" + PCB.att + \")\" );\n\t\t\t\t\n\t\t\t\t//Successfull shift and right beyond error recovery?\n\t\t\t\tif( PCB.error_step > 0 )\n\t\t\t\t\tPCB.error_step--;\n\t\t\t}\n\t\t\t//Reduce\n\t\t\telse\n\t\t\t{\t\t\n\t\t\t\tact = PCB.act * -1;\n\t\t\t\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"Reducing by production: \" + act );\n\t\t\t\n\t\t\t\trval = void( 0 );\n\t\t\t\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"\\tPerforming semantic action...\" );\n\t\t\t\n\t\t\t\trval=ACTIONS(act,sstack,vstack);/// this for ## ACIONS ## usage\t\n\t\n\t\t\t\tif( dbg_withparsetree )\n\t\t\t\t\ttmptree = [];\n\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"\\tPopping \" + \n\t\t\t\t\t\t\t\t\tpop_tab[act][1] +  \" off the stack...\" );\n\t\t\t\t\n\t\t\t\tfor( var i = 0; i < pop_tab[act][1]; i++ )\n\t\t\t\t{\n\t\t\t\t\tif( dbg_withparsetree )\n\t\t\t\t\t\ttmptree.push( tree.pop() );\n\t\t\t\t\t\n\t\t\t\t\tsstack.pop();\n\t\t\t\t\tvstack.pop();\n\t\t\t\t}\n\n\t\t\t\t//Get goto-table entry\n\t\t\t\tPCB.act = ##ERROR##;\n\t\t\t\tfor( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )\n\t\t\t\t{\n\t\t\t\t\tif( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )\n\t\t\t\t\t{\n\t\t\t\t\t\tPCB.act = goto_tab[sstack[sstack.length-1]][i+1];\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\n\t\t\t\t//Do some parse tree construction if desired\n\t\t\t\tif( dbg_withparsetree )\n\t\t\t\t{\n\t\t\t\t\ttree.push( treenodes.length );\n\t\t\t\t\ttreenodes.push( {\n\t\t\t\t\t\tsym:labels[ pop_tab[act][0] ],\n\t\t\t\t\t\tatt:rval,\n\t\t\t\t\t\tchild:tmptree.reverse()\n\t\t\t\t\t\t} );\n\t\t\t\t}\n\t\t\t\n\t\t\t\t//Goal symbol match?\n\t\t\t\tif( act == 0 ) //Don't use PCB.act here!\n\t\t\t\t\tbreak;\n\t\t\t\t\n\t\t\t\tif( dbg_withtrace )\n\t\t\t\t\tdbg_print( \"\\tPushing non-terminal \" + \n\t\t\t\t\t\tlabels[ pop_tab[act][0] ] );\n\t\t\t\n\t\t\t\t//...and push it!\n\t\t\t\tsstack.push( PCB.act );\n\t\t\t\tvstack.push( rval );\n\t\t\t}\n\t\t}\n\n\t\tif( dbg_withtrace )\n\t\t{\n\t\t\tdbg_print( \"\\nParse complete.\" );\n\t\t\n\t\t\t//This function is used for parser drivers that will output\n\t\t\t//the entire debug messages in a row.\n\t\t\tdbg_flush();\n\t\t}\n\n\t\tif( dbg_withparsetree )\n\t\t{\n\t\t\tif( err_cnt == 0 )\n\t\t\t{\n\t\t\t\tdbg_print( \"\\n\\n--- Parse tree ---\" );\n\t\t\t\tdbg_parsetree( 0, treenodes, tree );\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tdbg_print( \"\\n\\nParse tree cannot be viewed. \" +\n\t\t\t\t\t\t\t\t\t\"There where parse errors.\" );\n\t\t\t}\n\t\t}\n\t\n\t\treturn err_cnt;\n\t}\n\t\n\treturn parse;\n})(__##PREFIX##_debug);\n\n##FOOTER##";
+
+if (!this.JSON) {
+    this.JSON = {};
+}
+
+(function () {
+
+    function f(n) {
+        return n < 10 ? '0' + n : n;
+    }
+
+    if (typeof Date.prototype.toJSON !== 'function') {
+
+        Date.prototype.toJSON = function (key) {
+
+            return isFinite(this.valueOf()) ?
+                   this.getUTCFullYear()   + '-' +
+                 f(this.getUTCMonth() + 1) + '-' +
+                 f(this.getUTCDate())      + 'T' +
+                 f(this.getUTCHours())     + ':' +
+                 f(this.getUTCMinutes())   + ':' +
+                 f(this.getUTCSeconds())   + 'Z' : null;
+        };
+
+        String.prototype.toJSON =
+        Number.prototype.toJSON =
+        Boolean.prototype.toJSON = function (key) {
+            return this.valueOf();
+        };
+    }
+
+    var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
+        escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g,
+        gap,
+        indent,
+        meta = {    
+            '\b': '\\b',
+            '\t': '\\t',
+            '\n': '\\n',
+            '\f': '\\f',
+            '\r': '\\r',
+            '"' : '\\"',
+            '\\': '\\\\'
+        },
+        rep;
+
+
+    function quote(string) {
+      escapable.lastIndex = 0;
+        return escapable.test(string) ?
+            '"' + string.replace(escapable, function (a) {
+                var c = meta[a];
+                return typeof c === 'string' ? c :
+                    '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            }) + '"' :
+            '"' + string + '"';
+    }
+
+
+    function str(key, holder) {
+
+        var i,          
+            k,          
+            v,          
+            length,
+            mind = gap,
+            partial,
+            value = holder[key];
+
+
+        if (value && typeof value === 'object' &&
+                typeof value.toJSON === 'function') {
+            value = value.toJSON(key);
+        }
+
+
+        if (typeof rep === 'function') {
+            value = rep.call(holder, key, value);
+        }
+
+
+        switch (typeof value) {
+        case 'string':
+            return quote(value);
+
+        case 'number':
+
+
+            return isFinite(value) ? String(value) : 'null';
+
+        case 'boolean':
+        case 'null':
+
+
+            return String(value);
+
+
+        case 'object':
+
+
+            if (!value) {
+                return 'null';
+            }
+
+
+            gap += indent;
+            partial = [];
+
+
+            if (Object.prototype.toString.apply(value) === '[object Array]') {
+
+
+                length = value.length;
+                for (i = 0; i < length; i += 1) {
+                    partial[i] = str(i, value) || 'null';
+                }
+
+
+                v = partial.length === 0 ? '[]' :
+                    gap ? '[\n' + gap +
+                            partial.join(',\n' + gap) + '\n' +
+                                mind + ']' :
+                          '[' + partial.join(',') + ']';
+                gap = mind;
+                return v;
+            }
+
+
+            if (rep && typeof rep === 'object') {
+                length = rep.length;
+                for (i = 0; i < length; i += 1) {
+                    k = rep[i];
+                    if (typeof k === 'string') {
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                        }
+                    }
+                }
+            } else {
+
+
+                for (k in value) {
+                    if (Object.hasOwnProperty.call(value, k)) {
+                        v = str(k, value);
+                        if (v) {
+                            partial.push(quote(k) + (gap ? ': ' : ':') + v);
+                        }
+                    }
+                }
+            }
+
+
+            v = partial.length === 0 ? '{}' :
+                gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' +
+                        mind + '}' : '{' + partial.join(',') + '}';
+            gap = mind;
+            return v;
+        }
+    }
+
+
+
+    if (typeof JSON.stringify !== 'function') {
+        JSON.stringify = function (value, replacer, space) {
+
+
+            var i;
+            gap = '';
+            indent = '';
+
+
+            if (typeof space === 'number') {
+                for (i = 0; i < space; i += 1) {
+                    indent += ' ';
+                }
+
+
+            } else if (typeof space === 'string') {
+                indent = space;
+            }
+
+
+            rep = replacer;
+            if (replacer && typeof replacer !== 'function' &&
+                    (typeof replacer !== 'object' ||
+                     typeof replacer.length !== 'number')) {
+                throw new Error('JSON.stringify');
+            }
+
+            return str('', {'': value});
+        };
+    }
+
+
+    if (typeof JSON.parse !== 'function') {
+        JSON.parse = function (text, reviver) {
+
+            var j;
+
+            function walk(holder, key) {
+
+                var k, v, value = holder[key];
+                if (value && typeof value === 'object') {
+                    for (k in value) {
+                        if (Object.hasOwnProperty.call(value, k)) {
+                            v = walk(value, k);
+                            if (v !== undefined) {
+                                value[k] = v;
+                            } else {
+                                delete value[k];
+                            }
+                        }
+                    }
+                }
+                return reviver.call(holder, key, value);
+            }
+
+
+
+            text = String(text);
+            cx.lastIndex = 0;
+            if (cx.test(text)) {
+                text = text.replace(cx, function (a) {
+                    return '\\u' +
+                        ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+                });
+            }
+
+
+            if (/^[\],:{}\s]*$/.
+test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@').
+replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+replace(/(?:^|:|,)(?:\s*\[)+/g, ''))) {
+
+
+                j = eval('(' + text + ')');
+
+
+                return typeof reviver === 'function' ?
+                    walk({'': j}, '') : j;
+            }
+
+
+            throw new SyntaxError('JSON.parse');
+        };
+    }
+}());
 /* -HEADER----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -13,10 +261,25 @@ You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 
+/// constructors generator:
+function createConstructor(a){
+    var arr={};
+    for(var i = 0;i<a.length;i++)
+        arr[a[i]]=true;
+    return function(o){
+        o=o||{};
+        for(var f in o)
+            if(f in arr)
+                this[f]=o[f];
+    }
+}
+/// there was "continue" in code, we must to replace it
+function Continue(){}
 /*
 	Constants
 */
-
+var NEW_VERSION=true;
+//var DEFAULT_DRIVER="";
 //Program version info 
 var JSCC_VERSION			= "0.33";
 
@@ -73,86 +336,15 @@ var EDGE_CHAR				= 2;
 /*
 	Structs
 */
-function SYMBOL()
-{
-	var kind;			//Symbol kind (SYM_TERM, SYM_NONTERM)
-	var label;			//Symbol label/name
-	var prods;			//Array of associated productions (SYM_NONTERM only)
-	var first;			//Array of first symbols
-	
-	var associativity;	//Associativity mode (SYM_TERM only)
-	var level;			//Association level (SYM_TERM only)
-	
-	var code;			//Code to be executed at token recognition (SYM_TERM only)
-	var special;		//Special symbol
-	
-	/* --- Flags & Information --- */
-	var nullable;		//Nullable-flag
-	var defined;		//Defined flag
-	
-	var defined_at;		//Line of definition
-	var used_at;		//Line of use
-}
 
-function PROD()
-{
-	var lhs;
-	var rhs;
-	var level;
-	var code;
-}
-
-function ITEM()
-{
-	var prod;
-	var dot_offset;
-	var lookahead;
-}
-
-function STATE()
-{
-	var kernel;
-	var epsilon;
-
-	var def_act;
-
-	var done;
-	var closed;
-
-	var actionrow;
-	var	gotorow;
-}
-
-function NFA()
-{
-	var		edge;
-	var		ccl;
-	var		follow;
-	var		follow2;
-	var		accept;
-	var		weight;
-}
-
-function DFA()
-{
-	var		line;
-	var		nfa_set;
-	var		accept;
-	var		done;
-	var		group;
-}
-
-function PARAM()
-{
-	var start;
-	var end;
-}
-
-function TOKEN()
-{
-	var token;
-	var lexeme;
-}
+var SYMBOL=createConstructor(['kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
+var PROD=createConstructor(['id','lhs','rhs','level','code']);
+var ITEM=createConstructor(['prod','dot_offset','lookahead']);
+var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
+var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);//object
+var PARAM=createConstructor(['start','end']);
+var TOKEN=createConstructor(['token','lexeme']);
 
 /*
 	Globals (will be initialized via reset_all()!)
@@ -185,6 +377,44 @@ var exec_mode;
 var assoc_level;
 
 var	regex_weight;
+/* -MODULE----------------------------------------------------------------------
+JS/CC: A LALR(1) Parser Generator written in JavaScript
+Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+
+File:	io_sm.js
+Author: Jan Max Meyer
+Usage:	Console-based wrapper function set for JS/CC to be executed
+		via Mozilla/Spidermonkey
+
+You may use, modify and distribute this software under the terms and conditions
+of the Artistic License. Please see ARTISTIC for more information.
+----------------------------------------------------------------------------- */
+
+function _error( msg )
+{
+	if( show_errors )
+		print( "/*--- error: " + msg + " */" );
+	
+	errors++;
+}
+
+function _warning( msg )
+{
+	if( show_warnings )
+		print( "/*--- warning: " + msg + " */" );
+	
+	warnings++;
+}
+
+function _print( txt )
+{
+	print( txt );
+}
+
+var DEFAULT_DRIVER = "";
+
+//The rest of the platform-dependent code is done in jscc_main_sm.js,
+//because Spidermonkey can't handle files.
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -619,234 +849,158 @@ of the Artistic License. Please see ARTISTIC for more information.
 	16.04.2009	Jan Max Meyer	New table generator section to build default
 								reduction table on each state.
 ----------------------------------------------------------------------------- */
-function print_parse_tables( mode )
-{
-	var code	= new String();
+function print_parse_tables( mode ){
+	var code	= "";
 	var i, j, deepest = 0, val;
-	
-	/* Printing the pop table */
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
-		code += "</tr>";
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
-		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
-		code += "</tr>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Pop-Table */\n";
-		code += "var pop_tab = new Array(\n";
-	}
-	
-	for( i = 0; i < productions.length; i++ )
-	{
-		if( mode == MODE_GEN_HTML )
-		{
+	switch(mode){
+		case MODE_GEN_HTML:case "html":{
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
-			code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
-			code += "<td>" + productions[i].rhs.length + "</td>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Pop-Table</td>";
 			code += "</tr>";
-		}
-		else if( mode == MODE_GEN_JS )
-		{
-			code += "\tnew Array( " + productions[i].lhs + "/* " + symbols[productions[i].lhs].label + " */, "
-				+ productions[i].rhs.length + " )" +
-					(( i < productions.length-1 ) ? ",\n" : "\n");
-		}
-	}
-	
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "</table>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += ");\n\n";
-	}
-	
-	/* Printing the action table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_TERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_TERM )
-				code += "<td><b>" + symbols[i].label + "</b></td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < productions.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">" + productions[i].lhs + "</td>";
+				code += "<td>" + productions[i].rhs.length + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_TERM )
+					deepest++;
 			
-			for( j = 0; j < symbols.length; j++ )
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
+			code += "</tr>";
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
 			{
-				if( symbols[j].kind == SYM_TERM )
-				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
-					{
-						if( val <= 0 )
-							code += "r" + (val * -1);
-						else
-							code += "s" + val;
-					}
-					code += "</td>";
-				}
+				if( symbols[i].kind == SYM_TERM )
+					code += "<td><b>" + symbols[i].label + "</b></td>";
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Action-Table */\n";
-		code += "var act_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */ new Array( "
-			for( j = 0; j < states[i].actionrow.length; j++ )
-				code += states[i].actionrow[j][0] + "/* \"" + 
-					symbols[states[i].actionrow[j][0]].label + "\" */," + states[i].actionrow[j][1]
-						+ ( ( j < states[i].actionrow.length-1 ) ? " , " : "" );
+			code += "</tr>";
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
-	/* Printing the goto table */			
-	if( mode == MODE_GEN_HTML )
-	{
-		for( i = 0; i < symbols.length; i++ )
-			if( symbols[i].kind == SYM_NONTERM )
-				deepest++;
-		
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
-		code += "</tr>";
-		
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
-		for( i = 0; i < symbols.length; i++ )
-		{
-			if( symbols[i].kind == SYM_NONTERM )
-				code += "<td>" + symbols[i].label + "</td>";
-		}
-		
-		code += "</tr>";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "<tr>" ;
-			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-			
-			for( j = 0; j < symbols.length; j++ )
+			for( i = 0; i < states.length; i++ )
 			{
-				if( symbols[j].kind == SYM_NONTERM )
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
 				{
-					code += "<td>";
-					if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+					if( symbols[j].kind == SYM_TERM )
 					{
-						code += val;
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].actionrow, j ) ) != void(0) )
+						{
+							if( val <= 0 )
+								code += "r" + (val * -1);
+							else
+								code += "s" + val;
+						}
+						code += "</td>";
 					}
-					code += "</td>";
 				}
+				
+				code += "</tr>" ;
 			}
 			
-			code += "</tr>" ;
-		}
-		
-		code += "</table>";
-		
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Goto-Table */\n";
-		code += "var goto_tab = new Array(\n";
-		
-		for( i = 0; i < states.length; i++ )
-		{
-			code += "\t/* State " + i + " */";
-			code += " new Array( "
-							
-			for( j = 0; j < states[i].gotorow.length; j++ )
-				code += states[i].gotorow[j][0] + "/* " + symbols[ states[i].gotorow[j][0] ].label + " */,"
-					+ states[i].gotorow[j][1] + ( ( j < states[i].gotorow.length-1 ) ? " , " : "" );
+			code += "</table>";
+
+			for( i = 0; i < symbols.length; i++ )
+				if( symbols[i].kind == SYM_NONTERM )
+					deepest++;
 			
-			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
-		}
-		
-		code += ");\n\n";
-	}
-	
-	/*
-		JMM 16.04.2009:
-		Printing the default action table
-	*/
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
-		code += "<tr>";
-		code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
-		code += "</tr>";
-		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
-		code += "<td class=\"coltitle\">Number of symbols to pop</td>";
-		code += "</tr>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += "/* Default-Actions-Table */\n";
-		code += "var defact_tab = new Array(\n";
-	}
-	
-	for( i = 0; i < states.length; i++ )
-	{
-		if( mode == MODE_GEN_HTML )
-		{
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
-			code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
-			code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
 			code += "</tr>";
-		}
-		else if( mode == MODE_GEN_JS )
-		{
-			code += "\t /* State " + i + " */ " + states[i].def_act + " " +
-						(( i < states.length-1 ) ? ",\n" : "\n");
-		}
-	}
-	
-	if( mode == MODE_GEN_HTML )
-	{
-		code += "</table>";
-	}
-	else if( mode == MODE_GEN_JS )
-	{
-		code += ");\n\n";
-	}
-	
+			
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
+			for( i = 0; i < symbols.length; i++ )
+			{
+				if( symbols[i].kind == SYM_NONTERM )
+					code += "<td>" + symbols[i].label + "</td>";
+			}
+			
+			code += "</tr>";
+			
+			for( i = 0; i < states.length; i++ )
+			{
+				code += "<tr>" ;
+				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
+				
+				for( j = 0; j < symbols.length; j++ )
+				{
+					if( symbols[j].kind == SYM_NONTERM )
+					{
+						code += "<td>";
+						if( ( val = get_table_entry( states[i].gotorow, j ) ) != void(0) )
+						{
+							code += val;
+						}
+						code += "</td>";
+					}
+				}
+				
+				code += "</tr>" ;
+			}
+			
+			code += "</table>";
+
+			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
+			code += "<tr>";
+			code += "<td class=\"tabtitle\" colspan=\"2\">Default Actions Table</td>";
+			code += "</tr>";
+			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">Left-hand side</td>";
+			code += "<td class=\"coltitle\">Number of symbols to pop</td>";
+			code += "</tr>";
+			for( i = 0; i < states.length; i++ ){
+				code += "<tr>";
+				code += "<td style=\"border-right: 1px solid lightgray;\">State " + i + "</td>";
+				code += "<td>" + ( ( states[ i ].def_act < 0 ) ? "(none)" : states[ i ].def_act ) + "</td>";
+				code += "</tr>";
+			}
+			code += "</table>";
+
+		break;}
+		case MODE_GEN_JS:case "js":{
+			var pop_tab_json =[];
+			for( i = 0; i < productions.length; i++ )
+				pop_tab_json.push([productions[i].lhs,productions[i].rhs.length]);
+			code +="\nvar pop_tab ="+JSON.stringify(pop_tab_json)+";\n";
+			
+			var act_tab_json =[];
+			for( i = 0; i < states.length; i++ ){
+				var act_tab_json_item=[];
+				for( j = 0; j < states[i].actionrow.length; j++ )
+					act_tab_json_item.push(states[i].actionrow[j][0],states[i].actionrow[j][1]);
+				act_tab_json.push(act_tab_json_item);}
+			code +="\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
+			
+			var goto_tab_json = [];
+			for( i = 0; i < states.length; i++ ){
+				var goto_tab_json_item=[];
+				for( j = 0; j < states[i].gotorow.length; j++ )
+					goto_tab_json_item.push(states[i].gotorow[j][0],states[i].gotorow[j][1]);
+				goto_tab_json.push(goto_tab_json_item);}
+			code +="\nvar goto_tab ="+JSON.stringify(goto_tab_json)+";\n";	
+			
+			var defact_tab_json=[];
+			for( i = 0; i < states.length; i++ )
+				defact_tab_json.push(states[i].def_act);
+			code +="\nvar defact_tab ="+JSON.stringify(defact_tab_json)+";\n";
+			
+		break;}		
+	}	
 	return code;
 }
-
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
 	
@@ -865,13 +1019,49 @@ function print_parse_tables( mode )
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_dfa_table( dfa_states )
-{
-	var code = new String();
+{	
+	var code ="";
+	//code += "\nvar DFA_DATA=[];\n\n";
+	//var json=[],ii,jj;
+	
+	//This is how I would format it
+	/*for( ii=0; ii < dfa_states.length; ii++)
+	(
+		function( ii )
+		{
+			var line = {};
+			for( jj = 0; jj < dfa_states[ii].line.length; jj++ )
+				if(dfa_states[ii].line[jj]!=-1)
+					line[jj] = dfa_states[ii].line[jj];
+					
+		//and so on... ;)
+		
+		json.push({
+			line:line,
+			accept:dfa_states[ii].accept,
+			});
+		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
+		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
+	})(ii);*/
+	//var json_str = JSON.stringify( json );
+	//json_str=json_str.replace( /,/g , ",\n\t" );
+	//code+="\nvar DFA_DATA="+json_str+";\n\n";
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	/*
+	code+="var st=DATA[state].line[chr];\n"+
+	"if(typeof st == \"undefined\")st=-1;\n"+
+	"var ac=DATA[state].accept;\n"+
+	"set_state(st)\n"+
+	"if(ac!=-1){\n"+
+	"\tset_match(ac);\n"+
+	"\tset_match_pos(pos);\n"+
+	"}\n"+
+	"return;\n\n";
+	*/
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
-	code += "switch( state )\n"
-	code += "{\n";
+	code += "switch( state )\n{\n";
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		code += "	case " + i + ":\n";
@@ -914,28 +1104,31 @@ function print_dfa_table( dfa_states )
 			}
 			
 			if( !grp_first )
-				code += " ) state = " + j + ";\n";
+				//code += " ) state = " + j + ";\n";
+				code += " ) set_state(" + j + ");\n";
 		}
 				
 		code += "		";
 		if( !first )
 			code += "else ";
-		code += "state = -1;\n"
+		//code += "state = -1;\n"
+		code += "set_state(-1);\n"
 		
 		if( dfa_states[i].accept > -1 )
 		{
-			code += "		match = " + dfa_states[i].accept + ";\n";
-			code += "		match_pos = pos;\n";
+			//code += "		match = " + dfa_states[i].accept + ";\n";
+			//code += "		match_pos = pos;\n";
+			code += "		set_match(" + dfa_states[i].accept + ");\n";
+			code += "		set_match_pos(pos);\n";
 		}
 		
 		code += "		break;\n\n";
 	}
 	
 	code += "}\n\n";
-
+	code += "}\n";
 	return code;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -953,33 +1146,12 @@ function print_dfa_table( dfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_symbol_labels()
-{
-	var code = new String();
-	var i;	
-	
-	code += "/* Symbol labels */\n";
-	code += "var labels = new Array(\n";
-	for( i = 0; i < symbols.length; i++ )
-	{
-		code += "\t\"" + symbols[i].label + "\" ";
-		
-		if( symbols[i].kind == SYM_TERM )
-			code += "/* Terminal symbol */";
-		else
-			code += "/* Non-terminal symbol */";
-			
-		if( i < symbols.length-1 )
-			code += ",";
-			
-		code += "\n";
-	}
-
-	code += ");\n\n";
-
-	return code;
+function print_symbol_labels(){//Generate code without comments
+	var i,arr
+	for(var i = 0, arr= []; i < symbols.length ; i++ )
+		arr.push( symbols[ i ].label );
+	return "var labels = "+JSON.stringify( symbols )+";\n\n";
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_term_actions()
@@ -1009,8 +1181,8 @@ function print_symbol_labels()
 ----------------------------------------------------------------------------- */
 function print_term_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%match|%offset|%source" );
+	var code = "";
+	var re = /%match|%offset|%source/;
 	var i, j, k;	
 	var semcode;
 	var strmatch;
@@ -1024,7 +1196,7 @@ function print_term_actions()
 						"if( match == " + i + " )\n";
 			code += "	{\n";
 			
-			semcode = new String();
+			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
@@ -1073,8 +1245,8 @@ function print_term_actions()
 ----------------------------------------------------------------------------- */
 function print_actions()
 {
-	var code = new String();
-	var re = new RegExp( "%[0-9]+|%%" );
+	var code = "";
+	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
 	
@@ -1086,7 +1258,7 @@ function print_actions()
 		code += "	case " + i + ":\n";
 		code += "	{\n";
 		
-		semcode = new String();
+		semcode = "";
 		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
 		{
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
@@ -1244,10 +1416,10 @@ function create_state()
 {
 	var state = new STATE();
 	
-	state.kernel = new Array();
-	state.epsilon = new Array();
-	state.actionrow = new Array();
-	state.gotorow = new Array();
+	state.kernel = [];
+	state.epsilon = [];
+	state.actionrow = [];
+	state.gotorow = [];
 	state.done = false;
 	state.closed = false;
 	state.def_act = 0;
@@ -1264,7 +1436,7 @@ function create_item( p )
 	
 	item.prod = p;
 	item.dot_offset = 0;
-	item.lookahead = new Array();
+	item.lookahead = [];
 	
 	return item;
 }
@@ -1277,7 +1449,7 @@ function add_table_entry( row, sym, act )
 		if( row[i][0] == sym )
 			return row;
 	
-	row.push( new Array( sym, act ) );
+	row.push( [ sym, act ] );
 	return row;
 }
 
@@ -1413,10 +1585,10 @@ function create_symbol( label, kind, special )
 	var sym = new SYMBOL();
 	sym.label = label;
 	sym.kind = kind;
-	sym.prods = new Array();
+	sym.prods = [];
 	sym.nullable = false;
 	sym.id = symbols.length;
-	sym.code = new String();
+	sym.code = "";
 	
 	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
 	sym.level = 0; //Could be changed by grammar parser
@@ -1426,7 +1598,7 @@ function create_symbol( label, kind, special )
 	//Flags
 	sym.defined = false;
 
-	sym.first = new Array();
+	sym.first = [];
 	
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
@@ -1573,7 +1745,7 @@ function close_items( seed, closure )
 ----------------------------------------------------------------------------- */
 function lalr1_closure( s )
 {
-	var closure = new Array(), nclosure, partition;
+	var closure = [], nclosure, partition;
 	var item, partition_sym;
 	var i, j, k, l, cnt = 0, old_cnt = 0, tmp_cnt, ns;
 	
@@ -1606,7 +1778,7 @@ function lalr1_closure( s )
 
 			closure[0].prod = states[s].kernel[i].prod;
 			closure[0].dot_offset = states[s].kernel[i].dot_offset;
-			closure[0].lookahead = new Array();
+			closure[0].lookahead = [];
 		
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
@@ -1638,8 +1810,8 @@ function lalr1_closure( s )
 	
 	while( closure.length > 0 )
 	{
-		partition = new Array();
-		nclosure = new Array();
+		partition = [];
+		nclosure = [];
 		partition_sym = -1;
 		
 		for( i = 0; i < closure.length; i++ )
@@ -1770,7 +1942,7 @@ function lalr1_closure( s )
 function do_reductions( s )
 {
 	var n, i, j, ex, act, output_warning, item_set;
-	var reds = new Array();
+	var reds = [];
 	var max = 0, count;
 	
 	for( n = 0; n < 2; n++ )
@@ -1804,7 +1976,7 @@ function do_reductions( s )
 					}
 					else
 					{
-						var warning	= new String();
+						var warning	= "";
 						if( ex > 0 )
 						{
 							//Shift-reduce conflict
@@ -2065,12 +2237,12 @@ function reset_all( mode )
 	assoc_level = 1;
 	exec_mode = mode;
 
-	symbols = new Array();
-	productions = new Array();
-	states = new Array();
-	nfa_states = new Array();
-	dfa_states = new Array();
-	lex = new Array();
+	symbols = [];
+	productions = [];
+	states = [];
+	nfa_states = [];
+	dfa_states = [];
+	lex = [];
 	
 	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
@@ -2082,8 +2254,8 @@ function reset_all( mode )
 	
 	p = new PROD();
 	p.lhs = 0;
-	p.rhs = new Array();
-	p.code = new String( "%% = %1;" );
+	p.rhs = [];
+	p.code = "%% = %1;";
 	symbols[0].prods.push( productions.length );
 	productions.push( p );
 	
@@ -2095,7 +2267,7 @@ function reset_all( mode )
 	line = 1;
 	lookahead = void(0);
 	*/
-	file = new String();
+	file = "";
 	errors = 0;
 	show_errors = true;
 	warnings = 0;
@@ -2107,8 +2279,8 @@ function reset_all( mode )
 	
 	regex_weight = 0;
 	
-	code_head = new String();
-	code_foot = new String();
+	code_head = "";
+	code_foot = "";
 }
 
 
@@ -2124,50 +2296,71 @@ Usage:	Bitset functionalities implemented in JavaScript.
 You may use, modify and distribute this software under the terms and conditions
 of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
-
-//I think there is no documentation required on these tiny functions...
-function bitset_create( size )
+///SV: it is no reason to optimize data size, so we may use array of bool directly in code
+function BitSetBool(size)
 {
-	if( size <= 0 )
-		return new Array();
-	
-	return new Array( Math.ceil( size / 8 ) );
+	this.data=new Array((size>0)?size:0);
 }
+BitSetBool.prototype={
+	set:function(bit,state)
+	{
+		return this.data[bit]=state;
+	},
+	get:function(bit)
+	{
+		return this.data[bit];
+	},
+	count:function()
+	{
+		var i, c = 0;
 
+		for( i = 0; i < this.data.length; i++ )
+			if( this.data[i] )
+				c++;
+		return c;
+	}
+}
+function BitSet32(size){
+	this.data=new Array((size>0)?(size+1)>>5:0);
+	}
+BitSet32.prototype={
+	set:function(bit,state)
+	{///@TODO simplify this if possible
+		this.data[bit >> 5] = state ? (this.data[bit >> 5] | (1 << (bit & 31))) : (this.data[bit >> 5] & ~(1 << (bit & 31)));
+	},
+	get:function(bit)
+	{
+		return (this.data[bit >> 5] | (1 << (bit & 31))) ? true : false;
+	},
+	count:function()
+	{
+		var i,l,c=0;
+		for(i=0,l=this.data.length*32;i<l;i++)
+			if(this.get(i))c++;
+		return c;
+	}
+}
+//var BitSet=BitSetBool;
+var BitSet=BitSet32;
 
+///SV: this functions used before deleting them call from code
+function bitset_create(size)
+{
+	return new BitSet(size);
+}
 function bitset_set( bitset, bit, state )
 {
-	if( !bitset && bit < 0 )
-		return false;
-		
-	if( state )
-		bitset[ Math.floor( bit / 8 ) ] |= ( 1 << (bit % 8) );
-	else
-		bitset[ Math.floor( bit / 8 ) ] &= ( 0xFF ^ ( 1 << (bit % 8) ) );
-		
-	return true;
+	return bitset.set(bit,state);
 }
-
-
 function bitset_get( bitset, bit )
 {
-	if( !bitset && bit < 0 )
-		return 0;
-
-	return bitset[ Math.floor( bit / 8 ) ] & ( 1 << ( bit % 8 ) );
+	return bitset.get(bit);
 }
-
-
-function bitset_count( bitset )
+function bitset_count(bitset)
 {
-	var cnt = 0;
-
-	for( var i = 0; i < bitset.length * 8; i++ )
-		if( bitset_get( bitset, i ) )
-			cnt++;
-			
-	return cnt;
+	return bitset.count();
 }
+
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
@@ -2229,8 +2422,8 @@ function undef()
 ----------------------------------------------------------------------------- */
 function unreachable()
 {
-	var		stack		= new Array();
-	var		reachable	= new Array();
+	var		stack		= [];
+	var		reachable	= [];
 	var		i, j, k, l;
 	
 	for( i = 0; i < symbols.length; i++ )
@@ -2323,12 +2516,12 @@ of the Artistic License. Please see ARTISTIC for more information.
 //Utility functions; I think there is no documentation required about them.
 
 function create_dfa( where )
-{
+{///SV0L0CH: this array better to replace by object with single characters like indexes
 	var dfa = new DFA();
 	
 	dfa.line = new Array( MAX_CHAR );
 	dfa.accept = -1;
-	dfa.nfa_set = new Array();
+	dfa.nfa_set = [];
 	dfa.done = false;
 	dfa.group = -1;
 	
@@ -2368,9 +2561,9 @@ function get_undone_dfa( dfa_states )
 //NFA test function; Has no use currently.
 function execute_nfa( machine, str )
 {
-	var	result		= new Array();
+	var	result		= [];
 	var	accept;
-	var	last_accept	= new Array();
+	var	last_accept	= [];
 	var last_length = 0;
 	var	chr_cnt		= 0;
 
@@ -2419,7 +2612,7 @@ function execute_nfa( machine, str )
 ----------------------------------------------------------------------------- */
 function move( state_set, machine, ch )
 {
-	var hits	= new Array();
+	var hits	= [];
 	var tos		= -1;
 	
 	do
@@ -2456,8 +2649,8 @@ function move( state_set, machine, ch )
 ----------------------------------------------------------------------------- */
 function epsilon_closure( state_set, machine )
 {
-	var 	stack	= new Array();
-	var		accept	= new Array();
+	var 	stack	= [];
+	var		accept	= [];
 	var		tos		= -1;
 	
 	for( var i = 0; i < state_set.length; i++ )
@@ -2524,8 +2717,8 @@ function epsilon_closure( state_set, machine )
 ----------------------------------------------------------------------------- */
 function create_subset( nfa_states )
 {
-	var dfa_states = new Array();
-	var stack = new Array();
+	var dfa_states = [];
+	var stack = [];
 	var current = create_dfa( dfa_states );
 	var trans;
 	var next = -1;
@@ -2558,7 +2751,7 @@ function create_subset( nfa_states )
 			
 		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 		{
-			trans = new Array();
+			trans = [];
 			trans = trans.concat( dfa_states[ current ].nfa_set );
 			
 			trans = move( trans, nfa_states, i );
@@ -2606,10 +2799,10 @@ function create_subset( nfa_states )
 ----------------------------------------------------------------------------- */
 function minimize_dfa( dfa_states )
 {
-	var		groups			= new Array();
-	var		group			= new Array();
-	var		accept_groups	= new Array();
-	var		min_dfa_states	= new Array();
+	var		groups			= [];
+	var		group			= [];
+	var		accept_groups	= [];
+	var		min_dfa_states	= [];
 	var		old_cnt 		= 0;
 	var		cnt 			= 0;
 	var		new_group;
@@ -2623,7 +2816,7 @@ function minimize_dfa( dfa_states )
 		Accepting and non-accepting states are pushed in
 		separate groups first
 	*/
-	groups.push( new Array() );
+	groups.push( [] );
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		if( dfa_states[i].accept > -1 )
@@ -2635,7 +2828,7 @@ function minimize_dfa( dfa_states )
 			if( j == accept_groups.length )
 			{
 				accept_groups.push( dfa_states[i].accept );
-				groups.push( new Array() );
+				groups.push( [] );
 			}
 			groups[ j+1 ].push( i );
 			dfa_states[ i ].group = j+1;
@@ -2657,7 +2850,7 @@ function minimize_dfa( dfa_states )
 
 		for( i = 0; i < groups.length; i++ )
 		{
-			new_group = new Array();
+			new_group = [];
 			
 			if( groups[i].length > 0 )
 			{
@@ -2694,7 +2887,7 @@ function minimize_dfa( dfa_states )
 
 			if( new_group.length > 0 )
 			{
-				groups[ groups.length ] = new Array();
+				groups[ groups.length ] = [];
 				groups[ groups.length-1 ] = groups[ groups.length-1 ].concat( new_group );
 				cnt += new_group.length;
 			}
@@ -2794,2328 +2987,12 @@ function print_dfa( dfa_states )
 		_print( str );
 	}
 }
-/*
-	Default driver template for JS/CC generated parsers for Mozilla/Spidermonkey
-	
-	Features:
-	- Parser trace messages
-	- Integrated error recovery
-	- Pseudo-graphical parse tree generation
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
-	
-	This is in the public domain.
-*/
-
-var		first_lhs;
-var		cur_line;
-
-//Wrapper for semantic errors
-function line_error( line, txt )
-{
-	_error( "line " + line + ": " + txt );
-}
-
-
-
-var jscc_dbg_withparsetree	= false;
-var jscc_dbg_withtrace		= false;
-
-function __jsccdbg_print( text )
-{
-	print( text );
-}
-
-function __jscclex( PCB )
-{
-	var state;
-	var match		= -1;
-	var match_pos	= 0;
-	var start		= 0;
-	var pos;
-	var chr;
-
-	while( 1 )
-	{
-		state = 0;
-		match = -1;
-		match_pos = 0;
-		start = 0;
-		pos = PCB.offset + 1 + ( match_pos - start );
-
-		do
-		{
-			pos--;
-			state = 0;
-			match = -2;
-			start = pos;
-	
-			if( PCB.src.length <= start )
-				return 38;
-	
-			do
-			{
-				chr = PCB.src.charCodeAt( pos );
-
-switch( state )
-{
-	case 0:
-		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
-		else if( chr == 10 ) state = 2;
-		else if( chr == 33 ) state = 3;
-		else if( chr == 38 ) state = 4;
-		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
-		else if( chr == 58 ) state = 6;
-		else if( chr == 59 ) state = 7;
-		else if( chr == 60 ) state = 8;
-		else if( chr == 62 ) state = 9;
-		else if( chr == 94 ) state = 10;
-		else if( chr == 124 ) state = 11;
-		else if( chr == 126 ) state = 12;
-		else if( chr == 34 ) state = 18;
-		else if( chr == 35 ) state = 21;
-		else if( chr == 39 ) state = 22;
-		else if( chr == 47 ) state = 23;
-		else if( chr == 91 ) state = 24;
-		else state = -1;
-		break;
-
-	case 1:
-		if( chr == 9 || chr == 13 || chr == 32 ) state = 1;
-		else state = -1;
-		match = 18;
-		match_pos = pos;
-		break;
-
-	case 2:
-		state = -1;
-		match = 16;
-		match_pos = pos;
-		break;
-
-	case 3:
-		state = -1;
-		match = 6;
-		match_pos = pos;
-		break;
-
-	case 4:
-		state = -1;
-		match = 10;
-		match_pos = pos;
-		break;
-
-	case 5:
-		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) state = 5;
-		else state = -1;
-		match = 15;
-		match_pos = pos;
-		break;
-
-	case 6:
-		state = -1;
-		match = 8;
-		match_pos = pos;
-		break;
-
-	case 7:
-		state = -1;
-		match = 7;
-		match_pos = pos;
-		break;
-
-	case 8:
-		state = -1;
-		match = 3;
-		match_pos = pos;
-		break;
-
-	case 9:
-		state = -1;
-		match = 4;
-		match_pos = pos;
-		break;
-
-	case 10:
-		state = -1;
-		match = 5;
-		match_pos = pos;
-		break;
-
-	case 11:
-		state = -1;
-		match = 9;
-		match_pos = pos;
-		break;
-
-	case 12:
-		state = -1;
-		match = 11;
-		match_pos = pos;
-		break;
-
-	case 13:
-		state = -1;
-		match = 14;
-		match_pos = pos;
-		break;
-
-	case 14:
-		state = -1;
-		match = 2;
-		match_pos = pos;
-		break;
-
-	case 15:
-		state = -1;
-		match = 13;
-		match_pos = pos;
-		break;
-
-	case 16:
-		state = -1;
-		match = 17;
-		match_pos = pos;
-		break;
-
-	case 17:
-		state = -1;
-		match = 12;
-		match_pos = pos;
-		break;
-
-	case 18:
-		if( chr == 34 ) state = 13;
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
-		break;
-
-	case 19:
-		if( chr == 34 ) state = 13;
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
-		match = 14;
-		match_pos = pos;
-		break;
-
-	case 20:
-		if( chr == 39 ) state = 15;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
-		match = 13;
-		match_pos = pos;
-		break;
-
-	case 21:
-		if( chr == 35 ) state = 14;
-		else state = -1;
-		break;
-
-	case 22:
-		if( chr == 39 ) state = 15;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
-		break;
-
-	case 23:
-		if( chr == 126 ) state = 27;
-		else state = -1;
-		break;
-
-	case 24:
-		if( chr == 42 ) state = 35;
-		else state = -1;
-		break;
-
-	case 25:
-		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 18;
-		else if( chr == 34 ) state = 19;
-		else if( chr == 92 ) state = 25;
-		else state = -1;
-		break;
-
-	case 26:
-		if( chr == 39 ) state = 20;
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) state = 22;
-		else if( chr == 92 ) state = 26;
-		else state = -1;
-		break;
-
-	case 27:
-		if( chr == 47 ) state = 28;
-		else if( chr == 126 ) state = 29;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
-		break;
-
-	case 28:
-		if( chr == 47 ) state = 27;
-		else state = -1;
-		break;
-
-	case 29:
-		if( chr == 47 ) state = 16;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) state = 27;
-		else state = -1;
-		break;
-
-	case 30:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else state = -1;
-		break;
-
-	case 31:
-		if( chr == 93 ) state = 17;
-		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 34;
-		else state = -1;
-		break;
-
-	case 32:
-		if( chr == 93 ) state = 34;
-		else state = -1;
-		break;
-
-	case 33:
-		if( chr == 126 ) state = 29;
-		else if( chr == 47 ) state = 33;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
-		break;
-
-	case 34:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else if( chr == 93 ) state = 32;
-		else state = -1;
-		break;
-
-	case 35:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) state = 30;
-		else if( chr == 42 ) state = 31;
-		else if( chr == 93 ) state = 32;
-		else state = -1;
-		break;
-
-	case 36:
-		if( chr == 126 ) state = 29;
-		else if( chr == 47 ) state = 33;
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) state = 36;
-		else state = -1;
-		break;
-
-}
-
-
-
-				//Line- and column-counter
-				if( state > -1 )
-				{
-					if( chr == 10 )
-					{
-						PCB.line++;
-						PCB.column = 0;
-					}
-					PCB.column++;
-				}
-
-				pos++;
-	
-			}
-			while( state > -1 );
-	
-		}
-		while( -1 > -1 && match == -1 );
-	
-		if( match > -1 )
-		{
-			PCB.att = PCB.src.substr( start, match_pos - start );
-			PCB.offset = match_pos;
-			
-	if( match == 12 )
-	{
-			PCB.att = PCB.att.substr(
-																	2, PCB.att.length - 4 );
-															
-		}
-	else if( match == 16 )
-	{
-		 	continue;	
-		}
-	else if( match == 17 )
-	{
-			continue;	
-		}
-	else if( match == 18 )
-	{
-			continue;	
-		}
-
-		}
-		else
-		{
-			PCB.att = new String();
-			match = -1;
-		}
-		
-		break;
-	}
-
-	return match;
-}
-
-function __jsccparse( src, err_off, err_la )
-{
-	var		sstack			= new Array();
-	var		vstack			= new Array();
-	var 	err_cnt			= 0;
-	var		rval;
-	var		act;
-	
-	//PCB: Parser Control Block
-	var 	parsercontrol	= new Function( "",
-								"var la;" +
-								"var act;" +
-								"var offset;" +
-								"var src;" +
-								"var att;" +
-								"var line;" +
-								"var column;" +
-								"var error_step;" );
-	var		PCB	= new parsercontrol();
-	
-	//Visual parse tree generation
-	var 	treenode		= new Function( "",
-								"var sym;"+
-								"var att;"+
-								"var child;" );
-	var		treenodes		= new Array();
-	var		tree			= new Array();
-	var		tmptree			= null;
-
-/* Pop-Table */
-var pop_tab = new Array(
-	new Array( 0/* def' */, 1 ),
-	new Array( 23/* def */, 5 ),
-	new Array( 19/* header_code */, 1 ),
-	new Array( 22/* footer_code */, 1 ),
-	new Array( 20/* token_assocs */, 2 ),
-	new Array( 20/* token_assocs */, 1 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 3 ),
-	new Array( 25/* token_assoc */, 2 ),
-	new Array( 25/* token_assoc */, 2 ),
-	new Array( 26/* token_defs */, 2 ),
-	new Array( 26/* token_defs */, 1 ),
-	new Array( 28/* token_def */, 3 ),
-	new Array( 28/* token_def */, 2 ),
-	new Array( 21/* grammar_defs */, 2 ),
-	new Array( 21/* grammar_defs */, 1 ),
-	new Array( 30/* grammar_def */, 4 ),
-	new Array( 30/* grammar_def */, 2 ),
-	new Array( 31/* productions */, 3 ),
-	new Array( 31/* productions */, 1 ),
-	new Array( 32/* rhs */, 3 ),
-	new Array( 34/* rhs_prec */, 2 ),
-	new Array( 34/* rhs_prec */, 2 ),
-	new Array( 34/* rhs_prec */, 0 ),
-	new Array( 33/* sequence_opt */, 1 ),
-	new Array( 33/* sequence_opt */, 0 ),
-	new Array( 35/* sequence */, 2 ),
-	new Array( 35/* sequence */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 36/* symbol */, 1 ),
-	new Array( 24/* code_opt */, 1 ),
-	new Array( 24/* code_opt */, 0 ),
-	new Array( 37/* code */, 2 ),
-	new Array( 37/* code */, 1 ),
-	new Array( 27/* string */, 1 ),
-	new Array( 27/* string */, 1 ),
-	new Array( 29/* identifier */, 1 )
-);
-
-/* Action-Table */
-var act_tab = new Array(
-	/* State 0 */ new Array( 12/* "CODE" */,5 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array( 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 3 */ new Array(  ),
-	/* State 4 */ new Array( 12/* "CODE" */,17 ),
-	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array( 2/* "##" */,19 , 3/* "<" */,8 , 4/* ">" */,9 , 5/* "^" */,10 , 6/* "!" */,12 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 9 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 10 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 11 */ new Array( 7/* ";" */,24 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 12 */ new Array( 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 15/* "IDENT" */,28 , 12/* "CODE" */,5 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 ),
-	/* State 20 */ new Array( 7/* ";" */,33 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 21 */ new Array( 7/* ";" */,34 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 22 */ new Array( 7/* ";" */,35 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  ),
-	/* State 25 */ new Array(  ),
-	/* State 26 */ new Array(  ),
-	/* State 27 */ new Array( 12/* "CODE" */,5 ),
-	/* State 28 */ new Array(  ),
-	/* State 29 */ new Array( 1/* "ERROR_RESYNC" */,32 , 15/* "IDENT" */,28 , 12/* "CODE" */,5 ),
-	/* State 30 */ new Array(  ),
-	/* State 31 */ new Array( 8/* ":" */,40 ),
-	/* State 32 */ new Array( 7/* ";" */,41 ),
-	/* State 33 */ new Array(  ),
-	/* State 34 */ new Array(  ),
-	/* State 35 */ new Array(  ),
-	/* State 36 */ new Array(  ),
-	/* State 37 */ new Array(  ),
-	/* State 38 */ new Array(  ),
-	/* State 39 */ new Array(  ),
-	/* State 40 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 41 */ new Array(  ),
-	/* State 42 */ new Array( 9/* "|" */,50 , 7/* ";" */,51 ),
-	/* State 43 */ new Array(  ),
-	/* State 44 */ new Array( 10/* "&" */,53 ),
-	/* State 45 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 46 */ new Array(  ),
-	/* State 47 */ new Array(  ),
-	/* State 48 */ new Array(  ),
-	/* State 49 */ new Array(  ),
-	/* State 50 */ new Array( 11/* "~" */,49 , 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 51 */ new Array(  ),
-	/* State 52 */ new Array( 12/* "CODE" */,5 ),
-	/* State 53 */ new Array( 15/* "IDENT" */,28 , 13/* "STRING_SINGLE" */,15 , 14/* "STRING_DOUBLE" */,16 ),
-	/* State 54 */ new Array(  ),
-	/* State 55 */ new Array(  ),
-	/* State 56 */ new Array(  ),
-	/* State 57 */ new Array(  ),
-	/* State 58 */ new Array(  )
-);
-
-/* Goto-Table */
-var goto_tab = new Array(
-	/* State 0 */ new Array( 23/* def */,1 , 19/* header_code */,2 , 24/* code_opt */,3 , 37/* code */,4 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array( 20/* token_assocs */,6 , 25/* token_assoc */,7 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 3 */ new Array(  ),
-	/* State 4 */ new Array(  ),
-	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array( 25/* token_assoc */,18 , 26/* token_defs */,11 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 26/* token_defs */,20 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 9 */ new Array( 26/* token_defs */,21 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 10 */ new Array( 26/* token_defs */,22 , 28/* token_def */,13 , 27/* string */,14 ),
-	/* State 11 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 12 */ new Array( 27/* string */,25 ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 24/* code_opt */,26 , 29/* identifier */,27 , 37/* code */,4 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array( 21/* grammar_defs */,29 , 30/* grammar_def */,30 , 29/* identifier */,31 ),
-	/* State 20 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 21 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 22 */ new Array( 28/* token_def */,23 , 27/* string */,14 ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  ),
-	/* State 25 */ new Array(  ),
-	/* State 26 */ new Array(  ),
-	/* State 27 */ new Array( 24/* code_opt */,36 , 37/* code */,4 ),
-	/* State 28 */ new Array(  ),
-	/* State 29 */ new Array( 30/* grammar_def */,37 , 22/* footer_code */,38 , 24/* code_opt */,39 , 29/* identifier */,31 , 37/* code */,4 ),
-	/* State 30 */ new Array(  ),
-	/* State 31 */ new Array(  ),
-	/* State 32 */ new Array(  ),
-	/* State 33 */ new Array(  ),
-	/* State 34 */ new Array(  ),
-	/* State 35 */ new Array(  ),
-	/* State 36 */ new Array(  ),
-	/* State 37 */ new Array(  ),
-	/* State 38 */ new Array(  ),
-	/* State 39 */ new Array(  ),
-	/* State 40 */ new Array( 31/* productions */,42 , 32/* rhs */,43 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 41 */ new Array(  ),
-	/* State 42 */ new Array(  ),
-	/* State 43 */ new Array(  ),
-	/* State 44 */ new Array( 34/* rhs_prec */,52 ),
-	/* State 45 */ new Array( 36/* symbol */,54 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 46 */ new Array(  ),
-	/* State 47 */ new Array(  ),
-	/* State 48 */ new Array(  ),
-	/* State 49 */ new Array(  ),
-	/* State 50 */ new Array( 32/* rhs */,55 , 33/* sequence_opt */,44 , 35/* sequence */,45 , 36/* symbol */,46 , 29/* identifier */,47 , 27/* string */,48 ),
-	/* State 51 */ new Array(  ),
-	/* State 52 */ new Array( 24/* code_opt */,56 , 37/* code */,4 ),
-	/* State 53 */ new Array( 27/* string */,57 , 29/* identifier */,58 ),
-	/* State 54 */ new Array(  ),
-	/* State 55 */ new Array(  ),
-	/* State 56 */ new Array(  ),
-	/* State 57 */ new Array(  ),
-	/* State 58 */ new Array(  )
-);
-
-/* Default-Actions-Table */
-var defact_tab = new Array(
-	 /* State 0 */ 33 ,
-	 /* State 1 */ 0 ,
-	 /* State 2 */ -1 ,
-	 /* State 3 */ 2 ,
-	 /* State 4 */ 32 ,
-	 /* State 5 */ 35 ,
-	 /* State 6 */ -1 ,
-	 /* State 7 */ 5 ,
-	 /* State 8 */ -1 ,
-	 /* State 9 */ -1 ,
-	 /* State 10 */ -1 ,
-	 /* State 11 */ -1 ,
-	 /* State 12 */ -1 ,
-	 /* State 13 */ 12 ,
-	 /* State 14 */ 33 ,
-	 /* State 15 */ 36 ,
-	 /* State 16 */ 37 ,
-	 /* State 17 */ 34 ,
-	 /* State 18 */ 4 ,
-	 /* State 19 */ -1 ,
-	 /* State 20 */ -1 ,
-	 /* State 21 */ -1 ,
-	 /* State 22 */ -1 ,
-	 /* State 23 */ 11 ,
-	 /* State 24 */ 9 ,
-	 /* State 25 */ 10 ,
-	 /* State 26 */ 14 ,
-	 /* State 27 */ 33 ,
-	 /* State 28 */ 38 ,
-	 /* State 29 */ 33 ,
-	 /* State 30 */ 16 ,
-	 /* State 31 */ -1 ,
-	 /* State 32 */ -1 ,
-	 /* State 33 */ 6 ,
-	 /* State 34 */ 7 ,
-	 /* State 35 */ 8 ,
-	 /* State 36 */ 13 ,
-	 /* State 37 */ 15 ,
-	 /* State 38 */ 1 ,
-	 /* State 39 */ 3 ,
-	 /* State 40 */ 26 ,
-	 /* State 41 */ 18 ,
-	 /* State 42 */ -1 ,
-	 /* State 43 */ 20 ,
-	 /* State 44 */ 24 ,
-	 /* State 45 */ 25 ,
-	 /* State 46 */ 28 ,
-	 /* State 47 */ 29 ,
-	 /* State 48 */ 30 ,
-	 /* State 49 */ 31 ,
-	 /* State 50 */ 26 ,
-	 /* State 51 */ 17 ,
-	 /* State 52 */ 33 ,
-	 /* State 53 */ -1 ,
-	 /* State 54 */ 27 ,
-	 /* State 55 */ 19 ,
-	 /* State 56 */ 21 ,
-	 /* State 57 */ 23 ,
-	 /* State 58 */ 22 
-);
-
-
-
-/* Symbol labels */
-var labels = new Array(
-	"def'" /* Non-terminal symbol */,
-	"ERROR_RESYNC" /* Terminal symbol */,
-	"##" /* Terminal symbol */,
-	"<" /* Terminal symbol */,
-	">" /* Terminal symbol */,
-	"^" /* Terminal symbol */,
-	"!" /* Terminal symbol */,
-	";" /* Terminal symbol */,
-	":" /* Terminal symbol */,
-	"|" /* Terminal symbol */,
-	"&" /* Terminal symbol */,
-	"~" /* Terminal symbol */,
-	"CODE" /* Terminal symbol */,
-	"STRING_SINGLE" /* Terminal symbol */,
-	"STRING_DOUBLE" /* Terminal symbol */,
-	"IDENT" /* Terminal symbol */,
-	"n" /* Terminal symbol */,
-	"/~([^~]/|~[^/]|[^~/])*~/" /* Terminal symbol */,
-	"[tr ]+" /* Terminal symbol */,
-	"header_code" /* Non-terminal symbol */,
-	"token_assocs" /* Non-terminal symbol */,
-	"grammar_defs" /* Non-terminal symbol */,
-	"footer_code" /* Non-terminal symbol */,
-	"def" /* Non-terminal symbol */,
-	"code_opt" /* Non-terminal symbol */,
-	"token_assoc" /* Non-terminal symbol */,
-	"token_defs" /* Non-terminal symbol */,
-	"string" /* Non-terminal symbol */,
-	"token_def" /* Non-terminal symbol */,
-	"identifier" /* Non-terminal symbol */,
-	"grammar_def" /* Non-terminal symbol */,
-	"productions" /* Non-terminal symbol */,
-	"rhs" /* Non-terminal symbol */,
-	"sequence_opt" /* Non-terminal symbol */,
-	"rhs_prec" /* Non-terminal symbol */,
-	"sequence" /* Non-terminal symbol */,
-	"symbol" /* Non-terminal symbol */,
-	"code" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
-);
-
-
-	
-	PCB.line = 1;
-	PCB.column = 1;
-	PCB.offset = 0;
-	PCB.error_step = 0;
-	PCB.src = src;
-	PCB.att = new String();
-
-	if( !err_off )
-		err_off	= new Array();
-	if( !err_la )
-		err_la = new Array();
-	
-	sstack.push( 0 );
-	vstack.push( 0 );
-	
-	PCB.la = __jscclex( PCB );
-			
-	while( true )
-	{
-		PCB.act = 60;
-		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-		{
-			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-			{
-				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-				break;
-			}
-		}
-		
-		if( PCB.act == 60 )
-		{
-			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
-				PCB.act = 60;
-			else
-				PCB.act *= -1;
-		}
-
-		/*
-		_print( "state " + sstack[sstack.length-1] +
-				" la = " +
-				PCB.la + " att = >" +
-				PCB.att + "< act = " +
-				PCB.act + " src = >" +
-				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-				" sstack = " + sstack.join() );
-		*/
-		
-		if( jscc_dbg_withtrace && sstack.length > 0 )
-		{
-			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-		}
-		
-			
-		//Parse error? Try to recover!
-		if( PCB.act == 60 )
-		{
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
-			//Report errors only when error_step is 0, and this is not a
-			//subsequent error from a previous parse
-			if( PCB.error_step == 0 )
-			{
-				err_cnt++;
-				err_off.push( PCB.offset - PCB.att.length );
-				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			}
-			
-			//Perform error recovery			
-			while( sstack.length > 1 && PCB.act == 60 )
-			{
-				sstack.pop();
-				vstack.pop();
-				
-				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( act_tab[sstack[sstack.length-1]][i] == 1 )
-					{
-						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
-						sstack.push( PCB.act );
-						vstack.push( new String() );
-
-						break;
-					}
-				}
-			}
-			
-			//Is it better to leave the parser now?
-			if( sstack.length > 1 && PCB.act != 60 )
-			{
-				//Ok, now try to shift on the next tokens
-				while( PCB.la != 38 )
-				{
-					PCB.act = 60;
-					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-						{
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-							break;
-						}
-					}
-					
-					if( PCB.act != 60 )
-						break;
-					
-					while( ( PCB.la = __jscclex( PCB ) )
-								< 0 )
-						PCB.offset++;
-				}
-				while( PCB.la != 38 && PCB.act == 60 );
-			}
-			
-			if( PCB.act == 60 || PCB.la == 38 )
-			{
-				if( jscc_dbg_withtrace )
-					__jsccdbg_print( "\tError recovery failed, terminating parse process..." );
-				break;
-			}
-
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tError recovery succeeded, continuing" );
-			
-			//Try to parse the next three tokens successfully...
-			PCB.error_step = 3;
-		}
-
-		//Shift
-		if( PCB.act > 0 )
-		{
-			//Parse tree generation
-			if( jscc_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ PCB.la ];
-				node.att = PCB.att;
-				node.child = new Array();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
-			sstack.push( PCB.act );
-			vstack.push( PCB.att );
-			
-			PCB.la = __jscclex( PCB );
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
-			//Successfull shift and right beyond error recovery?
-			if( PCB.error_step > 0 )
-				PCB.error_step--;
-		}
-		//Reduce
-		else
-		{		
-			act = PCB.act * -1;
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "Reducing by production: " + act );
-			
-			rval = void( 0 );
-			
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPerforming semantic action..." );
-			
-switch( act )
-{
-	case 0:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 1:
-	{
-		rval = vstack[ vstack.length - 5 ];
-	}
-	break;
-	case 2:
-	{
-		 code_head += vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 3:
-	{
-		 code_foot += vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 4:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 5:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 6:
-	{
-			assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_LEFT;
-														}
-													
-	}
-	break;
-	case 7:
-	{
-			assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_RIGHT;
-														}
-													
-	}
-	break;
-	case 8:
-	{
-			assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_NOASSOC;
-														}
-													
-	}
-	break;
-	case 9:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 10:
-	{
-			if( whitespace_token == -1 )
-														{
-															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
-															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, 
-																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
-														}
-														else
-															line_error( PCB.line, "Multiple whitespace definition" );
-													
-	}
-	break;
-	case 11:
-	{
-			vstack[ vstack.length - 2 ].push( vstack[ vstack.length - 1 ] );
-														rval = vstack[ vstack.length - 2 ];
-													
-	}
-	break;
-	case 12:
-	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 13:
-	{
-			rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
-														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
-														symbols[rval].code = vstack[ vstack.length - 1 ];
-
-														compile_regex( regex, symbols[ rval ].id, 
-															( vstack[ vstack.length - 3 ].charAt( 0 ) == '\'' ) ? false : true );
-													
-	}
-	break;
-	case 14:
-	{
-			var regex = vstack[ vstack.length - 2 ].substr( 1, vstack[ vstack.length - 2 ].length - 2 );
-														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
-														symbols[rval].code = vstack[ vstack.length - 1 ];
-
-														compile_regex( regex, symbols[ rval ].id, 
-															( vstack[ vstack.length - 2 ].charAt( 0 ) == '\'' ) ? false : true );
-													
-	}
-	break;
-	case 15:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 16:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 17:
-	{
-			var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
-														symbols[nonterm].defined = true;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
-															productions[ vstack[ vstack.length - 2 ][i] ].lhs = nonterm;
-															symbols[nonterm].prods.push( vstack[ vstack.length - 2 ][i] );
-														}
-														
-														if( first_lhs )
-														{
-															first_lhs = false;
-															symbols[0].label = symbols[nonterm].label + "\'";
-															productions[0].rhs.push( nonterm );
-														}
-													
-	}
-	break;
-	case 18:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 19:
-	{
-			rval = new Array();
-														rval = rval.concat( vstack[ vstack.length - 3 ] );
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 20:
-	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 21:
-	{
-			var prod = new PROD();
-														prod.id = productions.length;
-														prod.rhs = vstack[ vstack.length - 3 ];
-														prod.level = vstack[ vstack.length - 2 ];
-														prod.code = vstack[ vstack.length - 1 ];														
-														if( prod.code == "" )
-															prod.code = new String( DEF_PROD_CODE );
-														
-														//Get level of the leftmost terminal
-														//as production level.
-														if( prod.level == 0 )
-														{
-															if( prod.rhs.length > 0 )
-																for( var i = prod.rhs.length-1; i >= 0; i-- )
-																	if( symbols[prod.rhs[i]] &&
-																		symbols[prod.rhs[i]].kind == SYM_TERM )
-																	{
-																		prod.level = symbols[prod.rhs[i]].level;
-																		break;
-																	}
-														}
-
-														productions.push( prod );
-														rval = prod.id;
-													
-	}
-	break;
-	case 22:
-	{
-		 	var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = symbols[index].level;
-														else
-															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
-													
-	}
-	break;
-	case 23:
-	{
-			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
-																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = symbols[index].level;
-														else
-															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
-													
-	}
-	break;
-	case 24:
-	{
-			rval = 0; 
-	}
-	break;
-	case 25:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 26:
-	{
-			rval = new Array(); 
-	}
-	break;
-	case 27:
-	{
-			rval = new Array();
-														rval = rval.concat( vstack[ vstack.length - 2 ] );
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 28:
-	{
-			rval = new Array();
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 29:
-	{
-			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = index;
-														else
-															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
-													
-	}
-	break;
-	case 30:
-	{
-			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
-																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = index;
-														else
-															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 31:
-	{
-			rval = find_symbol( "ERROR_RESYNC", SYM_TERM,
-																			SPECIAL_ERROR );
-													
-	}
-	break;
-	case 32:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 33:
-	{
-			rval = new String(); 
-	}
-	break;
-	case 34:
-	{
-			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 35:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 36:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 37:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 38:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-}
-
-
-			
-			if( jscc_dbg_withparsetree )
-				tmptree = new Array();
-
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
-			for( var i = 0; i < pop_tab[act][1]; i++ )
-			{
-				if( jscc_dbg_withparsetree )
-					tmptree.push( tree.pop() );
-					
-				sstack.pop();
-				vstack.pop();
-			}
-
-			//Get goto-table entry
-			PCB.act = 60;
-			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
-			{
-				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
-				{
-					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
-					break;
-				}
-			}
-			
-			//Do some parse tree construction if desired
-			if( jscc_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ pop_tab[PCB.act][0] ];
-				node.att = rval;
-				node.child = tmptree.reverse();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			//Goal symbol match?
-			if( act == 0 ) //Don't use PCB.act here!
-				break;
-				
-			if( jscc_dbg_withtrace )
-				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-			
-			//...and push it!
-			sstack.push( PCB.act );
-			vstack.push( rval );
-		}
-	}
-
-	if( jscc_dbg_withtrace )
-		__jsccdbg_print( "\nParse complete." );
-
-	if( jscc_dbg_withparsetree )
-	{
-		if( err_cnt == 0 )
-		{
-			__jsccdbg_print( "\n\n--- Parse tree ---" );
-			__jsccdbg_parsetree( 0, treenodes, tree );
-		}
-		else
-		{
-			__jsccdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
-		}
-	}
-	
-	return err_cnt;
-}
-
-
-function __jsccdbg_parsetree( indent, nodes, tree )
-{
-	var str = new String();
-	for( var i = 0; i < tree.length; i++ )
-	{
-		str = "";
-		for( var j = indent; j > 0; j-- )
-			str += "\t";
-		
-		str += nodes[ tree[i] ].sym;
-		if( nodes[ tree[i] ].att != "" )
-			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
-		__jsccdbg_print( str );
-		if( nodes[ tree[i] ].child.length > 0 )
-			__jsccdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
-	}
-}
-
-
-
-function parse_grammar( str, filename )
-{
-	var error_offsets = new Array();
-	var error_expects = new Array();
-	var parse_error = 0;
-	
-	first_lhs = true;
-	cur_line = 1;
-	
-	//jscc_dbg_withstepbystep = true;
-	//jscc_dbg_withtrace = true;
-
-	if( ( parse_error += __jsccparse( str, error_offsets, error_expects ) ) > 0 )
-	{
-		for( i = 0; i < parse_error; i++ )
-			line_error( ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
-				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ),
-					"Parse error near\n\t"  + str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
-							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
-	}
-	return parse_error;
-}
-	
-
-/*
-	Default driver template for JS/CC generated parsers for Mozilla/Spidermonkey
-	
-	Features:
-	- Parser trace messages
-	- Integrated error recovery
-	- Pseudo-graphical parse tree generation
-	- Line and column counter variables
-	
-	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
-	
-	This is in the public domain.
-*/
-
-var first_nfa;
-var last_nfa;
-var created_nfas; //Must always be initialized by compile_regex()...
-
-function create_nfa( where )
-{
-	var pos;
-	var nfa;
-	var i;
-	
-	/*
-		Use an empty item if available,
-		else create a new one...
-	*/
-	for( i = 0; i < where.length; i++ )
-		if( where[i].edge == EDGE_FREE )
-			break;
-	
-	if( i == where.length )
-	{
-		nfa = new NFA()			
-		where.push( nfa );
-	}
-	
-	where[i].edge = EDGE_EPSILON;
-	where[i].ccl = bitset_create( MAX_CHAR );
-	where[i].accept = -1;
-	where[i].follow = -1;
-	where[i].follow2 = -1;
-	where[i].weight = -1;
-	
-	created_nfas.push( i );
-	
-	return i;
-}
-
-
-
-var regex_dbg_withparsetree	= false;
-var regex_dbg_withtrace		= false;
-
-function __regexdbg_print( text )
-{
-	print( text );
-}
-
-function __regexlex( PCB )
-{
-	var state;
-	var match		= -1;
-	var match_pos	= 0;
-	var start		= 0;
-	var pos;
-	var chr;
-
-	while( 1 )
-	{
-		state = 0;
-		match = -1;
-		match_pos = 0;
-		start = 0;
-		pos = PCB.offset + 1 + ( match_pos - start );
-
-		do
-		{
-			pos--;
-			state = 0;
-			match = -2;
-			start = pos;
-	
-			if( PCB.src.length <= start )
-				return 22;
-	
-			do
-			{
-				chr = PCB.src.charCodeAt( pos );
-
-switch( state )
-{
-	case 0:
-		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) state = 1;
-		else if( chr == 40 ) state = 2;
-		else if( chr == 41 ) state = 3;
-		else if( chr == 42 ) state = 4;
-		else if( chr == 43 ) state = 5;
-		else if( chr == 46 ) state = 6;
-		else if( chr == 63 ) state = 7;
-		else if( chr == 91 ) state = 8;
-		else if( chr == 93 ) state = 9;
-		else if( chr == 124 ) state = 10;
-		else if( chr == 92 ) state = 13;
-		else state = -1;
-		break;
-
-	case 1:
-		state = -1;
-		match = 13;
-		match_pos = pos;
-		break;
-
-	case 2:
-		state = -1;
-		match = 6;
-		match_pos = pos;
-		break;
-
-	case 3:
-		state = -1;
-		match = 7;
-		match_pos = pos;
-		break;
-
-	case 4:
-		state = -1;
-		match = 3;
-		match_pos = pos;
-		break;
-
-	case 5:
-		state = -1;
-		match = 4;
-		match_pos = pos;
-		break;
-
-	case 6:
-		state = -1;
-		match = 10;
-		match_pos = pos;
-		break;
-
-	case 7:
-		state = -1;
-		match = 5;
-		match_pos = pos;
-		break;
-
-	case 8:
-		state = -1;
-		match = 8;
-		match_pos = pos;
-		break;
-
-	case 9:
-		state = -1;
-		match = 9;
-		match_pos = pos;
-		break;
-
-	case 10:
-		state = -1;
-		match = 2;
-		match_pos = pos;
-		break;
-
-	case 11:
-		state = -1;
-		match = 12;
-		match_pos = pos;
-		break;
-
-	case 12:
-		if( ( chr >= 48 && chr <= 57 ) ) state = 12;
-		else state = -1;
-		match = 11;
-		match_pos = pos;
-		break;
-
-	case 13:
-		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) state = 11;
-		else if( ( chr >= 48 && chr <= 57 ) ) state = 12;
-		else state = -1;
-		match = 13;
-		match_pos = pos;
-		break;
-
-}
-
-
-
-				//Line- and column-counter
-				if( state > -1 )
-				{
-					if( chr == 10 )
-					{
-						PCB.line++;
-						PCB.column = 0;
-					}
-					PCB.column++;
-				}
-
-				pos++;
-	
-			}
-			while( state > -1 );
-	
-		}
-		while( -1 > -1 && match == -1 );
-	
-		if( match > -1 )
-		{
-			PCB.att = PCB.src.substr( start, match_pos - start );
-			PCB.offset = match_pos;
-			
-
-		}
-		else
-		{
-			PCB.att = new String();
-			match = -1;
-		}
-		
-		break;
-	}
-
-	return match;
-}
-
-function __regexparse( src, err_off, err_la )
-{
-	var		sstack			= new Array();
-	var		vstack			= new Array();
-	var 	err_cnt			= 0;
-	var		rval;
-	var		act;
-	
-	//PCB: Parser Control Block
-	var 	parsercontrol	= new Function( "",
-								"var la;" +
-								"var act;" +
-								"var offset;" +
-								"var src;" +
-								"var att;" +
-								"var line;" +
-								"var column;" +
-								"var error_step;" );
-	var		PCB	= new parsercontrol();
-	
-	//Visual parse tree generation
-	var 	treenode		= new Function( "",
-								"var sym;"+
-								"var att;"+
-								"var child;" );
-	var		treenodes		= new Array();
-	var		tree			= new Array();
-	var		tmptree			= null;
-
-/* Pop-Table */
-var pop_tab = new Array(
-	new Array( 0/* RegEx' */, 1 ),
-	new Array( 15/* RegEx */, 1 ),
-	new Array( 14/* Expression */, 3 ),
-	new Array( 14/* Expression */, 1 ),
-	new Array( 16/* Catenation */, 2 ),
-	new Array( 16/* Catenation */, 1 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 2 ),
-	new Array( 17/* Factor */, 1 ),
-	new Array( 18/* Term */, 1 ),
-	new Array( 18/* Term */, 1 ),
-	new Array( 18/* Term */, 3 ),
-	new Array( 20/* CharacterSet */, 3 ),
-	new Array( 20/* CharacterSet */, 1 ),
-	new Array( 21/* CharClass */, 2 ),
-	new Array( 21/* CharClass */, 0 ),
-	new Array( 19/* Character */, 1 ),
-	new Array( 19/* Character */, 1 ),
-	new Array( 19/* Character */, 1 )
-);
-
-/* Action-Table */
-var act_tab = new Array(
-	/* State 0 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array( 2/* "|" */,14 ),
-	/* State 3 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 4 */ new Array(  ),
-	/* State 5 */ new Array( 5/* "?" */,16 , 4/* "+" */,17 , 3/* "*" */,18 ),
-	/* State 6 */ new Array(  ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 9 */ new Array(  ),
-	/* State 10 */ new Array(  ),
-	/* State 11 */ new Array(  ),
-	/* State 12 */ new Array(  ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array( 7/* ")" */,22 , 2/* "|" */,14 ),
-	/* State 20 */ new Array( 9/* "]" */,24 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 ),
-	/* State 21 */ new Array( 6/* "(" */,8 , 11/* "ASCII_CODE" */,9 , 12/* "ESCAPED_CHAR" */,10 , 13/* "ANY" */,11 , 8/* "[" */,12 , 10/* "ANY_CHAR" */,13 ),
-	/* State 22 */ new Array(  ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  )
-);
-
-/* Goto-Table */
-var goto_tab = new Array(
-	/* State 0 */ new Array( 15/* RegEx */,1 , 14/* Expression */,2 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 1 */ new Array(  ),
-	/* State 2 */ new Array(  ),
-	/* State 3 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 4 */ new Array(  ),
-	/* State 5 */ new Array(  ),
-	/* State 6 */ new Array(  ),
-	/* State 7 */ new Array(  ),
-	/* State 8 */ new Array( 14/* Expression */,19 , 16/* Catenation */,3 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 9 */ new Array(  ),
-	/* State 10 */ new Array(  ),
-	/* State 11 */ new Array(  ),
-	/* State 12 */ new Array( 21/* CharClass */,20 ),
-	/* State 13 */ new Array(  ),
-	/* State 14 */ new Array( 16/* Catenation */,21 , 17/* Factor */,4 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 15 */ new Array(  ),
-	/* State 16 */ new Array(  ),
-	/* State 17 */ new Array(  ),
-	/* State 18 */ new Array(  ),
-	/* State 19 */ new Array(  ),
-	/* State 20 */ new Array( 19/* Character */,23 ),
-	/* State 21 */ new Array( 17/* Factor */,15 , 18/* Term */,5 , 19/* Character */,6 , 20/* CharacterSet */,7 ),
-	/* State 22 */ new Array(  ),
-	/* State 23 */ new Array(  ),
-	/* State 24 */ new Array(  )
-);
-
-/* Default-Actions-Table */
-var defact_tab = new Array(
-	 /* State 0 */ -1 ,
-	 /* State 1 */ 0 ,
-	 /* State 2 */ 1 ,
-	 /* State 3 */ 3 ,
-	 /* State 4 */ 5 ,
-	 /* State 5 */ 9 ,
-	 /* State 6 */ 10 ,
-	 /* State 7 */ 11 ,
-	 /* State 8 */ -1 ,
-	 /* State 9 */ 17 ,
-	 /* State 10 */ 18 ,
-	 /* State 11 */ 19 ,
-	 /* State 12 */ 16 ,
-	 /* State 13 */ 14 ,
-	 /* State 14 */ -1 ,
-	 /* State 15 */ 4 ,
-	 /* State 16 */ 8 ,
-	 /* State 17 */ 7 ,
-	 /* State 18 */ 6 ,
-	 /* State 19 */ -1 ,
-	 /* State 20 */ -1 ,
-	 /* State 21 */ 2 ,
-	 /* State 22 */ 12 ,
-	 /* State 23 */ 15 ,
-	 /* State 24 */ 13 
-);
-
-
-
-/* Symbol labels */
-var labels = new Array(
-	"RegEx'" /* Non-terminal symbol */,
-	"ERROR_RESYNC" /* Terminal symbol */,
-	"|" /* Terminal symbol */,
-	"*" /* Terminal symbol */,
-	"+" /* Terminal symbol */,
-	"?" /* Terminal symbol */,
-	"(" /* Terminal symbol */,
-	")" /* Terminal symbol */,
-	"[" /* Terminal symbol */,
-	"]" /* Terminal symbol */,
-	"ANY_CHAR" /* Terminal symbol */,
-	"ASCII_CODE" /* Terminal symbol */,
-	"ESCAPED_CHAR" /* Terminal symbol */,
-	"ANY" /* Terminal symbol */,
-	"Expression" /* Non-terminal symbol */,
-	"RegEx" /* Non-terminal symbol */,
-	"Catenation" /* Non-terminal symbol */,
-	"Factor" /* Non-terminal symbol */,
-	"Term" /* Non-terminal symbol */,
-	"Character" /* Non-terminal symbol */,
-	"CharacterSet" /* Non-terminal symbol */,
-	"CharClass" /* Non-terminal symbol */,
-	"$" /* Terminal symbol */
-);
-
-
-	
-	PCB.line = 1;
-	PCB.column = 1;
-	PCB.offset = 0;
-	PCB.error_step = 0;
-	PCB.src = src;
-	PCB.att = new String();
-
-	if( !err_off )
-		err_off	= new Array();
-	if( !err_la )
-		err_la = new Array();
-	
-	sstack.push( 0 );
-	vstack.push( 0 );
-	
-	PCB.la = __regexlex( PCB );
-			
-	while( true )
-	{
-		PCB.act = 26;
-		for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-		{
-			if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-			{
-				PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-				break;
-			}
-		}
-		
-		if( PCB.act == 26 )
-		{
-			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
-				PCB.act = 26;
-			else
-				PCB.act *= -1;
-		}
-
-		/*
-		_print( "state " + sstack[sstack.length-1] +
-				" la = " +
-				PCB.la + " att = >" +
-				PCB.att + "< act = " +
-				PCB.act + " src = >" +
-				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-				" sstack = " + sstack.join() );
-		*/
-		
-		if( regex_dbg_withtrace && sstack.length > 0 )
-		{
-			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-		}
-		
-			
-		//Parse error? Try to recover!
-		if( PCB.act == 26 )
-		{
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
-			//Report errors only when error_step is 0, and this is not a
-			//subsequent error from a previous parse
-			if( PCB.error_step == 0 )
-			{
-				err_cnt++;
-				err_off.push( PCB.offset - PCB.att.length );
-				err_la.push( new Array() );
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
-			}
-			
-			//Perform error recovery			
-			while( sstack.length > 1 && PCB.act == 26 )
-			{
-				sstack.pop();
-				vstack.pop();
-				
-				//Try to shift on error token
-				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( act_tab[sstack[sstack.length-1]][i] == 1 )
-					{
-						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
-						sstack.push( PCB.act );
-						vstack.push( new String() );
-
-						break;
-					}
-				}
-			}
-			
-			//Is it better to leave the parser now?
-			if( sstack.length > 1 && PCB.act != 26 )
-			{
-				//Ok, now try to shift on the next tokens
-				while( PCB.la != 22 )
-				{
-					PCB.act = 26;
-					
-					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-						{
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-							break;
-						}
-					}
-					
-					if( PCB.act != 26 )
-						break;
-					
-					while( ( PCB.la = __regexlex( PCB ) )
-								< 0 )
-						PCB.offset++;
-				}
-				while( PCB.la != 22 && PCB.act == 26 );
-			}
-			
-			if( PCB.act == 26 || PCB.la == 22 )
-			{
-				if( regex_dbg_withtrace )
-					__regexdbg_print( "\tError recovery failed, terminating parse process..." );
-				break;
-			}
-
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tError recovery succeeded, continuing" );
-			
-			//Try to parse the next three tokens successfully...
-			PCB.error_step = 3;
-		}
-
-		//Shift
-		if( PCB.act > 0 )
-		{
-			//Parse tree generation
-			if( regex_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ PCB.la ];
-				node.att = PCB.att;
-				node.child = new Array();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
-			sstack.push( PCB.act );
-			vstack.push( PCB.att );
-			
-			PCB.la = __regexlex( PCB );
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
-			//Successfull shift and right beyond error recovery?
-			if( PCB.error_step > 0 )
-				PCB.error_step--;
-		}
-		//Reduce
-		else
-		{		
-			act = PCB.act * -1;
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "Reducing by production: " + act );
-			
-			rval = void( 0 );
-			
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPerforming semantic action..." );
-			
-switch( act )
-{
-	case 0:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 1:
-	{
-			rval = new PARAM();
-													nfa_states[ first_nfa ].follow = vstack[ vstack.length - 1 ].start;
-													last_nfa = vstack[ vstack.length - 1 ].end;
-												
-	}
-	break;
-	case 2:
-	{
-			rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													nfa_states[rval.start].follow = vstack[ vstack.length - 3 ].start;
-													nfa_states[rval.start].follow2 = vstack[ vstack.length - 1 ].start;
-													
-													nfa_states[vstack[ vstack.length - 3 ].end].follow = rval.end;
-													nfa_states[vstack[ vstack.length - 1 ].end].follow = rval.end;
-												
-	}
-	break;
-	case 3:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 4:
-	{
-			/*
-														(As a C-junkie, I miss memcpy() here ;P)
-													*/
-													nfa_states[vstack[ vstack.length - 2 ].end].edge		= nfa_states[vstack[ vstack.length - 1 ].start].edge;
-													nfa_states[vstack[ vstack.length - 2 ].end].ccl		= nfa_states[vstack[ vstack.length - 1 ].start].ccl;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow	= nfa_states[vstack[ vstack.length - 1 ].start].follow;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2	= nfa_states[vstack[ vstack.length - 1 ].start].follow2;
-													nfa_states[vstack[ vstack.length - 2 ].end].accept	= nfa_states[vstack[ vstack.length - 1 ].start].accept;
-													
-													nfa_states[vstack[ vstack.length - 1 ].start].edge = EDGE_FREE;
-													
-													vstack[ vstack.length - 2 ].end = vstack[ vstack.length - 1 ].end;
-													
-													rval = vstack[ vstack.length - 2 ];
-												
-	}
-	break;
-	case 5:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 6:
-	{
-		
-													rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
-
-													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
-												
-	}
-	break;
-	case 7:
-	{
-		 	rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
-
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
-												
-	}
-	break;
-	case 8:
-	{
-		 	rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = create_nfa( nfa_states );
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
-													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
-												
-	}
-	break;
-	case 9:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 10:
-	{
-			rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
-													
-													//_print( "SINGLE: >" + vstack[ vstack.length - 1 ] + "<" );
-													
-													bitset_set( nfa_states[rval.start].ccl,
-															vstack[ vstack.length - 1 ].charCodeAt( 0 ), 1 );
-												
-	}
-	break;
-	case 11:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 12:
-	{
-			rval = vstack[ vstack.length - 2 ]; 
-	}
-	break;
-	case 13:
-	{
-			var negate = false;
-													var i = 0, j, start;
-													
-													//_print( "CHARCLASS: >" + vstack[ vstack.length - 2 ] + "<" );
-													
-													rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
-													
-													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' )
-													{
-														negate = true;
-														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
-															bitset_set( nfa_states[rval.start].ccl, j, 1 );
-														i++;
-													}
-
-													for( ; i < vstack[ vstack.length - 2 ].length; i++ )
-													{
-														if( vstack[ vstack.length - 2 ].charAt( i+1 ) == '-'
-															&& i+2 < vstack[ vstack.length - 2 ].length )
-														{
-															i++;
-															for( j = vstack[ vstack.length - 2 ].charCodeAt( i-1 );
-																	j < vstack[ vstack.length - 2 ].charCodeAt( i+1 );
-																		j++ )		
-																bitset_set( nfa_states[rval.start].ccl,
-																	j, negate ? 0 : 1 );
-														}
-														else
-															bitset_set( nfa_states[rval.start].ccl,
-																vstack[ vstack.length - 2 ].charCodeAt( i ), negate ? 0 : 1 );
-													}
-												
-	}
-	break;
-	case 14:
-	{
-			rval = new PARAM();
-				
-													//_print( "ANYCHAR: >" + vstack[ vstack.length - 1 ] + "<" );
-													
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
-													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-														bitset_set( nfa_states[rval.start].ccl, i, 1 );
-												
-	}
-	break;
-	case 15:
-	{
-			rval = new String( vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ] ); 
-	}
-	break;
-	case 16:
-	{
-			rval = new String(); 
-	}
-	break;
-	case 17:
-	{
-			rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
-	}
-	break;
-	case 18:
-	{
-			switch( vstack[ vstack.length - 1 ].substr( 1 ) )
-													{
-														case 'n':
-															rval = '\n';
-															break;
-														case 'r':
-															rval = '\r';
-															break;
-														case 't':
-															rval = '\t';
-															break;
-														case 'a':
-															rval = '\a';
-															break;
-														default:
-															rval = vstack[ vstack.length - 1 ].substr( 1 );
-															break;
-													}
-												
-	}
-	break;
-	case 19:
-	{
-			rval = vstack[ vstack.length - 1 ]; 
-	}
-	break;
-}
-
-
-			
-			if( regex_dbg_withparsetree )
-				tmptree = new Array();
-
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
-			for( var i = 0; i < pop_tab[act][1]; i++ )
-			{
-				if( regex_dbg_withparsetree )
-					tmptree.push( tree.pop() );
-					
-				sstack.pop();
-				vstack.pop();
-			}
-
-			//Get goto-table entry
-			PCB.act = 26;
-			for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
-			{
-				if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
-				{
-					PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
-					break;
-				}
-			}
-			
-			//Do some parse tree construction if desired
-			if( regex_dbg_withparsetree )
-			{
-				var node = new treenode();
-				node.sym = labels[ pop_tab[PCB.act][0] ];
-				node.att = rval;
-				node.child = tmptree.reverse();
-				tree.push( treenodes.length );
-				treenodes.push( node );
-			}
-			
-			//Goal symbol match?
-			if( act == 0 ) //Don't use PCB.act here!
-				break;
-				
-			if( regex_dbg_withtrace )
-				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-			
-			//...and push it!
-			sstack.push( PCB.act );
-			vstack.push( rval );
-		}
-	}
-
-	if( regex_dbg_withtrace )
-		__regexdbg_print( "\nParse complete." );
-
-	if( regex_dbg_withparsetree )
-	{
-		if( err_cnt == 0 )
-		{
-			__regexdbg_print( "\n\n--- Parse tree ---" );
-			__regexdbg_parsetree( 0, treenodes, tree );
-		}
-		else
-		{
-			__regexdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
-		}
-	}
-	
-	return err_cnt;
-}
-
-
-function __regexdbg_parsetree( indent, nodes, tree )
-{
-	var str = new String();
-	for( var i = 0; i < tree.length; i++ )
-	{
-		str = "";
-		for( var j = indent; j > 0; j-- )
-			str += "\t";
-		
-		str += nodes[ tree[i] ].sym;
-		if( nodes[ tree[i] ].att != "" )
-			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
-		__regexdbg_print( str );
-		if( nodes[ tree[i] ].child.length > 0 )
-			__regexdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
-	}
-}
-
-
-
-function compile_regex( str, accept, case_insensitive )
-{
-	var i, j;
-	var weight = 0;
-	var true_edges = 0;
-	var error_offsets = new Array();
-	var error_expects = new Array();
-	var error_count = 0;
-	
-	if( str == "" )
-		return;
-	
-	//_print( "str = >" + str + "< " + case_insensitive );
-	
-	created_nfas = new Array();
-	
-	first_nfa = create_nfa( nfa_states );
-	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 )
-	{
-		//If the symbol should be case-insensitive, manipulate the
-		//character sets on the newly created items.
-		if( case_insensitive )
-		{
-			for( i = 0; i < created_nfas.length; i++ )
-			{
-				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR )
-				{
-					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
-					{
-						if( bitset_get( nfa_states[ created_nfas[i] ].ccl, j ) )
-						{
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), 1 );
-							bitset_set( nfa_states[ created_nfas[i] ].ccl,
-								String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), 1 );
-						}
-					}
-				}
-			}
-		}
-
-		/* 
-			2008-5-9	Radim Cebis:
-			
-			I think that computing weight of the nfa_states is weird,
-			IMHO nfa_state which accepts a symbol, should have
-			weight according to the order...
-		*/
-		nfa_states[ last_nfa ].accept = accept;   
-		nfa_states[ last_nfa ].weight = regex_weight++;
-
-		if( first_nfa > 0 )
-		{
-			i = 0;
-			while( nfa_states[i].follow2 != -1 )
-				i = nfa_states[i].follow2;
-
-			nfa_states[i].follow2 = first_nfa;
-		}
-	}
-	else
-	{
-		for( i = 0; i < error_count; i++ )
-		{
-			var spaces = new String();
-			for( j = 0; j < error_offsets[i]; j++ )
-				spaces += " ";
-			
-			line_error( cur_line, "Regular expression:\n\t" + str + "\n\t" +
-			 		spaces + "^ expecting " + error_expects[i].join() );
-		}
-	}
-}
-
-
-//TESTING AREA ;)
-//compile_regex( "[A-Z][A-Z0-9]*", 0 );
-//compile_regex( "ab|c", 1 );
-//compile_regex( "[0-9]+", 1 );
-//print_nfa();
-//var d = create_subset( nfa_states );
-//print_dfa( d );
-//d = minimize_dfa( d );
-//print_dfa( d );
-
-
-/* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-
-File:	io_sm.js
-Author: Jan Max Meyer
-Usage:	Console-based wrapper function set for JS/CC to be executed
-		via Mozilla/Spidermonkey
-
-You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
------------------------------------------------------------------------------ */
-
-function _error( msg )
-{
-	if( show_errors )
-		print( "/*--- error: " + msg + " */" );
-	
-	errors++;
-}
-
-function _warning( msg )
-{
-	if( show_warnings )
-		print( "/*--- warning: " + msg + " */" );
-	
-	warnings++;
-}
-
-function _print( txt )
-{
-	print( txt );
-}
-
-//The rest of the platform-dependent code is done in jscc_main_sm.js,
-//because Spidermonkey can't handle files.
+/*--- error: line 1: Parse error near
+	PARSER------------------------...
+	[object Object],[object Object],[object Object],[object Object],[object Object],[object Object] expected */
+/*--- error: line 1: Parse error near
+	PARSER------------------------...
+	[object Object],[object Object],[object Object],[object Object],[object Object],[object Object] expected */
 /* -MODULE----------------------------------------------------------------------
 JS/CC: A LALR(1) Parser Generator written in JavaScript
 Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer

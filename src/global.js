@@ -28,9 +28,10 @@ function Continue(){}
 /*
 	Constants
 */
-
+var NEW_VERSION=true;
+//var DEFAULT_DRIVER="";
 //Program version info 
-var JSCC_VERSION			= "0.35";
+var JSCC_VERSION			= "0.33";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -91,7 +92,7 @@ var PROD=createConstructor(['id','lhs','rhs','level','code']);
 var ITEM=createConstructor(['prod','dot_offset','lookahead']);
 var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
 var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
-var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);//object
 var PARAM=createConstructor(['start','end']);
 var TOKEN=createConstructor(['token','lexeme']);
 
