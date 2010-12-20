@@ -19,11 +19,9 @@ var		first_lhs;
 var		cur_line;
 
 //Wrapper for semantic errors
-function line_error( line, txt )
-{
+function line_error( line, txt ){
 	_error( "line " + line + ": " + txt );
 }
-
 *]
 
 /~
@@ -43,17 +41,15 @@ function line_error( line, txt )
 	'~'
 	
 	/~ Lexeme: ~/
-	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(
-																	2, %match.length - 4 );
-															*]
+	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(2, %match.length - 4 ); *]
 	'\'([^\']|\\\')*\''						STRING_SINGLE
 	'"([^"]|\\")*"'							STRING_DOUBLE
 	'[A-Za-z0-9_-]+'						IDENT
 	
 	/~ Whitespace: ~/
-	'\n'									[* continue; *]
-	'/~([^~]/|~[^/]|[^~/])*~/'				[* continue; *]
-	'[\t\r ]+'								[* continue; *]
+	'\n'									[* throw Continue;*]
+	'/~([^~]/|~[^/]|[^~/])*~/'				[* throw Continue;*]
+	'[\t\r ]+'								[* throw Continue;*]
 	;
 	
 ##
@@ -75,8 +71,7 @@ token_assocs:	token_assocs token_assoc
 				;
 
 token_assoc:	'<' token_defs	';'					[*	assoc_level++;
-														for( var i = 0; i < %2.length; i++ )
-														{
+														for( var i = 0; i < %2.length; i++ ){
 															symbols[ %2[i] ].level = assoc_level;
 															symbols[ %2[i] ].assoc = ASSOC_LEFT;
 														}
@@ -89,19 +84,16 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 														}
 													*]
 				| '^' token_defs ';'				[*	assoc_level++;
-														for( var i = 0; i < %2.length; i++ )
-														{
+														for( var i = 0; i < %2.length; i++ ){
 															symbols[ %2[i] ].level = assoc_level;
 															symbols[ %2[i] ].assoc = ASSOC_NOASSOC;
 														}
 													*]
 				| token_defs ';'
-				| '!' string						[*	if( whitespace_token == -1 )
-														{
+				| '!' string						[*	if( whitespace_token == -1 ){
 															var regex = %2.substr( 1, %2.length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, 
-																 %2.charAt( 0 ) != '\''  );
+															compile_regex( regex, whitespace_token, %2.charAt( 0 ) != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
@@ -109,16 +101,12 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 				;
 
 
-token_defs:		token_defs token_def 				[*	%1.push( %2 );
-														%% = %1;
-													*]
-				| token_def							[*	%%=[%1];	*]
+token_defs:		token_defs token_def 				[*	%% = %1; %%.push( %2 );	*]
+				| token_def							[*	return [%1]; *]
 				;
-
 token_def:		string identifier code_opt 			[*	%% = create_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL );
 														var regex = %1.substr( 1, %1.length - 2 );
 														symbols[%%].code = %3;
-
 														compile_regex( regex, symbols[ %% ].id, %1.charAt( 0 ) != '\''  );
 													*]
 				| string code_opt 					[*	var regex = %1.substr( 1, %1.length - 2 );
@@ -136,16 +124,15 @@ grammar_defs:	grammar_defs grammar_def
 				| grammar_def
 				;
 
-grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
+grammar_def:	identifier ':' productions ';'		[*	
+														var nonterm = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
-														for( var i = 0; i < %3.length; i++ )
-														{
+														for( var i = 0; i < %3.length; i++ ){
 															productions[ %3[i] ].lhs = nonterm;
 															symbols[nonterm].prods.push( %3[i] );
 														}
 														
-														if( first_lhs )
-														{
+														if( first_lhs ){
 															first_lhs = false;
 															symbols[0].label = symbols[nonterm].label + "\'";
 															productions[0].rhs.push( nonterm );
@@ -154,12 +141,8 @@ grammar_def:	identifier ':' productions ';'		[*	var nonterm = create_symbol( %1,
 				| ~ ';'
 				;
 
-productions:	productions '|' rhs					[*	///SV: why you create new array and not use the same?
-														%% = [];
-														%% = %%.concat( %1 );
-														%%.push( %3 );
-													*]
-				| rhs								[*	%%=[%1]; *]
+productions:	productions '|' rhs					[*	%%=%1;%%.push(%3); *]
+				| rhs								[*	return [%1]; *]
 				;
 
 rhs:			sequence_opt rhs_prec code_opt		[*	
@@ -184,58 +167,51 @@ rhs:			sequence_opt rhs_prec code_opt		[*
 														}
 
 														productions.push( prod );
-														%% = prod.id;
+														return prod.id;
 													*]
 				;
 
 rhs_prec:		'&' identifier						[* 	var index;
 														if( ( index = find_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															%% = symbols[index].level;
+															return symbols[index].level;
 														else
 															line_error( PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
 				| '&' string						[*	var index;
 														if( ( index = find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															%% = symbols[index].level;
+															return symbols[index].level;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
-				|									[*	%% = 0; *]
+				|									[*	return 0; *]
 				;
 
 sequence_opt:	sequence
-				|									[*	%% = []; *]
+				|									[*	return []; *]
 				;
 
-sequence:		sequence symbol						[*	%%=%1.concat([%2]); *]
-				| symbol							[* %%=[%1]; *]
+sequence:		sequence symbol						[* %%=%1;%%.push(%2); *]
+				| symbol							[* return [%1]; *]
 				;
 
-symbol:			identifier							[*	var index;
-														if( ( index = find_symbol( %1, SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															%% = index;
-														else
+symbol:			identifier							[*	
+														if( ( %% = find_symbol( %1, SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															%% = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
 													*]
-				| string							[*	var index;
-														if( ( index = find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ),
-																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															%% = index;
-														else
+				| string							[*	
+														if( ( %% = find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															line_error(  PCB.line, "Call to undefined terminal " + %1 );
 													*]
-				| '~'								[*	%% = find_symbol( "ERROR_RESYNC", SYM_TERM,
-																			SPECIAL_ERROR );
-													*]
+				| '~'								[* return find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); *]
 				;
 
 /~ Universal elements ~/
 code_opt:		code
-				|									[*	%% = ""; *]
+				|									[* return ""; *]
 				;
 
-code:			code CODE							[*	%% = %1 + %2; *]
+code:			code CODE							[* return %1 + %2; *]
 				| CODE
 				;
 
@@ -247,9 +223,7 @@ identifier:		IDENT
 				;
 				
 [*
-
-function parse_grammar( str, filename )
-{
+function parse_grammar( str, filename ){
 	var error_offsets = [];
 	var error_expects = [];
 	var parse_error = 0;
@@ -271,5 +245,4 @@ function parse_grammar( str, filename )
 	}
 	return parse_error;
 }
-	
 *]

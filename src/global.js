@@ -24,14 +24,13 @@ function createConstructor(a){
     }
 }
 /// there was "continue" in code, we must to replace it
-function Continue(){}
+var Continue ={};
 /*
 	Constants
 */
-var NEW_VERSION=true;
-//var DEFAULT_DRIVER="";
+
 //Program version info 
-var JSCC_VERSION			= "0.33";
+var JSCC_VERSION			= "0.35";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -87,12 +86,12 @@ var EDGE_CHAR				= 2;
 	Structs
 */
 
-var SYMBOL=createConstructor(['kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
+var SYMBOL=createConstructor(['id','kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
 var PROD=createConstructor(['id','lhs','rhs','level','code']);
 var ITEM=createConstructor(['prod','dot_offset','lookahead']);
 var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
 var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
-var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);//object
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
 var PARAM=createConstructor(['start','end']);
 var TOKEN=createConstructor(['token','lexeme']);
 
