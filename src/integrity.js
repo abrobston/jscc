@@ -30,8 +30,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 function undef()
 {
-	var i;
-	for( i = 0; i < symbols.length; i++ )
+	for(var i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_NONTERM
 			&& symbols[i].defined == false )
@@ -131,8 +130,7 @@ function unreachable()
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
-	var i;
-	for( i = 0; i < states.length; i++ )
+	for(var i = 0; i < states.length; i++ )
 		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );

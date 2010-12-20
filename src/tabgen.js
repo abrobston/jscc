@@ -14,46 +14,36 @@ of the Artistic License. Please see ARTISTIC for more information.
 // --- Utility functions: I think there is no documentation necessary ;) ---
 function create_state()
 {
-	var state = new STATE();
-	
-	state.kernel = [];
-	state.epsilon = [];
-	state.actionrow = [];
-	state.gotorow = [];
-	state.done = false;
-	state.closed = false;
-	state.def_act = 0;
-
+	var state = new STATE({
+		kernel:[],
+		epsilon:[],
+		actionrow:[],
+		gotorow:[],
+		done:false,
+		closed:false,
+		def_act:0
+		});
 	states.push( state );
-	
 	return state;
 }
 
-
 function create_item( p )
 {
-	var item = new ITEM();
-	
-	item.prod = p;
-	item.dot_offset = 0;
-	item.lookahead = [];
-	
-	return item;
+	return new ITEM({
+		prod:p,
+		dot_offset:0,
+		lookahead:[]
+		});
 }
-
 
 function add_table_entry( row, sym, act )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row;
-	
 	row.push( [ sym, act ] );
 	return row;
 }
-
-
 
 function update_table_entry( row, sym, act )
 {
@@ -64,46 +54,35 @@ function update_table_entry( row, sym, act )
 			row[i][1] = act;
 			return row;
 		}
-
 	return row;
 }
 
-
 function remove_table_entry( row, sym )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 		{
 			row.splice( i, 1 );
 			return row;
 		}
-
 	return row;
 }
 
 function get_table_entry( row, sym )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row[i][1];
-	
 	return void(0);
 }
-
 
 function get_undone_state()
 {
 	for( var i = 0; i < states.length; i++ )
-	{
-		if( states[i].done == false )
-			return i;
-	}
-			
+		if( states[i].done == false )///???
+			return i;		
 	return -1;
 }
-
 
 function sort_partition( a, b )
 {
@@ -135,17 +114,11 @@ function find_symbol( label, kind, special )
 {
 	if( !special )
 		special = SPECIAL_NO_SPECIAL;
-
 	for( var i = 0; i < symbols.length; i++ )
-	{
 		if( symbols[i].label.toString() == label.toString()
 			&& symbols[i].kind == kind
 				&& symbols[i].special == special )
-		{
 			return i;
-		}
-	}
-	
 	return -1;
 }
 
@@ -182,27 +155,22 @@ function create_symbol( label, kind, special )
 	if( ( exists = find_symbol( label, kind, special ) ) > -1 )
 		return symbols[ exists ].id;
 	
-	var sym = new SYMBOL();
-	sym.label = label;
-	sym.kind = kind;
-	sym.prods = [];
-	sym.nullable = false;
-	sym.id = symbols.length;
-	sym.code = "";
-	
-	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
-	sym.level = 0; //Could be changed by grammar parser
-
-	sym.special = special;
-	
-	//Flags
-	sym.defined = false;
-
-	sym.first = [];
+	var sym = new SYMBOL({
+		label:label,
+		kind:kind,
+		prods:[],
+		nullable:false,
+		id:symbols.length,
+		code:"",
+		assoc:ASSOC_NONE, //Could be changed by grammar parser
+		level:0, //Could be changed by grammar parser
+		special:special,
+		defined:false,
+		first:[]
+		});
 	
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
-
 	symbols.push( sym );
 	
 	//_print( "Creating new symbol " + sym.id + " kind = " + kind + " >" + label + "<" );
@@ -247,11 +215,7 @@ function item_set_equal( set1, set2 )
 			}
 		}
 	}
-	
-	if( cnt == set1.length )
-		return true;
-		
-	return false;
+	return cnt == set1.length;
 }
 
 
@@ -374,12 +338,11 @@ function lalr1_closure( s )
 	{
 		if( states[s].kernel[i].dot_offset < productions[states[s].kernel[i].prod].rhs.length )
 		{
-			closure.unshift( new ITEM() );
-
-			closure[0].prod = states[s].kernel[i].prod;
-			closure[0].dot_offset = states[s].kernel[i].dot_offset;
-			closure[0].lookahead = [];
-		
+			closure.unshift( new ITEM({
+				prod: states[s].kernel[i].prod,
+				dot_offset: states[s].kernel[i].dot_offset,
+				lookahead: []
+				}) );
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
 		}
@@ -400,10 +363,8 @@ function lalr1_closure( s )
 				if( states[s].epsilon[j].prod == closure[i].prod
 						&& states[s].epsilon[j].dot_offset == closure[i].dot_offset )
 							break;
-			
 			if( j == states[s].epsilon.length )			
 				states[s].epsilon.push( closure[i] );
-
 			closure.splice( i, 1 );
 		}
 	}
@@ -446,11 +407,9 @@ function lalr1_closure( s )
 			partition.sort( sort_partition );
 			
 			//Now one can check for equality!
-			for( i = 0; i < states.length; i++ )
-			{	
+			for( i = 0; i < states.length; i++ )	
 				if( item_set_equal( states[i].kernel, partition ) )
 					break;
-			}
 			
 			if( i == states.length )
 			{				
@@ -506,10 +465,8 @@ function lalr1_closure( s )
 				}
 			}
 		}
-		
 		closure = nclosure;
 	}
-	
 	states[s].closed = true;
 }
 
@@ -669,11 +626,8 @@ function do_reductions( s )
 	for( i = 0; i < reds.length; i++ )
 	{
 		for( j = 0, count = 0; j < reds.length; j++ )
-		{
 			if( reds[j] == reds[i] )
 				count++;
-		}
-		
 		if( max < count )
 		{
 			max = count;

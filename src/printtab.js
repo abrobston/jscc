@@ -210,24 +210,16 @@ function print_parse_tables( mode ){
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_dfa_table( dfa_states )
-{	
+function print_dfa_table( dfa_states ){	
 	var code ="";
-	//code += "\nvar DFA_DATA=[];\n\n";
-	//var json=[],ii,jj;
-	
-	//This is how I would format it
-	/*for( ii=0; ii < dfa_states.length; ii++)
-	(
-		function( ii )
-		{
-			var line = {};
-			for( jj = 0; jj < dfa_states[ii].line.length; jj++ )
-				if(dfa_states[ii].line[jj]!=-1)
-					line[jj] = dfa_states[ii].line[jj];
-					
-		//and so on... ;)
-		
+	code += "\nvar DFA_DATA=[];\n\n";
+	/*
+	var json=[],ii,jj;
+	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
+		var line={};
+		for(jj=0;jj<dfa_states[ii].line.length;jj++)
+			if(dfa_states[ii].line[jj]!=-1)
+				line[jj]=dfa_states[ii].line[jj];
 		json.push({
 			line:line,
 			accept:dfa_states[ii].accept,
@@ -235,8 +227,8 @@ function print_dfa_table( dfa_states )
 		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
 		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
 	})(ii);*/
-	//var json_str = JSON.stringify( json );
-	//json_str=json_str.replace( /,/g , ",\n\t" );
+	//var json_str=JSON.stringify(json);
+	//json_str=json_str.replace(/,/g,",\n\t");
 	//code+="\nvar DFA_DATA="+json_str+";\n\n";
 	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	/*
@@ -296,20 +288,16 @@ function print_dfa_table( dfa_states )
 			}
 			
 			if( !grp_first )
-				//code += " ) state = " + j + ";\n";
 				code += " ) set_state(" + j + ");\n";
 		}
 				
 		code += "		";
 		if( !first )
 			code += "else ";
-		//code += "state = -1;\n"
 		code += "set_state(-1);\n"
 		
 		if( dfa_states[i].accept > -1 )
 		{
-			//code += "		match = " + dfa_states[i].accept + ";\n";
-			//code += "		match_pos = pos;\n";
 			code += "		set_match(" + dfa_states[i].accept + ");\n";
 			code += "		set_match_pos(pos);\n";
 		}
@@ -338,11 +326,11 @@ function print_dfa_table( dfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_symbol_labels(){//Generate code without comments
-	var i,arr
-	for(var i = 0, arr= []; i < symbols.length ; i++ )
-		arr.push( symbols[ i ].label );
-	return "var labels = "+JSON.stringify( symbols )+";\n\n";
+function print_symbol_labels(){
+	//var i,arr
+	for(var i=0,arr=[];i<symbols.length;i++)
+		arr.push(symbols[i].label);
+	return "var labels = "+JSON.stringify(symbols)+";\n\n";
 }
 
 /* -FUNCTION--------------------------------------------------------------------
@@ -371,23 +359,17 @@ function print_symbol_labels(){//Generate code without comments
 								actions, or break, which is automatically done
 								in each parser template.
 ----------------------------------------------------------------------------- */
-function print_term_actions()
-{
-	var code = "";
+function print_term_actions(){
+	var code = "(({\n";
 	var re = /%match|%offset|%source/;
 	var i, j, k;	
 	var semcode;
 	var strmatch;
 	
-	for( i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].kind == SYM_TERM
-			&& symbols[i].code != "" )
-		{			
-			code += "	" + ( code != "" ? "else " : "" ) +
-						"if( match == " + i + " )\n";
-			code += "	{\n";
-			
+	for( i = 0; i < symbols.length; i++ ){
+		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
+			code += "	\"" + i + "\":";
+			code += "function(){";
 			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
@@ -407,13 +389,48 @@ function print_term_actions()
 				else
 					semcode += symbols[i].code.charAt( j );
 			}
-
 			code += "		" + semcode + "\n";
-			
+			code += "		},\n";
+		}
+	}
+	code+="\n})[match.toString()]||(function(){}))()";
+	return code;
+}
+function print_term_actions_old(){
+	var code = "";
+	var re = /%match|%offset|%source/;
+	var i, j, k;	
+	var semcode;
+	var strmatch;
+	
+	for( i = 0; i < symbols.length; i++ ){
+		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
+			code += "	" + ( code != "" ? "else " : "" ) +
+						"if( match == " + i + " )\n";
+			code += "	{\n";
+			semcode = "";
+			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
+			{
+				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
+				if( strmatch && strmatch.index == 0 )
+				{
+					if( strmatch[0] == "%match" )
+						semcode += "PCB.att";
+					else if( strmatch[0] == "%offset" )
+						semcode += "( PCB.offset - PCB.att.length )";
+					else if( strmatch[0] == "%source" )
+						semcode += "PCB.src";
+					
+					j += strmatch[0].length - 1;
+					k = semcode.length;
+				}
+				else
+					semcode += symbols[i].code.charAt( j );
+			}
+			code += "		" + semcode + "\n";
 			code += "		}\n";
 		}
 	}
-
 	return code;
 }
 
@@ -435,27 +452,18 @@ function print_term_actions()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_actions()
-{
+function print_actions(){
 	var code = "";
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
-	
-	code += "switch( act )\n";
-	code += "{\n";
-	
-	for( i = 0; i < productions.length; i++ )
-	{
-		code += "	case " + i + ":\n";
-		code += "	{\n";
-		
-		semcode = "";
-		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
-		{
+	code += "rval=[";
+	for( i = 0; i < productions.length; i++ ){
+		semcode = "function(vstack){\n";
+		semcode+="var rval;"
+		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
-			if( strmatch && strmatch.index == 0 )
-			{
+			if( strmatch && strmatch.index == 0 ){
 				if( strmatch[0] == "%%" )
 					semcode += "rval";
 				else
@@ -464,26 +472,53 @@ function print_actions()
 					idx = productions[i].rhs.length - idx + 1;
 					semcode += "vstack[ vstack.length - " + idx + " ]";
 				}
-				
 				j += strmatch[0].length - 1;
 				k = semcode.length;
 			}
 			else
-			{
 				semcode += productions[i].code.charAt( j );
-			}
 		}
-
+		code += "		" + semcode + "\nreturn rval;},\n";
+	}
+	code += "][act](vstack);\n\n";
+	return code;
+}
+/*
+function print_actions_old(){
+	var code = "";
+	var re = /%[0-9]+|%%/;
+	var semcode, strmatch;
+	var i, j, k, idx;
+	code += "switch( act ){\n";
+	for( i = 0; i < productions.length; i++ ){
+		code += "	case " + i + ":\n";
+		code += "	{\n";
+		semcode = "";
+		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
+			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
+			if( strmatch && strmatch.index == 0 ){
+				if( strmatch[0] == "%%" )
+					semcode += "rval";
+				else
+				{
+					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
+					idx = productions[i].rhs.length - idx + 1;
+					semcode += "vstack[ vstack.length - " + idx + " ]";
+				}
+				j += strmatch[0].length - 1;
+				k = semcode.length;
+			}
+			else
+				semcode += productions[i].code.charAt( j );
+		}
 		code += "		" + semcode + "\n";
 		code += "	}\n";
 		code += "	break;\n";
 	}
-	
 	code += "}\n\n";
-
 	return code;
 }
-
+*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_eof_symbol_id()
@@ -499,23 +534,17 @@ function print_actions()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_eof_symbol_id()
-{
+function get_eof_symbol_id(){
 	var eof_id = -1;
-	
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].special == SPECIAL_EOF )
-		{
+	for( var i = 0; i < symbols.length; i++ ){
+		if( symbols[i].special == SPECIAL_EOF ){
 			eof_id = i;
 			break;
 		}
 	}
-
 	if( eof_id == -1 )
 		_error( "No EOF-symbol defined - This might not be possible (bug!)" );
-	
 	return eof_id;
 }
 
@@ -533,8 +562,7 @@ function get_eof_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_error_symbol_id()
-{
+function get_error_symbol_id(){
 	var error_id = -1;
 	
 	//Find out which symbol is for EOF!	
@@ -567,8 +595,7 @@ function get_error_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_whitespace_symbol_id()
-{
+function get_whitespace_symbol_id(){
 	return whitespace_token;
 }
 
@@ -586,7 +613,6 @@ function get_whitespace_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_error_state()
-{
+function get_error_state(){
 	return states.length + 1;
 }

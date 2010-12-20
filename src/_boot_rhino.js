@@ -272,14 +272,13 @@ function createConstructor(a){
     }
 }
 /// there was "continue" in code, we must to replace it
-function Continue(){}
+var Continue ={};
 /*
 	Constants
 */
-var NEW_VERSION=true;
-//var DEFAULT_DRIVER="";
+
 //Program version info 
-var JSCC_VERSION			= "0.33";
+var JSCC_VERSION			= "0.35";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -335,12 +334,12 @@ var EDGE_CHAR				= 2;
 	Structs
 */
 
-var SYMBOL=createConstructor(['kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
+var SYMBOL=createConstructor(['id','kind','label','prods','first','associativity','level','code','special','nullable','defined','defined_at','used_at']);
 var PROD=createConstructor(['id','lhs','rhs','level','code']);
 var ITEM=createConstructor(['prod','dot_offset','lookahead']);
 var STATE=createConstructor(['kernel','epsilon','def_act','done','closed','actionrow','gotorow']);
 var NFA=createConstructor(['edge','ccl','follow','follow2','accept','weight']);
-var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);//object
+var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
 var PARAM=createConstructor(['start','end']);
 var TOKEN=createConstructor(['token','lexeme']);
 
@@ -1057,24 +1056,16 @@ function print_parse_tables( mode ){
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_dfa_table( dfa_states )
-{	
+function print_dfa_table( dfa_states ){	
 	var code ="";
-	//code += "\nvar DFA_DATA=[];\n\n";
-	//var json=[],ii,jj;
-	
-	//This is how I would format it
-	/*for( ii=0; ii < dfa_states.length; ii++)
-	(
-		function( ii )
-		{
-			var line = {};
-			for( jj = 0; jj < dfa_states[ii].line.length; jj++ )
-				if(dfa_states[ii].line[jj]!=-1)
-					line[jj] = dfa_states[ii].line[jj];
-					
-		//and so on... ;)
-		
+	code += "\nvar DFA_DATA=[];\n\n";
+	/*
+	var json=[],ii,jj;
+	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
+		var line={};
+		for(jj=0;jj<dfa_states[ii].line.length;jj++)
+			if(dfa_states[ii].line[jj]!=-1)
+				line[jj]=dfa_states[ii].line[jj];
 		json.push({
 			line:line,
 			accept:dfa_states[ii].accept,
@@ -1082,8 +1073,8 @@ function print_dfa_table( dfa_states )
 		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
 		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
 	})(ii);*/
-	//var json_str = JSON.stringify( json );
-	//json_str=json_str.replace( /,/g , ",\n\t" );
+	//var json_str=JSON.stringify(json);
+	//json_str=json_str.replace(/,/g,",\n\t");
 	//code+="\nvar DFA_DATA="+json_str+";\n\n";
 	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	/*
@@ -1143,20 +1134,16 @@ function print_dfa_table( dfa_states )
 			}
 			
 			if( !grp_first )
-				//code += " ) state = " + j + ";\n";
 				code += " ) set_state(" + j + ");\n";
 		}
 				
 		code += "		";
 		if( !first )
 			code += "else ";
-		//code += "state = -1;\n"
 		code += "set_state(-1);\n"
 		
 		if( dfa_states[i].accept > -1 )
 		{
-			//code += "		match = " + dfa_states[i].accept + ";\n";
-			//code += "		match_pos = pos;\n";
 			code += "		set_match(" + dfa_states[i].accept + ");\n";
 			code += "		set_match_pos(pos);\n";
 		}
@@ -1185,11 +1172,11 @@ function print_dfa_table( dfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_symbol_labels(){//Generate code without comments
-	var i,arr
-	for(var i = 0, arr= []; i < symbols.length ; i++ )
-		arr.push( symbols[ i ].label );
-	return "var labels = "+JSON.stringify( symbols )+";\n\n";
+function print_symbol_labels(){
+	//var i,arr
+	for(var i=0,arr=[];i<symbols.length;i++)
+		arr.push(symbols[i].label);
+	return "var labels = "+JSON.stringify(symbols)+";\n\n";
 }
 
 /* -FUNCTION--------------------------------------------------------------------
@@ -1218,23 +1205,18 @@ function print_symbol_labels(){//Generate code without comments
 								actions, or break, which is automatically done
 								in each parser template.
 ----------------------------------------------------------------------------- */
-function print_term_actions()
-{
+function print_term_actions(){
 	var code = "";
 	var re = /%match|%offset|%source/;
 	var i, j, k;	
 	var semcode;
 	var strmatch;
 	
-	for( i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].kind == SYM_TERM
-			&& symbols[i].code != "" )
-		{			
+	for( i = 0; i < symbols.length; i++ ){
+		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
 			code += "	" + ( code != "" ? "else " : "" ) +
 						"if( match == " + i + " )\n";
 			code += "	{\n";
-			
 			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
@@ -1254,13 +1236,10 @@ function print_term_actions()
 				else
 					semcode += symbols[i].code.charAt( j );
 			}
-
 			code += "		" + semcode + "\n";
-			
 			code += "		}\n";
 		}
 	}
-
 	return code;
 }
 
@@ -1282,27 +1261,18 @@ function print_term_actions()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_actions()
-{
+function print_actions(){
 	var code = "";
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
-	
-	code += "switch( act )\n";
-	code += "{\n";
-	
-	for( i = 0; i < productions.length; i++ )
-	{
-		code += "	case " + i + ":\n";
-		code += "	{\n";
-		
-		semcode = "";
-		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
-		{
+	code += "rval=[";
+	for( i = 0; i < productions.length; i++ ){
+		semcode = "function(vstack){\n";
+		semcode+="var rval;"
+		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
-			if( strmatch && strmatch.index == 0 )
-			{
+			if( strmatch && strmatch.index == 0 ){
 				if( strmatch[0] == "%%" )
 					semcode += "rval";
 				else
@@ -1311,26 +1281,53 @@ function print_actions()
 					idx = productions[i].rhs.length - idx + 1;
 					semcode += "vstack[ vstack.length - " + idx + " ]";
 				}
-				
 				j += strmatch[0].length - 1;
 				k = semcode.length;
 			}
 			else
-			{
 				semcode += productions[i].code.charAt( j );
-			}
 		}
-
+		code += "		" + semcode + "\nreturn rval;},\n";
+	}
+	code += "][act](vstack);\n\n";
+	return code;
+}
+/*
+function print_actions_old(){
+	var code = "";
+	var re = /%[0-9]+|%%/;
+	var semcode, strmatch;
+	var i, j, k, idx;
+	code += "switch( act ){\n";
+	for( i = 0; i < productions.length; i++ ){
+		code += "	case " + i + ":\n";
+		code += "	{\n";
+		semcode = "";
+		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
+			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
+			if( strmatch && strmatch.index == 0 ){
+				if( strmatch[0] == "%%" )
+					semcode += "rval";
+				else
+				{
+					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
+					idx = productions[i].rhs.length - idx + 1;
+					semcode += "vstack[ vstack.length - " + idx + " ]";
+				}
+				j += strmatch[0].length - 1;
+				k = semcode.length;
+			}
+			else
+				semcode += productions[i].code.charAt( j );
+		}
 		code += "		" + semcode + "\n";
 		code += "	}\n";
 		code += "	break;\n";
 	}
-	
 	code += "}\n\n";
-
 	return code;
 }
-
+*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_eof_symbol_id()
@@ -1346,23 +1343,17 @@ function print_actions()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_eof_symbol_id()
-{
+function get_eof_symbol_id(){
 	var eof_id = -1;
-	
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].special == SPECIAL_EOF )
-		{
+	for( var i = 0; i < symbols.length; i++ ){
+		if( symbols[i].special == SPECIAL_EOF ){
 			eof_id = i;
 			break;
 		}
 	}
-
 	if( eof_id == -1 )
 		_error( "No EOF-symbol defined - This might not be possible (bug!)" );
-	
 	return eof_id;
 }
 
@@ -1380,8 +1371,7 @@ function get_eof_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_error_symbol_id()
-{
+function get_error_symbol_id(){
 	var error_id = -1;
 	
 	//Find out which symbol is for EOF!	
@@ -1414,8 +1404,7 @@ function get_error_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_whitespace_symbol_id()
-{
+function get_whitespace_symbol_id(){
 	return whitespace_token;
 }
 
@@ -1433,8 +1422,7 @@ function get_whitespace_symbol_id()
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function get_error_state()
-{
+function get_error_state(){
 	return states.length + 1;
 }
 /* -MODULE----------------------------------------------------------------------
@@ -1453,46 +1441,36 @@ of the Artistic License. Please see ARTISTIC for more information.
 // --- Utility functions: I think there is no documentation necessary ;) ---
 function create_state()
 {
-	var state = new STATE();
-	
-	state.kernel = [];
-	state.epsilon = [];
-	state.actionrow = [];
-	state.gotorow = [];
-	state.done = false;
-	state.closed = false;
-	state.def_act = 0;
-
+	var state = new STATE({
+		kernel:[],
+		epsilon:[],
+		actionrow:[],
+		gotorow:[],
+		done:false,
+		closed:false,
+		def_act:0
+		});
 	states.push( state );
-	
 	return state;
 }
 
-
 function create_item( p )
 {
-	var item = new ITEM();
-	
-	item.prod = p;
-	item.dot_offset = 0;
-	item.lookahead = [];
-	
-	return item;
+	return new ITEM({
+		prod:p,
+		dot_offset:0,
+		lookahead:[]
+		});
 }
-
 
 function add_table_entry( row, sym, act )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row;
-	
 	row.push( [ sym, act ] );
 	return row;
 }
-
-
 
 function update_table_entry( row, sym, act )
 {
@@ -1503,46 +1481,35 @@ function update_table_entry( row, sym, act )
 			row[i][1] = act;
 			return row;
 		}
-
 	return row;
 }
 
-
 function remove_table_entry( row, sym )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 		{
 			row.splice( i, 1 );
 			return row;
 		}
-
 	return row;
 }
 
 function get_table_entry( row, sym )
 {
-	var i;
-	for( i = 0; i < row.length; i++ )
+	for(var i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row[i][1];
-	
 	return void(0);
 }
-
 
 function get_undone_state()
 {
 	for( var i = 0; i < states.length; i++ )
-	{
-		if( states[i].done == false )
-			return i;
-	}
-			
+		if( states[i].done == false )///???
+			return i;		
 	return -1;
 }
-
 
 function sort_partition( a, b )
 {
@@ -1574,17 +1541,11 @@ function find_symbol( label, kind, special )
 {
 	if( !special )
 		special = SPECIAL_NO_SPECIAL;
-
 	for( var i = 0; i < symbols.length; i++ )
-	{
 		if( symbols[i].label.toString() == label.toString()
 			&& symbols[i].kind == kind
 				&& symbols[i].special == special )
-		{
 			return i;
-		}
-	}
-	
 	return -1;
 }
 
@@ -1621,27 +1582,22 @@ function create_symbol( label, kind, special )
 	if( ( exists = find_symbol( label, kind, special ) ) > -1 )
 		return symbols[ exists ].id;
 	
-	var sym = new SYMBOL();
-	sym.label = label;
-	sym.kind = kind;
-	sym.prods = [];
-	sym.nullable = false;
-	sym.id = symbols.length;
-	sym.code = "";
-	
-	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
-	sym.level = 0; //Could be changed by grammar parser
-
-	sym.special = special;
-	
-	//Flags
-	sym.defined = false;
-
-	sym.first = [];
+	var sym = new SYMBOL({
+		label:label,
+		kind:kind,
+		prods:[],
+		nullable:false,
+		id:symbols.length,
+		code:"",
+		assoc:ASSOC_NONE, //Could be changed by grammar parser
+		level:0, //Could be changed by grammar parser
+		special:special,
+		defined:false,
+		first:[]
+		});
 	
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
-
 	symbols.push( sym );
 	
 	//_print( "Creating new symbol " + sym.id + " kind = " + kind + " >" + label + "<" );
@@ -1686,11 +1642,7 @@ function item_set_equal( set1, set2 )
 			}
 		}
 	}
-	
-	if( cnt == set1.length )
-		return true;
-		
-	return false;
+	return cnt == set1.length;
 }
 
 
@@ -1813,12 +1765,11 @@ function lalr1_closure( s )
 	{
 		if( states[s].kernel[i].dot_offset < productions[states[s].kernel[i].prod].rhs.length )
 		{
-			closure.unshift( new ITEM() );
-
-			closure[0].prod = states[s].kernel[i].prod;
-			closure[0].dot_offset = states[s].kernel[i].dot_offset;
-			closure[0].lookahead = [];
-		
+			closure.unshift( new ITEM({
+				prod: states[s].kernel[i].prod,
+				dot_offset: states[s].kernel[i].dot_offset,
+				lookahead: []
+				}) );
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
 		}
@@ -1839,10 +1790,8 @@ function lalr1_closure( s )
 				if( states[s].epsilon[j].prod == closure[i].prod
 						&& states[s].epsilon[j].dot_offset == closure[i].dot_offset )
 							break;
-			
 			if( j == states[s].epsilon.length )			
 				states[s].epsilon.push( closure[i] );
-
 			closure.splice( i, 1 );
 		}
 	}
@@ -1885,11 +1834,9 @@ function lalr1_closure( s )
 			partition.sort( sort_partition );
 			
 			//Now one can check for equality!
-			for( i = 0; i < states.length; i++ )
-			{	
+			for( i = 0; i < states.length; i++ )	
 				if( item_set_equal( states[i].kernel, partition ) )
 					break;
-			}
 			
 			if( i == states.length )
 			{				
@@ -1945,10 +1892,8 @@ function lalr1_closure( s )
 				}
 			}
 		}
-		
 		closure = nclosure;
 	}
-	
 	states[s].closed = true;
 }
 
@@ -2108,11 +2053,8 @@ function do_reductions( s )
 	for( i = 0; i < reds.length; i++ )
 	{
 		for( j = 0, count = 0; j < reds.length; j++ )
-		{
 			if( reds[j] == reds[i] )
 				count++;
-		}
-		
 		if( max < count )
 		{
 			max = count;
@@ -2471,8 +2413,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 ----------------------------------------------------------------------------- */
 function undef()
 {
-	var i;
-	for( i = 0; i < symbols.length; i++ )
+	for(var i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_NONTERM
 			&& symbols[i].defined == false )
@@ -2572,8 +2513,7 @@ function unreachable()
 ----------------------------------------------------------------------------- */
 function check_empty_states()
 {
-	var i;
-	for( i = 0; i < states.length; i++ )
+	for(var i = 0; i < states.length; i++ )
 		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
 			_error( "No lookaheads in state " + i + 
 						", watch for endless list definitions" );
@@ -2619,8 +2559,7 @@ function same_nfa_items( dfa_states, items )
 			
 			if( j == dfa_states[i].nfa_set.length )
 				return i;
-		}
-			
+		}	
 	return -1;
 }
 
@@ -2629,8 +2568,7 @@ function get_undone_dfa( dfa_states )
 {
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
-			return i;
-			
+			return i;	
 	return -1;
 }
 
@@ -2662,7 +2600,6 @@ function execute_nfa( machine, str )
 		result = move( result, machine, str.charCodeAt( chr_cnt ) );
 		chr_cnt++;
 	}
-	
 	return last_accept;
 }
 
@@ -2692,14 +2629,12 @@ function move( state_set, machine, ch )
 	var hits	= [];
 	var tos		= -1;
 	try{
-	do
-	{
-		tos = state_set.pop();
-		if( machine[ tos ].edge == EDGE_CHAR )
-			if( machine[ tos ].ccl.get( ch ) )
-				hits.push( machine[ tos ].follow );		
-	}
-	while( state_set.length > 0 );
+		do{
+			tos = state_set.pop();
+			if( machine[ tos ].edge == EDGE_CHAR )
+				if( machine[ tos ].ccl.get( ch ) )
+					hits.push( machine[ tos ].follow );		
+		}while( state_set.length > 0 );
 	}catch(e){
 		_print("\n state_set= " + state_set + " machine= " + machine + " ch= "+ch);
 		throw e;}
@@ -2735,8 +2670,7 @@ function epsilon_closure( state_set, machine )
 	for( var i = 0; i < state_set.length; i++ )
 		stack.push( state_set[i] );
 	
-	do
-	{
+	do{
 		tos = stack.pop();
 		if( machine[ tos ].accept >= 0 )
 			accept.push( machine[ tos ].accept );
@@ -2769,8 +2703,7 @@ function epsilon_closure( state_set, machine )
 				}
 			}
 		}
-	}
-	while( stack.length > 0 );
+	}while( stack.length > 0 );
 	return accept.sort();
 }
 
@@ -2922,10 +2855,8 @@ function minimize_dfa( dfa_states )
 		Now the minimization is performed on base of
 		these default groups
 	*/
-	do
-	{
+	do{
 		old_cnt = cnt;
-
 		for( i = 0; i < groups.length; i++ )
 		{
 			new_group = [];
@@ -2973,8 +2904,7 @@ function minimize_dfa( dfa_states )
 		
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
-	}
-	while( old_cnt != cnt );
+	}while( old_cnt != cnt );
 	
 	/*
 		Updating the dfa-state transitions;
@@ -3153,6 +3083,9 @@ var __jsccparse=(function(debug){
 		var dbg_flush = __dbg_flush;
 		var dbg_parsetree = __dbg_parsetree;
 	}
+
+
+var DFA_DATA=[];
 
 function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 switch( state )
@@ -3410,18 +3343,12 @@ switch( state )
 
 }
 
-
-	function lex( PCB )
-	{
-		var state;
-		var match		= -1;
-		var match_pos	= 0;
-		var start		= 0;
-		var pos;
-		var chr;
-
-		while(true)
-		{
+	//function TERMINAL_ACTIONS(){
+//## TERMINAL_ACTIONS ##
+	//}
+	function lex( PCB ){
+		var state, match, match_pos, start, pos, chr;
+		while(true){
 			state = 0;
 			match = -1;
 			match_pos = 0;
@@ -3431,76 +3358,61 @@ switch( state )
 			function set_match(v){match=v;}
 			function set_state(v){state=v;}
 			function set_match_pos(v){match_pos=v;}
-			do
-			{
+			do{
 				pos--;
 				state = 0;
 				match = -2;
 				start = pos;
-	
 				if( PCB.src.length <= start )
 					return 38;
-	
-				do
-				{
+				do{
 					chr = PCB.src.charCodeAt( pos );
-
-
 					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
 					//Line- and column-counter
-					if( state > -1 )
-					{
-						if( chr == 10 )
-						{
+					if( state > -1 ){
+						if( chr == 10 ){
 							PCB.line++;
 							PCB.column = 0;
 						}
 						PCB.column++;
 					}
-
 					pos++;
+				}while( state > -1 );
+			}while( -1 > -1 && match == -1 );
 	
-				}
-				while( state > -1 );
-	
-			}
-			while( -1 > -1 && match == -1 );
-	
-			if( match > -1 )
-			{
+			if( match > -1 ){
 				PCB.att = PCB.src.substr( start, match_pos - start );
 				PCB.offset = match_pos;
-
+				if((function(){
+					try{
 	if( match == 12 )
 	{
-			PCB.att = PCB.att.substr(
-																	2, PCB.att.length - 4 );
-															
+			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
 		}
 	else if( match == 16 )
 	{
-		 continue; 
+		 /*continue;*/ throw Continue;
 		}
 	else if( match == 17 )
 	{
-		 continue; 
+		 /*continue;*/ throw Continue;
 		}
 	else if( match == 18 )
 	{
-		 continue; 
+		 /*continue;*/ throw Continue;
 		}
 
-
-			}
-			else
-			{
+					}catch(e){
+						if(e===Continue)return true;
+						else throw e;
+					}
+				})())continue;
+			}else{
 				PCB.att = "";
 				match = -1;
 			}
-		
 			break;
 		}
-
 		return match;
 	}
 
@@ -3514,141 +3426,100 @@ var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[
 var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
 
 
-var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t2, %match.length - 4 );\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" continue; ","assoc":0,"level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[38]}];
+var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(2, %match.length - 4 ); ","level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","level":0,"special":1,"defined":false,"first":[38]}];
 
 
 
 	function ACTIONS(act,sstack,vstack){
 		var rval;
-switch( act )
-{
-	case 0:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 1:
-	{
-		rval = vstack[ vstack.length - 5 ];
-	}
-	break;
-	case 2:
-	{
-		 code_head += vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 3:
-	{
-		 code_foot += vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 4:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 5:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 6:
-	{
-			assoc_level++;
+rval=[		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 5 ];
+return rval;},
+		function(vstack){
+var rval; code_head += vstack[ vstack.length - 1 ]; 
+return rval;},
+		function(vstack){
+var rval; code_foot += vstack[ vstack.length - 1 ]; 
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 2 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	assoc_level++;
 														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
 														{
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_LEFT;
 														}
 													
-	}
-	break;
-	case 7:
-	{
-			assoc_level++;
+return rval;},
+		function(vstack){
+var rval;	assoc_level++;
 														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
 														{
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_RIGHT;
 														}
 													
-	}
-	break;
-	case 8:
-	{
-			assoc_level++;
+return rval;},
+		function(vstack){
+var rval;	assoc_level++;
 														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
 														{
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_NOASSOC;
 														}
 													
-	}
-	break;
-	case 9:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 10:
-	{
-			if( whitespace_token == -1 )
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 2 ];
+return rval;},
+		function(vstack){
+var rval;	if( whitespace_token == -1 )
 														{
 															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, 
-																 vstack[ vstack.length - 1 ].charAt( 0 ) != '\''  );
+															compile_regex( regex, whitespace_token, vstack[ vstack.length - 1 ].charAt( 0 ) != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
 													
-	}
-	break;
-	case 11:
-	{
-			vstack[ vstack.length - 2 ].push( vstack[ vstack.length - 1 ] );
-														rval = vstack[ vstack.length - 2 ];
-													
-	}
-	break;
-	case 12:
-	{
-			rval=[vstack[ vstack.length - 1 ]];	
-	}
-	break;
-	case 13:
-	{
-			rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
+return rval;},
+		function(vstack){
+var rval;	rval = vstack[ vstack.length - 2 ]; rval.push( vstack[ vstack.length - 1 ] );	
+return rval;},
+		function(vstack){
+var rval;	rval=[vstack[ vstack.length - 1 ]]; 
+return rval;},
+		function(vstack){
+var rval;	rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
 														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
-
 														compile_regex( regex, symbols[ rval ].id, vstack[ vstack.length - 3 ].charAt( 0 ) != '\''  );
 													
-	}
-	break;
-	case 14:
-	{
-			var regex = vstack[ vstack.length - 2 ].substr( 1, vstack[ vstack.length - 2 ].length - 2 );
+return rval;},
+		function(vstack){
+var rval;	var regex = vstack[ vstack.length - 2 ].substr( 1, vstack[ vstack.length - 2 ].length - 2 );
 														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
 														compile_regex( regex, symbols[ rval ].id,  vstack[ vstack.length - 2 ].charAt( 0 ) != '\'' );
 													
-	}
-	break;
-	case 15:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 16:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 17:
-	{
-			var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 2 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
 														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
 														{
@@ -3663,30 +3534,18 @@ switch( act )
 															productions[0].rhs.push( nonterm );
 														}
 													
-	}
-	break;
-	case 18:
-	{
-		rval = vstack[ vstack.length - 2 ];
-	}
-	break;
-	case 19:
-	{
-			///SV: why you create new array and not use the same?
-														rval = [];
-														rval = rval.concat( vstack[ vstack.length - 3 ] );
-														rval.push( vstack[ vstack.length - 1 ] );
-													
-	}
-	break;
-	case 20:
-	{
-			rval=[vstack[ vstack.length - 1 ]]; 
-	}
-	break;
-	case 21:
-	{
-			
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 2 ];
+return rval;},
+		function(vstack){
+var rval;	rval=vstack[ vstack.length - 3 ];rval.push(vstack[ vstack.length - 1 ]); 
+return rval;},
+		function(vstack){
+var rval;	rval=[vstack[ vstack.length - 1 ]]; 
+return rval;},
+		function(vstack){
+var rval;	
 														var prod = new PROD({
 															id:productions.length,
 															rhs:vstack[ vstack.length - 3 ],
@@ -3710,124 +3569,81 @@ switch( act )
 														productions.push( prod );
 														rval = prod.id;
 													
-	}
-	break;
-	case 22:
-	{
-		 	var index;
+return rval;},
+		function(vstack){
+var rval; 	var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
 															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
-	}
-	break;
-	case 23:
-	{
-			var index;
+return rval;},
+		function(vstack){
+var rval;	var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															rval = symbols[index].level;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
-	}
-	break;
-	case 24:
-	{
-			rval = 0; 
-	}
-	break;
-	case 25:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 26:
-	{
-			rval = []; 
-	}
-	break;
-	case 27:
-	{
-			rval=vstack[ vstack.length - 2 ].concat([vstack[ vstack.length - 1 ]]); 
-	}
-	break;
-	case 28:
-	{
-		 rval=[vstack[ vstack.length - 1 ]]; 
-	}
-	break;
-	case 29:
-	{
-			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = index;
-														else
+return rval;},
+		function(vstack){
+var rval;	rval = 0; 
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	rval = []; 
+return rval;},
+		function(vstack){
+var rval; rval=vstack[ vstack.length - 2 ];rval.push(vstack[ vstack.length - 1 ]); 
+return rval;},
+		function(vstack){
+var rval; rval=[vstack[ vstack.length - 1 ]]; 
+return rval;},
+		function(vstack){
+var rval;	
+														if( ( rval = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
 													
-	}
-	break;
-	case 30:
-	{
-			var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
-																SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = index;
-														else
+return rval;},
+		function(vstack){
+var rval;	
+														if( ( rval = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
 													
-	}
-	break;
-	case 31:
-	{
-			rval = find_symbol( "ERROR_RESYNC", SYM_TERM,
-																			SPECIAL_ERROR );
-													
-	}
-	break;
-	case 32:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 33:
-	{
-			rval = ""; 
-	}
-	break;
-	case 34:
-	{
-			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 35:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 36:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 37:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 38:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-}
+return rval;},
+		function(vstack){
+var rval;	rval = find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); 
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	rval = ""; 
+return rval;},
+		function(vstack){
+var rval;	rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+][act](vstack);
 
 
 		return rval;
 	}
-	function parse( src, err_off, err_la )
-	{
+	function parse( src, err_off, err_la ){
 		var		sstack			= [];
 		var		vstack			= [];
 		var 	err_cnt			= 0;
@@ -3865,20 +3681,16 @@ switch( act )
 	
 		PCB.la = lex( PCB );
 			
-		while( true )
-		{
+		while(true){
 			PCB.act = 60;
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-			{
-				if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-				{
+			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 ){
+				if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
 					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 		
-			if( PCB.act == 60 )
-			{
+			if( PCB.act == 60 ){
 				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
 					PCB.act = 60;
 				else
@@ -3934,14 +3746,12 @@ switch( act )
 								labels[ act_tab[sstack[sstack.length-1]][i] ]
 									+ "\"";
 					}
-				
 					dbg_print( "Expecting: " + expect );
 				}
 			
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
-				if( PCB.error_step == 0 )
-				{
+				if( PCB.error_step == 0 ){
 					err_cnt++;
 					err_off.push( PCB.offset - PCB.att.length );
 					err_la.push([]);
@@ -3953,43 +3763,33 @@ switch( act )
 				}
 			
 				//Perform error recovery			
-				while( sstack.length > 1 && PCB.act == 60 )
-				{
+				while( sstack.length > 1 && PCB.act == 60 ){
 					sstack.pop();
 					vstack.pop();
 				
 					//Try to shift on error token
 					for( var i = 0;
 						i < act_tab[sstack[sstack.length-1]].length;
-						i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == 1 )
-						{
+						i+=2 ){
+						if( act_tab[sstack[sstack.length-1]][i] == 1 ){
 							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
 							sstack.push( PCB.act );
 							vstack.push("");
 						
-							if( dbg_withtrace )
-							{
-								dbg_print(
-									"Error recovery: error token " +
-									"could be shifted!" );
-								dbg_print( "Error recovery: " +
-									"current stack is " + sstack.join() );
+							if( dbg_withtrace ){
+								dbg_print("Error recovery: error token could be shifted!" );
+								dbg_print( "Error recovery: current stack is " + sstack.join() );
 							}
-
 							break;
 						}
 					}
 				}
 			
 				//Is it better to leave the parser now?
-				if( sstack.length > 1 && PCB.act != 60 )
-				{
+				if( sstack.length > 1 && PCB.act != 60 ){
 					//Ok, now try to shift on the next tokens
-					while( PCB.la != 38 )
-					{
+					while( PCB.la != 38 ){
 						if( dbg_withtrace )
 							dbg_print( "Error recovery: " +
 								"Trying to shift on \""
@@ -3999,10 +3799,8 @@ switch( act )
 					
 						for( var i = 0;
 							i < act_tab[sstack[sstack.length-1]].length;
-							i+=2 )
-						{
-							if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-							{
+							i+=2 ){
+							if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
 								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 								break;
 							}
@@ -4027,25 +3825,21 @@ switch( act )
 				if( PCB.act == 60 || PCB.la == 38 )
 				{
 					if( dbg_withtrace )
-						dbg_print( "\tError recovery failed, " +
-							"terminating parse process..." );
+						dbg_print( "\tError recovery failed, terminating parse process..." );
 					break;
 				}
 
 				if( dbg_withtrace )
-					dbg_print( "\tError recovery succeeded, " +
-											"continuing" );
+					dbg_print( "\tError recovery succeeded, continuing" );
 			
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
 
 			//Shift
-			if( PCB.act > 0 )
-			{
+			if( PCB.act > 0 ){
 				//Parse tree generation
-				if( dbg_withparsetree )
-				{
+				if( dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push({
 						sym:labels[ PCB.la ],
@@ -4093,8 +3887,7 @@ switch( act )
 					dbg_print( "\tPopping " + 
 									pop_tab[act][1] +  " off the stack..." );
 				
-				for( var i = 0; i < pop_tab[act][1]; i++ )
-				{
+				for( var i = 0; i < pop_tab[act][1]; i++ ){
 					if( dbg_withparsetree )
 						tmptree.push( tree.pop() );
 					
@@ -4104,18 +3897,15 @@ switch( act )
 
 				//Get goto-table entry
 				PCB.act = 60;
-				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
-					{
+				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 ){
+					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] ){
 						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 						break;
 					}
 				}
 			
 				//Do some parse tree construction if desired
-				if( dbg_withparsetree )
-				{
+				if( dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push( {
 						sym:labels[ pop_tab[act][0] ],
@@ -4123,14 +3913,10 @@ switch( act )
 						child:tmptree.reverse()
 						} );
 				}
-			
 				//Goal symbol match?
-				if( act == 0 ) //Don't use PCB.act here!
-					break;
-				
+				if( act == 0 ) break; //Don't use PCB.act here!
 				if( dbg_withtrace )
-					dbg_print( "\tPushing non-terminal " + 
-						labels[ pop_tab[act][0] ] );
+					dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
 			
 				//...and push it!
 				sstack.push( PCB.act );
@@ -4138,32 +3924,22 @@ switch( act )
 			}
 		}
 
-		if( dbg_withtrace )
-		{
+		if( dbg_withtrace ){
 			dbg_print( "\nParse complete." );
-		
 			//This function is used for parser drivers that will output
 			//the entire debug messages in a row.
 			dbg_flush();
 		}
 
-		if( dbg_withparsetree )
-		{
-			if( err_cnt == 0 )
-			{
+		if( dbg_withparsetree ){
+			if( err_cnt == 0 ){
 				dbg_print( "\n\n--- Parse tree ---" );
 				dbg_parsetree( 0, treenodes, tree );
 			}
-			else
-			{
-				dbg_print( "\n\nParse tree cannot be viewed. " +
-									"There where parse errors." );
-			}
+			else dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
-	
 		return err_cnt;
 	}
-	
 	return parse;
 })(__jscc_debug);
 
@@ -4289,7 +4065,6 @@ function create_nfa( where )
 	
 	where[i].edge = EDGE_EPSILON;
 	where[i].ccl=new BitSet(MAX_CHAR);
-	where[i].ccl_ = {};///SV: try to reblace array to object
 	where[i].accept = -1;
 	where[i].follow = -1;
 	where[i].follow2 = -1;
@@ -4311,6 +4086,9 @@ var __regexparse=(function(debug){
 		var dbg_flush = __dbg_flush;
 		var dbg_parsetree = __dbg_parsetree;
 	}
+
+
+var DFA_DATA=[];
 
 function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 switch( state )
@@ -4415,18 +4193,12 @@ switch( state )
 
 }
 
-
-	function lex( PCB )
-	{
-		var state;
-		var match		= -1;
-		var match_pos	= 0;
-		var start		= 0;
-		var pos;
-		var chr;
-
-		while(true)
-		{
+	//function TERMINAL_ACTIONS(){
+//## TERMINAL_ACTIONS ##
+	//}
+	function lex( PCB ){
+		var state, match, match_pos, start, pos, chr;
+		while(true){
 			state = 0;
 			match = -1;
 			match_pos = 0;
@@ -4436,58 +4208,45 @@ switch( state )
 			function set_match(v){match=v;}
 			function set_state(v){state=v;}
 			function set_match_pos(v){match_pos=v;}
-			do
-			{
+			do{
 				pos--;
 				state = 0;
 				match = -2;
 				start = pos;
-	
 				if( PCB.src.length <= start )
 					return 22;
-	
-				do
-				{
+				do{
 					chr = PCB.src.charCodeAt( pos );
-
-
 					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
 					//Line- and column-counter
-					if( state > -1 )
-					{
-						if( chr == 10 )
-						{
+					if( state > -1 ){
+						if( chr == 10 ){
 							PCB.line++;
 							PCB.column = 0;
 						}
 						PCB.column++;
 					}
-
 					pos++;
+				}while( state > -1 );
+			}while( -1 > -1 && match == -1 );
 	
-				}
-				while( state > -1 );
-	
-			}
-			while( -1 > -1 && match == -1 );
-	
-			if( match > -1 )
-			{
+			if( match > -1 ){
 				PCB.att = PCB.src.substr( start, match_pos - start );
 				PCB.offset = match_pos;
+				if((function(){
+					try{
 
-
-
-			}
-			else
-			{
+					}catch(e){
+						if(e===Continue)return true;
+						else throw e;
+					}
+				})())continue;
+			}else{
 				PCB.att = "";
 				match = -1;
 			}
-		
 			break;
 		}
-
 		return match;
 	}
 
@@ -4501,30 +4260,23 @@ var goto_tab =[[15,1,14,2,16,3,17,4,18,5,19,6,20,7],[],[],[17,15,18,5,19,6,20,7]
 var defact_tab =[-1,0,1,3,5,9,10,11,-1,17,18,19,16,14,-1,4,8,7,6,-1,-1,2,12,15,13];
 
 
-var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","assoc":0,"level":0,"special":3,"defined":true,"first":[1]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":2,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[2]},{"label":"*","kind":1,"prods":[],"nullable":false,"id":3,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[3]},{"label":"+","kind":1,"prods":[],"nullable":false,"id":4,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[4]},{"label":"?","kind":1,"prods":[],"nullable":false,"id":5,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[5]},{"label":"(","kind":1,"prods":[],"nullable":false,"id":6,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[6]},{"label":")","kind":1,"prods":[],"nullable":false,"id":7,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[7]},{"label":"[","kind":1,"prods":[],"nullable":false,"id":8,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[8]},{"label":"]","kind":1,"prods":[],"nullable":false,"id":9,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":1,"prods":[],"nullable":false,"id":10,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":1,"prods":[],"nullable":false,"id":11,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":1,"prods":[],"nullable":false,"id":12,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[12]},{"label":"ANY","kind":1,"prods":[],"nullable":false,"id":13,"code":"","assoc":0,"level":0,"special":0,"defined":false,"first":[13]},{"label":"Expression","kind":0,"prods":[2,3],"nullable":0,"id":14,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":0,"prods":[1],"nullable":0,"id":15,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":0,"prods":[4,5],"nullable":0,"id":16,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":0,"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":0,"prods":[10,11,12],"nullable":0,"id":18,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":0,"prods":[17,18,19],"nullable":0,"id":19,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":0,"prods":[13,14],"nullable":0,"id":20,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[8,10]},{"label":"CharClass","kind":0,"prods":[15,16],"nullable":1,"id":21,"code":"","assoc":0,"level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":22,"code":"","assoc":0,"level":0,"special":1,"defined":false,"first":[22]}];
+var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"*","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":"+","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"?","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"(","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":")","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":"[","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"]","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":1,"prods":[],"nullable":false,"id":12,"code":"","level":0,"special":0,"defined":false,"first":[12]},{"label":"ANY","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"Expression","kind":0,"prods":[2,3],"nullable":0,"id":14,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":0,"prods":[1],"nullable":0,"id":15,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":0,"prods":[4,5],"nullable":0,"id":16,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":0,"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":0,"prods":[10,11,12],"nullable":0,"id":18,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":0,"prods":[17,18,19],"nullable":0,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":0,"prods":[13,14],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[8,10]},{"label":"CharClass","kind":0,"prods":[15,16],"nullable":1,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":22,"code":"","level":0,"special":1,"defined":false,"first":[22]}];
 
 
 
 	function ACTIONS(act,sstack,vstack){
 		var rval;
-switch( act )
-{
-	case 0:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 1:
-	{
-			rval = new PARAM();
+rval=[		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	rval = new PARAM();
 													nfa_states[ first_nfa ].follow = vstack[ vstack.length - 1 ].start;
 													last_nfa = vstack[ vstack.length - 1 ].end;
 												
-	}
-	break;
-	case 2:
-	{
-			
+return rval;},
+		function(vstack){
+var rval;	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -4535,16 +4287,12 @@ switch( act )
 													nfa_states[vstack[ vstack.length - 3 ].end].follow = rval.end;
 													nfa_states[vstack[ vstack.length - 1 ].end].follow = rval.end;
 												
-	}
-	break;
-	case 3:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 4:
-	{
-			
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	
 													var weight=nfa_states[vstack[ vstack.length - 2 ].end].weight;///SV: if weight unused - delete this
 													nfa_states[vstack[ vstack.length - 2 ].end]=new NFA(nfa_states[vstack[ vstack.length - 1 ].start]);
 													nfa_states[vstack[ vstack.length - 2 ].end].weight=weight;///SV: if weight unused - delete this
@@ -4554,16 +4302,12 @@ switch( act )
 													
 													rval = vstack[ vstack.length - 2 ];
 												
-	}
-	break;
-	case 5:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 6:
-	{
-		
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -4574,11 +4318,9 @@ switch( act )
 													nfa_states[rval.start].follow2 = rval.end;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
 												
-	}
-	break;
-	case 7:
-	{
-		 	
+return rval;},
+		function(vstack){
+var rval; 	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -4588,11 +4330,9 @@ switch( act )
 
 													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
 												
-	}
-	break;
-	case 8:
-	{
-		 	
+return rval;},
+		function(vstack){
+var rval; 	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -4601,16 +4341,12 @@ switch( act )
 													nfa_states[rval.start].follow2 = rval.end;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 												
-	}
-	break;
-	case 9:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 10:
-	{
-			rval = new PARAM();
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
 														= create_nfa( nfa_states );
@@ -4618,21 +4354,15 @@ switch( act )
 													
 													nfa_states[rval.start].ccl.set(vstack[ vstack.length - 1 ].charCodeAt( 0 ), true );
 												
-	}
-	break;
-	case 11:
-	{
-		rval = vstack[ vstack.length - 1 ];
-	}
-	break;
-	case 12:
-	{
-			rval = vstack[ vstack.length - 2 ]; 
-	}
-	break;
-	case 13:
-	{
-			var negate = false;
+return rval;},
+		function(vstack){
+var rval;rval = vstack[ vstack.length - 1 ];
+return rval;},
+		function(vstack){
+var rval;	rval = vstack[ vstack.length - 2 ]; 
+return rval;},
+		function(vstack){
+var rval;	var negate = false;
 													var i = 0, j, start;													
 													rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
@@ -4663,11 +4393,9 @@ switch( act )
 															nfa_states[rval.start].ccl.set(vstack[ vstack.length - 2 ].charCodeAt(i), !negate);
 													}
 												
-	}
-	break;
-	case 14:
-	{
-			rval = new PARAM();
+return rval;},
+		function(vstack){
+var rval;	rval = new PARAM();
 				
 													
 													rval.start = create_nfa( nfa_states );
@@ -4677,40 +4405,28 @@ switch( act )
 													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 														nfa_states[rval.start].ccl.set(i, true);
 												
-	}
-	break;
-	case 15:
-	{
-			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
-	}
-	break;
-	case 16:
-	{
-			rval = ""; 
-	}
-	break;
-	case 17:
-	{
-			rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
-	}
-	break;
-	case 18:
-	{
-			rval={n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
-	}
-	break;
-	case 19:
-	{
-			rval = vstack[ vstack.length - 1 ]; 
-	}
-	break;
-}
+return rval;},
+		function(vstack){
+var rval;	rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+return rval;},
+		function(vstack){
+var rval;	rval = ""; 
+return rval;},
+		function(vstack){
+var rval;	rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
+return rval;},
+		function(vstack){
+var rval;	rval={n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
+return rval;},
+		function(vstack){
+var rval;	rval = vstack[ vstack.length - 1 ]; 
+return rval;},
+][act](vstack);
 
 
 		return rval;
 	}
-	function parse( src, err_off, err_la )
-	{
+	function parse( src, err_off, err_la ){
 		var		sstack			= [];
 		var		vstack			= [];
 		var 	err_cnt			= 0;
@@ -4748,20 +4464,16 @@ switch( act )
 	
 		PCB.la = lex( PCB );
 			
-		while( true )
-		{
+		while(true){
 			PCB.act = 26;
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
-			{
-				if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-				{
+			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 ){
+				if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
 					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 					break;
 				}
 			}
 		
-			if( PCB.act == 26 )
-			{
+			if( PCB.act == 26 ){
 				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
 					PCB.act = 26;
 				else
@@ -4817,14 +4529,12 @@ switch( act )
 								labels[ act_tab[sstack[sstack.length-1]][i] ]
 									+ "\"";
 					}
-				
 					dbg_print( "Expecting: " + expect );
 				}
 			
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
-				if( PCB.error_step == 0 )
-				{
+				if( PCB.error_step == 0 ){
 					err_cnt++;
 					err_off.push( PCB.offset - PCB.att.length );
 					err_la.push([]);
@@ -4836,43 +4546,33 @@ switch( act )
 				}
 			
 				//Perform error recovery			
-				while( sstack.length > 1 && PCB.act == 26 )
-				{
+				while( sstack.length > 1 && PCB.act == 26 ){
 					sstack.pop();
 					vstack.pop();
 				
 					//Try to shift on error token
 					for( var i = 0;
 						i < act_tab[sstack[sstack.length-1]].length;
-						i+=2 )
-					{
-						if( act_tab[sstack[sstack.length-1]][i] == 1 )
-						{
+						i+=2 ){
+						if( act_tab[sstack[sstack.length-1]][i] == 1 ){
 							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 						
 							sstack.push( PCB.act );
 							vstack.push("");
 						
-							if( dbg_withtrace )
-							{
-								dbg_print(
-									"Error recovery: error token " +
-									"could be shifted!" );
-								dbg_print( "Error recovery: " +
-									"current stack is " + sstack.join() );
+							if( dbg_withtrace ){
+								dbg_print("Error recovery: error token could be shifted!" );
+								dbg_print( "Error recovery: current stack is " + sstack.join() );
 							}
-
 							break;
 						}
 					}
 				}
 			
 				//Is it better to leave the parser now?
-				if( sstack.length > 1 && PCB.act != 26 )
-				{
+				if( sstack.length > 1 && PCB.act != 26 ){
 					//Ok, now try to shift on the next tokens
-					while( PCB.la != 22 )
-					{
+					while( PCB.la != 22 ){
 						if( dbg_withtrace )
 							dbg_print( "Error recovery: " +
 								"Trying to shift on \""
@@ -4882,10 +4582,8 @@ switch( act )
 					
 						for( var i = 0;
 							i < act_tab[sstack[sstack.length-1]].length;
-							i+=2 )
-						{
-							if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
-							{
+							i+=2 ){
+							if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
 								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
 								break;
 							}
@@ -4910,25 +4608,21 @@ switch( act )
 				if( PCB.act == 26 || PCB.la == 22 )
 				{
 					if( dbg_withtrace )
-						dbg_print( "\tError recovery failed, " +
-							"terminating parse process..." );
+						dbg_print( "\tError recovery failed, terminating parse process..." );
 					break;
 				}
 
 				if( dbg_withtrace )
-					dbg_print( "\tError recovery succeeded, " +
-											"continuing" );
+					dbg_print( "\tError recovery succeeded, continuing" );
 			
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
 
 			//Shift
-			if( PCB.act > 0 )
-			{
+			if( PCB.act > 0 ){
 				//Parse tree generation
-				if( dbg_withparsetree )
-				{
+				if( dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push({
 						sym:labels[ PCB.la ],
@@ -4976,8 +4670,7 @@ switch( act )
 					dbg_print( "\tPopping " + 
 									pop_tab[act][1] +  " off the stack..." );
 				
-				for( var i = 0; i < pop_tab[act][1]; i++ )
-				{
+				for( var i = 0; i < pop_tab[act][1]; i++ ){
 					if( dbg_withparsetree )
 						tmptree.push( tree.pop() );
 					
@@ -4987,18 +4680,15 @@ switch( act )
 
 				//Get goto-table entry
 				PCB.act = 26;
-				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 )
-				{
-					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] )
-					{
+				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 ){
+					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] ){
 						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
 						break;
 					}
 				}
 			
 				//Do some parse tree construction if desired
-				if( dbg_withparsetree )
-				{
+				if( dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push( {
 						sym:labels[ pop_tab[act][0] ],
@@ -5006,14 +4696,10 @@ switch( act )
 						child:tmptree.reverse()
 						} );
 				}
-			
 				//Goal symbol match?
-				if( act == 0 ) //Don't use PCB.act here!
-					break;
-				
+				if( act == 0 ) break; //Don't use PCB.act here!
 				if( dbg_withtrace )
-					dbg_print( "\tPushing non-terminal " + 
-						labels[ pop_tab[act][0] ] );
+					dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
 			
 				//...and push it!
 				sstack.push( PCB.act );
@@ -5021,32 +4707,22 @@ switch( act )
 			}
 		}
 
-		if( dbg_withtrace )
-		{
+		if( dbg_withtrace ){
 			dbg_print( "\nParse complete." );
-		
 			//This function is used for parser drivers that will output
 			//the entire debug messages in a row.
 			dbg_flush();
 		}
 
-		if( dbg_withparsetree )
-		{
-			if( err_cnt == 0 )
-			{
+		if( dbg_withparsetree ){
+			if( err_cnt == 0 ){
 				dbg_print( "\n\n--- Parse tree ---" );
 				dbg_parsetree( 0, treenodes, tree );
 			}
-			else
-			{
-				dbg_print( "\n\nParse tree cannot be viewed. " +
-									"There where parse errors." );
-			}
+			else dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
-	
 		return err_cnt;
 	}
-	
 	return parse;
 })(__regex_debug);
 

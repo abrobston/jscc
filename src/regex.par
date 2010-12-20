@@ -34,19 +34,18 @@ function create_nfa( where )
 		if( where[i].edge == EDGE_FREE )
 			break;
 	
-	if( i == where.length )
-	{
+	if( i == where.length ){
 		nfa = new NFA()			
 		where.push( nfa );
-	}
+	}else
+		nfa=where[i];
 	
-	where[i].edge = EDGE_EPSILON;
-	where[i].ccl=new BitSet(MAX_CHAR);
-	where[i].ccl_ = {};///SV: try to reblace array to object
-	where[i].accept = -1;
-	where[i].follow = -1;
-	where[i].follow2 = -1;
-	where[i].weight = -1;
+	nfa.edge = EDGE_EPSILON;
+	nfa.ccl=new BitSet(MAX_CHAR);
+	nfa.accept = -1;
+	nfa.follow = -1;
+	nfa.follow2 = -1;
+	nfa.weight = -1;
 	
 	created_nfas.push( i );
 	
@@ -160,19 +159,14 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
 													
-													if( %2.charAt( i ) == '^' )
-													{
+													if( %2.charAt( i ) == '^' ){
 														negate = true;
 														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
 															nfa_states[%%.start].ccl.set(j,true);
 														i++;
 													}
-
-													for( ; i < %2.length; i++ )
-													{
-														if( %2.charAt( i+1 ) == '-'
-															&& i+2 < %2.length )
-														{
+													for( ; i < %2.length; i++ ){
+														if( %2.charAt( i+1 ) == '-'	&& i+2 < %2.length ){
 															i++;
 															for( j = %2.charCodeAt( i-1 );
 																	j < %2.charCodeAt( i+1 );
@@ -195,20 +189,19 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 												*]
 				;
 												
-CharClass:		CharClass Character				[*	%% = %1 + %2; *]
-				|								[*	%% = ""; *]
+CharClass:		CharClass Character				[*	return %1 + %2; *]
+				|								[*	return ""; *]
 				;
 
 
-Character:		ASCII_CODE						[*	%% = String.fromCharCode( %1.substr( 1 ) ); *]
-				| ESCAPED_CHAR					[*	%%={n:'\n',r:'\r',t:'\t',a:'\a'}[%1.substr(1)]||%1.substr(1); *]
-				| ANY							[*	%% = %1; *]
+Character:		ASCII_CODE						[*	return String.fromCharCode( %1.substr( 1 ) ); *]
+				| ESCAPED_CHAR					[*	return {n:'\n',r:'\r',t:'\t',a:'\a'}[%1.substr(1)]||%1.substr(1); *]
+				| ANY							[*	return %1; *]
 				;
 
 [*
 
-function compile_regex( str, accept, case_insensitive )
-{
+function compile_regex( str, accept, case_insensitive ){
 	var i, j;
 	var weight = 0;
 	var true_edges = 0;
@@ -224,20 +217,14 @@ function compile_regex( str, accept, case_insensitive )
 	created_nfas = [];
 	
 	first_nfa = create_nfa( nfa_states );
-	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 )
-	{
+	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
 		//character sets on the newly created items.
-		if( case_insensitive )
-		{
-			for( i = 0; i < created_nfas.length; i++ )
-			{
-				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR )
-				{
-					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
-					{
-						if( nfa_states[ created_nfas[i] ].ccl.get( j ) )
-						{
+		if( case_insensitive ){
+			for( i = 0; i < created_nfas.length; i++ ){
+				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR ){
+					for( j = MIN_CHAR; j < MAX_CHAR; j++ ){
+						if( nfa_states[ created_nfas[i] ].ccl.get( j ) ){
 							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
 							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
@@ -256,19 +243,15 @@ function compile_regex( str, accept, case_insensitive )
 		nfa_states[ last_nfa ].accept = accept;   
 		nfa_states[ last_nfa ].weight = regex_weight++;
 
-		if( first_nfa > 0 )
-		{
+		if( first_nfa > 0 ){
 			i = 0;
 			while( nfa_states[i].follow2 != -1 )
 				i = nfa_states[i].follow2;
 
 			nfa_states[i].follow2 = first_nfa;
 		}
-	}
-	else
-	{
-		for( i = 0; i < error_count; i++ )
-		{
+	}else{
+		for( i = 0; i < error_count; i++ ){
 			var spaces = '';
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
