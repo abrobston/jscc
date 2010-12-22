@@ -1056,38 +1056,61 @@ function print_parse_tables( mode ){
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_dfa_table( dfa_states ){	
-	var code ="";
-	code += "\nvar DFA_DATA=[];\n\n";
-	/*
-	var json=[],ii,jj;
-	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
-		var line={};
-		for(jj=0;jj<dfa_states[ii].line.length;jj++)
-			if(dfa_states[ii].line[jj]!=-1)
-				line[jj]=dfa_states[ii].line[jj];
+function pack_dfa(dfa_states){
+	function PL(line){
+		var out=[];
+		while(line.length){
+			var first=line.shift();
+			var second=line.shift();
+			if(first==second)
+				out.push(first);
+			else
+				out.push([first,second]);}
+	return out;}
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line=[];
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		line=PL(PL(PL(PL(PL(PL(PL(PL((line)))))))));
 		json.push({
 			line:line,
-			accept:dfa_states[ii].accept,
+			accept:dfa_states[i].accept,
 			});
-		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
-		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
-	})(ii);*/
-	//var json_str=JSON.stringify(json);
-	//json_str=json_str.replace(/,/g,",\n\t");
-	//code+="\nvar DFA_DATA="+json_str+";\n\n";
-	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	})(i);
+	return json;
+}
+function print_dfa_table( dfa_states ){
+	var code="";
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line={};
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		json.push({
+			line:line,
+			accept:dfa_states[i].accept,
+			});
+	})(i);
+	
+	var test=JSON.stringify(pack_dfa(dfa_states));
+	test=test.replace(/,/g,",\n\t");
+	code+="\nvar DFA_DATA_1="+test+";\n\n";
 	/*
-	code+="var st=DATA[state].line[chr];\n"+
-	"if(typeof st == \"undefined\")st=-1;\n"+
-	"var ac=DATA[state].accept;\n"+
-	"set_state(st)\n"+
-	"if(ac!=-1){\n"+
-	"\tset_match(ac);\n"+
-	"\tset_match_pos(pos);\n"+
-	"}\n"+
-	"return;\n\n";
+	var json_str=JSON.stringify(json);
+	json_str=json_str.replace(/,/g,",\n\t");
+	code +="\nvar DFA_DATA_2="+json_str+";\n\n";
 	*/
+	return code;
+}
+
+
+function print_dfa_table_odl (dfa_states ){
+	var code="";
+	code+=print_dfa_table_new( dfa_states );
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
@@ -1154,7 +1177,7 @@ function print_dfa_table( dfa_states ){
 	code += "}\n\n";
 	code += "}\n";
 	return code;
-}
+}//*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -1206,6 +1229,43 @@ function print_symbol_labels(){
 								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions(){
+	var code = "(({\n";
+	var re = /%match|%offset|%source/;
+	var i, j, k;	
+	var semcode;
+	var strmatch;
+	
+	for( i = 0; i < symbols.length; i++ ){
+		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
+			code += "	\"" + i + "\":";
+			code += "function(){";
+			semcode = "";
+			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
+			{
+				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
+				if( strmatch && strmatch.index == 0 )
+				{
+					if( strmatch[0] == "%match" )
+						semcode += "PCB.att";
+					else if( strmatch[0] == "%offset" )
+						semcode += "( PCB.offset - PCB.att.length )";
+					else if( strmatch[0] == "%source" )
+						semcode += "PCB.src";
+					
+					j += strmatch[0].length - 1;
+					k = semcode.length;
+				}
+				else
+					semcode += symbols[i].code.charAt( j );
+			}
+			code += "		" + semcode + "\n";
+			code += "		},\n";
+		}
+	}
+	code+="\n})[match.toString()]||(function(){}))()";
+	return code;
+}
+function print_term_actions_old(){
 	var code = "";
 	var re = /%match|%offset|%source/;
 	var i, j, k;	
@@ -3067,11 +3127,9 @@ var		first_lhs;
 var		cur_line;
 
 //Wrapper for semantic errors
-function line_error( line, txt )
-{
+function line_error( line, txt ){
 	_error( "line " + line + ": " + txt );
 }
-
 
 var __jsccparse=(function(debug){
 	with(debug){
@@ -3085,267 +3143,544 @@ var __jsccparse=(function(debug){
 	}
 
 
-var DFA_DATA=[];
+var DFA_DATA_1=[{"line":[[[[[[null,
+	[[[null,
+	1],
+	[2,
+	null]],
+	[[null,
+	1],
+	null]]],
+	null],
+	[[[[[1,
+	3],
+	[18,
+	21]],
+	[null,
+	[4,
+	22]]],
+	[null,
+	[[null,
+	5],
+	[null,
+	23]]]],
+	[5,
+	[[5,
+	[6,
+	7]],
+	[[8,
+	null],
+	[9,
+	null]]]]]],
+	[[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	24]],
+	[null,
+	[10,
+	5]]]]],
+	[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	[[11,
+	null],
+	[12,
+	null]]]]]]],
+	null]],
+	"accept":-1},
+	{"line":[[[[[[null,
+	[[[null,
+	1],
+	null],
+	[[null,
+	1],
+	null]]],
+	null],
+	[[[[[1,
+	null],
+	null],
+	null],
+	null],
+	null]],
+	null],
+	null]],
+	"accept":18},
+	{"line":[],
+	"accept":16},
+	{"line":[],
+	"accept":6},
+	{"line":[],
+	"accept":10},
+	{"line":[[[[null,
+	[[null,
+	[null,
+	[[null,
+	5],
+	null]]],
+	[5,
+	[[5,
+	null],
+	null]]]],
+	[[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	[null,
+	[null,
+	5]]]]],
+	[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	null]]]]],
+	null]],
+	"accept":15},
+	{"line":[],
+	"accept":8},
+	{"line":[],
+	"accept":7},
+	{"line":[],
+	"accept":3},
+	{"line":[],
+	"accept":4},
+	{"line":[],
+	"accept":5},
+	{"line":[],
+	"accept":9},
+	{"line":[],
+	"accept":11},
+	{"line":[],
+	"accept":14},
+	{"line":[],
+	"accept":2},
+	{"line":[],
+	"accept":13},
+	{"line":[],
+	"accept":17},
+	{"line":[],
+	"accept":12},
+	{"line":[[[[18,
+	[[[[18,
+	[13,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[18,
+	[[[[18,
+	[13,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":14},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	15]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":13},
+	{"line":[[[[null,
+	[[[[null,
+	[null,
+	14]],
+	null],
+	null],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	15]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[null,
+	[null,
+	[null,
+	[null,
+	[null,
+	[null,
+	[27,
+	null]]]]]]],
+	null]],
+	"accept":-1},
+	{"line":[[[[null,
+	[[null,
+	[[null,
+	[35,
+	null]],
+	null]],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[18,
+	[[[[18,
+	[19,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	20]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	28]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[null,
+	[[null,
+	[null,
+	[null,
+	[null,
+	27]]]],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[27,
+	[[27,
+	[27,
+	[27,
+	[27,
+	16]]]],
+	27]],
+	27],
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	30],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[34,
+	[[34,
+	[34,
+	[34,
+	[[34,
+	17],
+	34]]]],
+	34]],
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[null,
+	[[null,
+	[null,
+	[null,
+	[[null,
+	34],
+	null]]]],
+	null]],
+	null]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	33]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	[[30,
+	[30,
+	[30,
+	[[30,
+	32],
+	30]]]],
+	30]],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	[[30,
+	[30,
+	[30,
+	[[30,
+	32],
+	30]]]],
+	30]],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	33]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1}];
 
-function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-switch( state )
-{
-	case 0:
-		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
-		else if( chr == 10 ) set_state(2);
-		else if( chr == 33 ) set_state(3);
-		else if( chr == 38 ) set_state(4);
-		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
-		else if( chr == 58 ) set_state(6);
-		else if( chr == 59 ) set_state(7);
-		else if( chr == 60 ) set_state(8);
-		else if( chr == 62 ) set_state(9);
-		else if( chr == 94 ) set_state(10);
-		else if( chr == 124 ) set_state(11);
-		else if( chr == 126 ) set_state(12);
-		else if( chr == 34 ) set_state(18);
-		else if( chr == 35 ) set_state(21);
-		else if( chr == 39 ) set_state(22);
-		else if( chr == 47 ) set_state(23);
-		else if( chr == 91 ) set_state(24);
-		else set_state(-1);
-		break;
 
-	case 1:
-		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
-		else set_state(-1);
-		set_match(18);
-		set_match_pos(pos);
-		break;
 
-	case 2:
-		set_state(-1);
-		set_match(16);
-		set_match_pos(pos);
-		break;
+	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var st=DFA_DATA_2[state].line[chr];
+		if(typeof st == "undefined")st=-1;
+		var ac=DFA_DATA_2[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+	
+	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA_1[state].line;
+		var p,st;
+		for(p=1<<8,st=line;p;p>>=1){
+			st=st[!!(chr&p)+0];
+			if(st==null){
+				st=-1;
+				break;
+			}
+			if(st.constructor===Array)continue;
+			break;
+		}
+		var ac=DFA_DATA_1[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
 
-	case 3:
-		set_state(-1);
-		set_match(6);
-		set_match_pos(pos);
-		break;
+	function TERMINAL_ACTIONS(PCB,match){
+(({
+	"12":function(){			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
+		},
+	"16":function(){		 throw Continue;
+		},
+	"17":function(){		 throw Continue;
+		},
+	"18":function(){		 throw Continue;
+		},
 
-	case 4:
-		set_state(-1);
-		set_match(10);
-		set_match_pos(pos);
-		break;
-
-	case 5:
-		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
-		else set_state(-1);
-		set_match(15);
-		set_match_pos(pos);
-		break;
-
-	case 6:
-		set_state(-1);
-		set_match(8);
-		set_match_pos(pos);
-		break;
-
-	case 7:
-		set_state(-1);
-		set_match(7);
-		set_match_pos(pos);
-		break;
-
-	case 8:
-		set_state(-1);
-		set_match(3);
-		set_match_pos(pos);
-		break;
-
-	case 9:
-		set_state(-1);
-		set_match(4);
-		set_match_pos(pos);
-		break;
-
-	case 10:
-		set_state(-1);
-		set_match(5);
-		set_match_pos(pos);
-		break;
-
-	case 11:
-		set_state(-1);
-		set_match(9);
-		set_match_pos(pos);
-		break;
-
-	case 12:
-		set_state(-1);
-		set_match(11);
-		set_match_pos(pos);
-		break;
-
-	case 13:
-		set_state(-1);
-		set_match(14);
-		set_match_pos(pos);
-		break;
-
-	case 14:
-		set_state(-1);
-		set_match(2);
-		set_match_pos(pos);
-		break;
-
-	case 15:
-		set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-	case 16:
-		set_state(-1);
-		set_match(17);
-		set_match_pos(pos);
-		break;
-
-	case 17:
-		set_state(-1);
-		set_match(12);
-		set_match_pos(pos);
-		break;
-
-	case 18:
-		if( chr == 34 ) set_state(13);
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		break;
-
-	case 19:
-		if( chr == 34 ) set_state(13);
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		set_match(14);
-		set_match_pos(pos);
-		break;
-
-	case 20:
-		if( chr == 39 ) set_state(15);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-	case 21:
-		if( chr == 35 ) set_state(14);
-		else set_state(-1);
-		break;
-
-	case 22:
-		if( chr == 39 ) set_state(15);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		break;
-
-	case 23:
-		if( chr == 126 ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 24:
-		if( chr == 42 ) set_state(35);
-		else set_state(-1);
-		break;
-
-	case 25:
-		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 34 ) set_state(19);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		break;
-
-	case 26:
-		if( chr == 39 ) set_state(20);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		break;
-
-	case 27:
-		if( chr == 47 ) set_state(28);
-		else if( chr == 126 ) set_state(29);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-	case 28:
-		if( chr == 47 ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 29:
-		if( chr == 47 ) set_state(16);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 30:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else set_state(-1);
-		break;
-
-	case 31:
-		if( chr == 93 ) set_state(17);
-		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(34);
-		else set_state(-1);
-		break;
-
-	case 32:
-		if( chr == 93 ) set_state(34);
-		else set_state(-1);
-		break;
-
-	case 33:
-		if( chr == 126 ) set_state(29);
-		else if( chr == 47 ) set_state(33);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-	case 34:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else if( chr == 93 ) set_state(32);
-		else set_state(-1);
-		break;
-
-	case 35:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else if( chr == 93 ) set_state(32);
-		else set_state(-1);
-		break;
-
-	case 36:
-		if( chr == 126 ) set_state(29);
-		else if( chr == 47 ) set_state(33);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-}
-
-}
-
-	//function TERMINAL_ACTIONS(){
-//## TERMINAL_ACTIONS ##
-	//}
+})[match.toString()]||(function(){}))()
+	}
 	function lex( PCB ){
 		var state, match, match_pos, start, pos, chr;
 		while(true){
@@ -3367,7 +3702,7 @@ switch( state )
 					return 38;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -3385,23 +3720,7 @@ switch( state )
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-	if( match == 12 )
-	{
-			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
-		}
-	else if( match == 16 )
-	{
-		 /*continue;*/ throw Continue;
-		}
-	else if( match == 17 )
-	{
-		 /*continue;*/ throw Continue;
-		}
-	else if( match == 18 )
-	{
-		 /*continue;*/ throw Continue;
-		}
-
+TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;
@@ -3426,7 +3745,7 @@ var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[
 var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
 
 
-var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(2, %match.length - 4 ); ","level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" /*continue;*/ throw Continue;","level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","level":0,"special":1,"defined":false,"first":[38]}];
+var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(2, %match.length - 4 ); ","level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","level":0,"special":1,"defined":false,"first":[38]}];
 
 
 
@@ -3452,8 +3771,7 @@ var rval;rval = vstack[ vstack.length - 1 ];
 return rval;},
 		function(vstack){
 var rval;	assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
+														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_LEFT;
 														}
@@ -3470,8 +3788,7 @@ var rval;	assoc_level++;
 return rval;},
 		function(vstack){
 var rval;	assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
+														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_NOASSOC;
 														}
@@ -3481,8 +3798,7 @@ return rval;},
 var rval;rval = vstack[ vstack.length - 2 ];
 return rval;},
 		function(vstack){
-var rval;	if( whitespace_token == -1 )
-														{
+var rval;	if( whitespace_token == -1 ){
 															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
 															compile_regex( regex, whitespace_token, vstack[ vstack.length - 1 ].charAt( 0 ) != '\''  );
@@ -3495,7 +3811,7 @@ return rval;},
 var rval;	rval = vstack[ vstack.length - 2 ]; rval.push( vstack[ vstack.length - 1 ] );	
 return rval;},
 		function(vstack){
-var rval;	rval=[vstack[ vstack.length - 1 ]]; 
+var rval;	return [vstack[ vstack.length - 1 ]]; 
 return rval;},
 		function(vstack){
 var rval;	rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
@@ -3519,16 +3835,15 @@ return rval;},
 var rval;rval = vstack[ vstack.length - 1 ];
 return rval;},
 		function(vstack){
-var rval;	var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
+var rval;	
+														var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
-														{
+														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
 															productions[ vstack[ vstack.length - 2 ][i] ].lhs = nonterm;
 															symbols[nonterm].prods.push( vstack[ vstack.length - 2 ][i] );
 														}
 														
-														if( first_lhs )
-														{
+														if( first_lhs ){
 															first_lhs = false;
 															symbols[0].label = symbols[nonterm].label + "\'";
 															productions[0].rhs.push( nonterm );
@@ -3542,7 +3857,7 @@ return rval;},
 var rval;	rval=vstack[ vstack.length - 3 ];rval.push(vstack[ vstack.length - 1 ]); 
 return rval;},
 		function(vstack){
-var rval;	rval=[vstack[ vstack.length - 1 ]]; 
+var rval;	return [vstack[ vstack.length - 1 ]]; 
 return rval;},
 		function(vstack){
 var rval;	
@@ -3567,13 +3882,13 @@ var rval;
 														}
 
 														productions.push( prod );
-														rval = prod.id;
+														return prod.id;
 													
 return rval;},
 		function(vstack){
 var rval; 	var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = symbols[index].level;
+															return symbols[index].level;
 														else
 															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
@@ -3582,25 +3897,25 @@ return rval;},
 var rval;	var index;
 														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
-															rval = symbols[index].level;
+															return symbols[index].level;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
 													
 return rval;},
 		function(vstack){
-var rval;	rval = 0; 
+var rval;	return 0; 
 return rval;},
 		function(vstack){
 var rval;rval = vstack[ vstack.length - 1 ];
 return rval;},
 		function(vstack){
-var rval;	rval = []; 
+var rval;	return []; 
 return rval;},
 		function(vstack){
 var rval; rval=vstack[ vstack.length - 2 ];rval.push(vstack[ vstack.length - 1 ]); 
 return rval;},
 		function(vstack){
-var rval; rval=[vstack[ vstack.length - 1 ]]; 
+var rval; return [vstack[ vstack.length - 1 ]]; 
 return rval;},
 		function(vstack){
 var rval;	
@@ -3615,16 +3930,16 @@ var rval;
 													
 return rval;},
 		function(vstack){
-var rval;	rval = find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); 
+var rval; return find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); 
 return rval;},
 		function(vstack){
 var rval;rval = vstack[ vstack.length - 1 ];
 return rval;},
 		function(vstack){
-var rval;	rval = ""; 
+var rval; return ""; 
 return rval;},
 		function(vstack){
-var rval;	rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+var rval; return vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
 return rval;},
 		function(vstack){
 var rval;rval = vstack[ vstack.length - 1 ];
@@ -3944,9 +4259,7 @@ return rval;},
 })(__jscc_debug);
 
 
-
-function parse_grammar( str, filename )
-{
+function parse_grammar( str, filename ){
 	var error_offsets = [];
 	var error_expects = [];
 	var parse_error = 0;
@@ -3968,7 +4281,6 @@ function parse_grammar( str, filename )
 	}
 	return parse_error;
 }
-	
 
 
 /*
@@ -4057,18 +4369,18 @@ function create_nfa( where )
 		if( where[i].edge == EDGE_FREE )
 			break;
 	
-	if( i == where.length )
-	{
+	if( i == where.length ){
 		nfa = new NFA()			
 		where.push( nfa );
-	}
+	}else
+		nfa=where[i];
 	
-	where[i].edge = EDGE_EPSILON;
-	where[i].ccl=new BitSet(MAX_CHAR);
-	where[i].accept = -1;
-	where[i].follow = -1;
-	where[i].follow2 = -1;
-	where[i].weight = -1;
+	nfa.edge = EDGE_EPSILON;
+	nfa.ccl=new BitSet(MAX_CHAR);
+	nfa.accept = -1;
+	nfa.follow = -1;
+	nfa.follow2 = -1;
+	nfa.weight = -1;
 	
 	created_nfas.push( i );
 	
@@ -4088,114 +4400,129 @@ var __regexparse=(function(debug){
 	}
 
 
-var DFA_DATA=[];
+var DFA_DATA_1=[{"line":[[[[1,
+	[[1,
+	[[[2,
+	3],
+	[4,
+	5]],
+	[1,
+	[6,
+	1]]]],
+	[1,
+	[1,
+	[1,
+	[1,
+	7]]]]]],
+	[[1,
+	[1,
+	[[1,
+	[1,
+	8]],
+	[[13,
+	9],
+	1]]]],
+	[1,
+	[1,
+	[1,
+	[[10,
+	1],
+	1]]]]]],
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[],
+	"accept":13},
+	{"line":[],
+	"accept":6},
+	{"line":[],
+	"accept":7},
+	{"line":[],
+	"accept":3},
+	{"line":[],
+	"accept":4},
+	{"line":[],
+	"accept":10},
+	{"line":[],
+	"accept":5},
+	{"line":[],
+	"accept":8},
+	{"line":[],
+	"accept":9},
+	{"line":[],
+	"accept":2},
+	{"line":[],
+	"accept":12},
+	{"line":[[[[null,
+	[null,
+	[12,
+	[[12,
+	null],
+	null]]]],
+	null],
+	null]],
+	"accept":11},
+	{"line":[[[[11,
+	[11,
+	[12,
+	[[12,
+	11],
+	11]]]],
+	11],
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	null]]]]]]]]],
+	"accept":13}];
 
-function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-switch( state )
-{
-	case 0:
-		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) set_state(1);
-		else if( chr == 40 ) set_state(2);
-		else if( chr == 41 ) set_state(3);
-		else if( chr == 42 ) set_state(4);
-		else if( chr == 43 ) set_state(5);
-		else if( chr == 46 ) set_state(6);
-		else if( chr == 63 ) set_state(7);
-		else if( chr == 91 ) set_state(8);
-		else if( chr == 93 ) set_state(9);
-		else if( chr == 124 ) set_state(10);
-		else if( chr == 92 ) set_state(13);
-		else set_state(-1);
-		break;
 
-	case 1:
-		set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
 
-	case 2:
-		set_state(-1);
-		set_match(6);
-		set_match_pos(pos);
-		break;
+	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var st=DFA_DATA_2[state].line[chr];
+		if(typeof st == "undefined")st=-1;
+		var ac=DFA_DATA_2[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+	
+	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA_1[state].line;
+		var p,st;
+		for(p=1<<8,st=line;p;p>>=1){
+			st=st[!!(chr&p)+0];
+			if(st==null){
+				st=-1;
+				break;
+			}
+			if(st.constructor===Array)continue;
+			break;
+		}
+		var ac=DFA_DATA_1[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
 
-	case 3:
-		set_state(-1);
-		set_match(7);
-		set_match_pos(pos);
-		break;
+	function TERMINAL_ACTIONS(PCB,match){
+(({
 
-	case 4:
-		set_state(-1);
-		set_match(3);
-		set_match_pos(pos);
-		break;
-
-	case 5:
-		set_state(-1);
-		set_match(4);
-		set_match_pos(pos);
-		break;
-
-	case 6:
-		set_state(-1);
-		set_match(10);
-		set_match_pos(pos);
-		break;
-
-	case 7:
-		set_state(-1);
-		set_match(5);
-		set_match_pos(pos);
-		break;
-
-	case 8:
-		set_state(-1);
-		set_match(8);
-		set_match_pos(pos);
-		break;
-
-	case 9:
-		set_state(-1);
-		set_match(9);
-		set_match_pos(pos);
-		break;
-
-	case 10:
-		set_state(-1);
-		set_match(2);
-		set_match_pos(pos);
-		break;
-
-	case 11:
-		set_state(-1);
-		set_match(12);
-		set_match_pos(pos);
-		break;
-
-	case 12:
-		if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
-		else set_state(-1);
-		set_match(11);
-		set_match_pos(pos);
-		break;
-
-	case 13:
-		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) set_state(11);
-		else if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
-		else set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-}
-
-}
-
-	//function TERMINAL_ACTIONS(){
-//## TERMINAL_ACTIONS ##
-	//}
+})[match.toString()]||(function(){}))()
+	}
 	function lex( PCB ){
 		var state, match, match_pos, start, pos, chr;
 		while(true){
@@ -4217,7 +4544,7 @@ switch( state )
 					return 22;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -4235,7 +4562,7 @@ switch( state )
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-
+TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;
@@ -4370,19 +4697,14 @@ var rval;	var negate = false;
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													
-													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' )
-													{
+													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' ){
 														negate = true;
 														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
 															nfa_states[rval.start].ccl.set(j,true);
 														i++;
 													}
-
-													for( ; i < vstack[ vstack.length - 2 ].length; i++ )
-													{
-														if( vstack[ vstack.length - 2 ].charAt( i+1 ) == '-'
-															&& i+2 < vstack[ vstack.length - 2 ].length )
-														{
+													for( ; i < vstack[ vstack.length - 2 ].length; i++ ){
+														if( vstack[ vstack.length - 2 ].charAt( i+1 ) == '-'	&& i+2 < vstack[ vstack.length - 2 ].length ){
 															i++;
 															for( j = vstack[ vstack.length - 2 ].charCodeAt( i-1 );
 																	j < vstack[ vstack.length - 2 ].charCodeAt( i+1 );
@@ -4407,19 +4729,19 @@ var rval;	rval = new PARAM();
 												
 return rval;},
 		function(vstack){
-var rval;	rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+var rval;	return vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
 return rval;},
 		function(vstack){
-var rval;	rval = ""; 
+var rval;	return ""; 
 return rval;},
 		function(vstack){
-var rval;	rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
+var rval;	return String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
 return rval;},
 		function(vstack){
-var rval;	rval={n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
+var rval;	return {n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
 return rval;},
 		function(vstack){
-var rval;	rval = vstack[ vstack.length - 1 ]; 
+var rval;	return vstack[ vstack.length - 1 ]; 
 return rval;},
 ][act](vstack);
 
@@ -4728,8 +5050,7 @@ return rval;},
 
 
 
-function compile_regex( str, accept, case_insensitive )
-{
+function compile_regex( str, accept, case_insensitive ){
 	var i, j;
 	var weight = 0;
 	var true_edges = 0;
@@ -4745,20 +5066,14 @@ function compile_regex( str, accept, case_insensitive )
 	created_nfas = [];
 	
 	first_nfa = create_nfa( nfa_states );
-	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 )
-	{
+	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
 		//character sets on the newly created items.
-		if( case_insensitive )
-		{
-			for( i = 0; i < created_nfas.length; i++ )
-			{
-				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR )
-				{
-					for( j = MIN_CHAR; j < MAX_CHAR; j++ )
-					{
-						if( nfa_states[ created_nfas[i] ].ccl.get( j ) )
-						{
+		if( case_insensitive ){
+			for( i = 0; i < created_nfas.length; i++ ){
+				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR ){
+					for( j = MIN_CHAR; j < MAX_CHAR; j++ ){
+						if( nfa_states[ created_nfas[i] ].ccl.get( j ) ){
 							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
 							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
@@ -4777,19 +5092,15 @@ function compile_regex( str, accept, case_insensitive )
 		nfa_states[ last_nfa ].accept = accept;   
 		nfa_states[ last_nfa ].weight = regex_weight++;
 
-		if( first_nfa > 0 )
-		{
+		if( first_nfa > 0 ){
 			i = 0;
 			while( nfa_states[i].follow2 != -1 )
 				i = nfa_states[i].follow2;
 
 			nfa_states[i].follow2 = first_nfa;
 		}
-	}
-	else
-	{
-		for( i = 0; i < error_count; i++ )
-		{
+	}else{
+		for( i = 0; i < error_count; i++ ){
 			var spaces = '';
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";

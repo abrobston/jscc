@@ -16,9 +16,41 @@ var __##PREFIX##parse=(function(debug){
 	}
 
 ##DFA##
-	//function TERMINAL_ACTIONS(){
-//## TERMINAL_ACTIONS ##
-	//}
+
+	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var st=DFA_DATA_2[state].line[chr];
+		if(typeof st == "undefined")st=-1;
+		var ac=DFA_DATA_2[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+	
+	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA_1[state].line;
+		var p,st;
+		for(p=1<<8,st=line;p;p>>=1){
+			st=st[!!(chr&p)+0];
+			if(st==null){
+				st=-1;
+				break;
+			}
+			if(st.constructor===Array)continue;
+			break;
+		}
+		var ac=DFA_DATA_1[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+
+	function TERMINAL_ACTIONS(PCB,match){
+##TERMINAL_ACTIONS##
+	}
 	function lex( PCB ){
 		var state, match, match_pos, start, pos, chr;
 		while(true){
@@ -40,7 +72,7 @@ var __##PREFIX##parse=(function(debug){
 					return ##EOF##;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -58,7 +90,7 @@ var __##PREFIX##parse=(function(debug){
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-##TERMINAL_ACTIONS##
+TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;

@@ -210,38 +210,61 @@ function print_parse_tables( mode ){
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_dfa_table( dfa_states ){	
-	var code ="";
-	code += "\nvar DFA_DATA=[];\n\n";
-	/*
-	var json=[],ii,jj;
-	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
-		var line={};
-		for(jj=0;jj<dfa_states[ii].line.length;jj++)
-			if(dfa_states[ii].line[jj]!=-1)
-				line[jj]=dfa_states[ii].line[jj];
+function pack_dfa(dfa_states){
+	function PL(line){
+		var out=[];
+		while(line.length){
+			var first=line.shift();
+			var second=line.shift();
+			if(first==second)
+				out.push(first);
+			else
+				out.push([first,second]);}
+	return out;}
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line=[];
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		line=PL(PL(PL(PL(PL(PL(PL(PL((line)))))))));
 		json.push({
 			line:line,
-			accept:dfa_states[ii].accept,
+			accept:dfa_states[i].accept,
 			});
-		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
-		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
-	})(ii);*/
-	//var json_str=JSON.stringify(json);
-	//json_str=json_str.replace(/,/g,",\n\t");
-	//code+="\nvar DFA_DATA="+json_str+";\n\n";
-	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	})(i);
+	return json;
+}
+function print_dfa_table( dfa_states ){
+	var code="";
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line={};
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		json.push({
+			line:line,
+			accept:dfa_states[i].accept,
+			});
+	})(i);
+	
+	var test=JSON.stringify(pack_dfa(dfa_states));
+	test=test.replace(/,/g,",\n\t");
+	code+="\nvar DFA_DATA_1="+test+";\n\n";
 	/*
-	code+="var st=DATA[state].line[chr];\n"+
-	"if(typeof st == \"undefined\")st=-1;\n"+
-	"var ac=DATA[state].accept;\n"+
-	"set_state(st)\n"+
-	"if(ac!=-1){\n"+
-	"\tset_match(ac);\n"+
-	"\tset_match_pos(pos);\n"+
-	"}\n"+
-	"return;\n\n";
+	var json_str=JSON.stringify(json);
+	json_str=json_str.replace(/,/g,",\n\t");
+	code +="\nvar DFA_DATA_2="+json_str+";\n\n";
 	*/
+	return code;
+}
+
+
+function print_dfa_table_odl (dfa_states ){
+	var code="";
+	code+=print_dfa_table_new( dfa_states );
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
@@ -308,7 +331,7 @@ function print_dfa_table( dfa_states ){
 	code += "}\n\n";
 	code += "}\n";
 	return code;
-}
+}//*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
