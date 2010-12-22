@@ -778,38 +778,61 @@ function print_parse_tables( mode ){
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function print_dfa_table( dfa_states ){	
-	var code ="";
-	code += "\nvar DFA_DATA=[];\n\n";
-	/*
-	var json=[],ii,jj;
-	for(ii=0;ii<dfa_states.length;ii++)(function(ii){
-		var line={};
-		for(jj=0;jj<dfa_states[ii].line.length;jj++)
-			if(dfa_states[ii].line[jj]!=-1)
-				line[jj]=dfa_states[ii].line[jj];
+function pack_dfa(dfa_states){
+	function PL(line){
+		var out=[];
+		while(line.length){
+			var first=line.shift();
+			var second=line.shift();
+			if(first==second)
+				out.push(first);
+			else
+				out.push([first,second]);}
+	return out;}
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line=[];
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		line=PL(PL(PL(PL(PL(PL(PL(PL((line)))))))));
 		json.push({
 			line:line,
-			accept:dfa_states[ii].accept,
+			accept:dfa_states[i].accept,
 			});
-		//code+="\tDFA_DATA.push("+JSON.stringify({line:line,accept:dfa_states[ii].accept})+");\n";
-		//code+="\tDFA_DATA.push("+JSON.stringify(line)+");\n";
-	})(ii);*/
-	//var json_str=JSON.stringify(json);
-	//json_str=json_str.replace(/,/g,",\n\t");
-	//code+="\nvar DFA_DATA="+json_str+";\n\n";
-	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
+	})(i);
+	return json;
+}
+function print_dfa_table( dfa_states ){
+	var code="";
+	var json=[];
+	for(var i=0;i<dfa_states.length;i++)(function(i){
+		var line={};
+		for(var j=0;j<dfa_states[i].line.length;j++)
+			if(dfa_states[i].line[j]!=-1)
+				line[j]=dfa_states[i].line[j];
+		json.push({
+			line:line,
+			accept:dfa_states[i].accept,
+			});
+	})(i);
+	
+	var test=JSON.stringify(pack_dfa(dfa_states));
+	test=test.replace(/,/g,",\n\t");
+	code+="\nvar DFA_DATA_1="+test+";\n\n";
 	/*
-	code+="var st=DATA[state].line[chr];\n"+
-	"if(typeof st == \"undefined\")st=-1;\n"+
-	"var ac=DATA[state].accept;\n"+
-	"set_state(st)\n"+
-	"if(ac!=-1){\n"+
-	"\tset_match(ac);\n"+
-	"\tset_match_pos(pos);\n"+
-	"}\n"+
-	"return;\n\n";
+	var json_str=JSON.stringify(json);
+	json_str=json_str.replace(/,/g,",\n\t");
+	code +="\nvar DFA_DATA_2="+json_str+";\n\n";
 	*/
+	return code;
+}
+
+
+function print_dfa_table_odl (dfa_states ){
+	var code="";
+	code+=print_dfa_table_new( dfa_states );
+	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
 	
@@ -876,7 +899,7 @@ function print_dfa_table( dfa_states ){
 	code += "}\n\n";
 	code += "}\n";
 	return code;
-}
+}//*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -2834,267 +2857,544 @@ var __jsccparse=(function(debug){
 	}
 
 
-var DFA_DATA=[];
+var DFA_DATA_1=[{"line":[[[[[[null,
+	[[[null,
+	1],
+	[2,
+	null]],
+	[[null,
+	1],
+	null]]],
+	null],
+	[[[[[1,
+	3],
+	[18,
+	21]],
+	[null,
+	[4,
+	22]]],
+	[null,
+	[[null,
+	5],
+	[null,
+	23]]]],
+	[5,
+	[[5,
+	[6,
+	7]],
+	[[8,
+	null],
+	[9,
+	null]]]]]],
+	[[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	24]],
+	[null,
+	[10,
+	5]]]]],
+	[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	[[11,
+	null],
+	[12,
+	null]]]]]]],
+	null]],
+	"accept":-1},
+	{"line":[[[[[[null,
+	[[[null,
+	1],
+	null],
+	[[null,
+	1],
+	null]]],
+	null],
+	[[[[[1,
+	null],
+	null],
+	null],
+	null],
+	null]],
+	null],
+	null]],
+	"accept":18},
+	{"line":[],
+	"accept":16},
+	{"line":[],
+	"accept":6},
+	{"line":[],
+	"accept":10},
+	{"line":[[[[null,
+	[[null,
+	[null,
+	[[null,
+	5],
+	null]]],
+	[5,
+	[[5,
+	null],
+	null]]]],
+	[[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	[null,
+	[null,
+	5]]]]],
+	[[[[[null,
+	5],
+	5],
+	5],
+	5],
+	[5,
+	[[5,
+	[5,
+	null]],
+	null]]]]],
+	null]],
+	"accept":15},
+	{"line":[],
+	"accept":8},
+	{"line":[],
+	"accept":7},
+	{"line":[],
+	"accept":3},
+	{"line":[],
+	"accept":4},
+	{"line":[],
+	"accept":5},
+	{"line":[],
+	"accept":9},
+	{"line":[],
+	"accept":11},
+	{"line":[],
+	"accept":14},
+	{"line":[],
+	"accept":2},
+	{"line":[],
+	"accept":13},
+	{"line":[],
+	"accept":17},
+	{"line":[],
+	"accept":12},
+	{"line":[[[[18,
+	[[[[18,
+	[13,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[18,
+	[[[[18,
+	[13,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":14},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	15]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":13},
+	{"line":[[[[null,
+	[[[[null,
+	[null,
+	14]],
+	null],
+	null],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	15]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[null,
+	[null,
+	[null,
+	[null,
+	[null,
+	[null,
+	[27,
+	null]]]]]]],
+	null]],
+	"accept":-1},
+	{"line":[[[[null,
+	[[null,
+	[[null,
+	[35,
+	null]],
+	null]],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[18,
+	[[[[18,
+	[19,
+	18]],
+	18],
+	18],
+	18]],
+	[[18,
+	[18,
+	[18,
+	[[25,
+	18],
+	18]]]],
+	18]],
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	[18,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[22,
+	[[[22,
+	[22,
+	[22,
+	20]]],
+	22],
+	22]],
+	[[22,
+	[22,
+	[22,
+	[[26,
+	22],
+	22]]]],
+	22]],
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	[22,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	28]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[null,
+	[[null,
+	[null,
+	[null,
+	[null,
+	27]]]],
+	null]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[27,
+	[[27,
+	[27,
+	[27,
+	[27,
+	16]]]],
+	27]],
+	27],
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	[27,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	30],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[34,
+	[[34,
+	[34,
+	[34,
+	[[34,
+	17],
+	34]]]],
+	34]],
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	[34,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[null,
+	[[null,
+	[null,
+	[null,
+	[[null,
+	34],
+	null]]]],
+	null]],
+	null]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	33]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	[[30,
+	[30,
+	[30,
+	[[30,
+	32],
+	30]]]],
+	30]],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[30,
+	[[30,
+	[[30,
+	[31,
+	30]],
+	30]],
+	30]],
+	[[30,
+	[30,
+	[30,
+	[[30,
+	32],
+	30]]]],
+	30]],
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	[30,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[36,
+	[[36,
+	[36,
+	[36,
+	[36,
+	33]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[29,
+	36]]]]]]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	null]]]]]]]]],
+	"accept":-1}];
 
-function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-switch( state )
-{
-	case 0:
-		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
-		else if( chr == 10 ) set_state(2);
-		else if( chr == 33 ) set_state(3);
-		else if( chr == 38 ) set_state(4);
-		else if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
-		else if( chr == 58 ) set_state(6);
-		else if( chr == 59 ) set_state(7);
-		else if( chr == 60 ) set_state(8);
-		else if( chr == 62 ) set_state(9);
-		else if( chr == 94 ) set_state(10);
-		else if( chr == 124 ) set_state(11);
-		else if( chr == 126 ) set_state(12);
-		else if( chr == 34 ) set_state(18);
-		else if( chr == 35 ) set_state(21);
-		else if( chr == 39 ) set_state(22);
-		else if( chr == 47 ) set_state(23);
-		else if( chr == 91 ) set_state(24);
-		else set_state(-1);
-		break;
 
-	case 1:
-		if( chr == 9 || chr == 13 || chr == 32 ) set_state(1);
-		else set_state(-1);
-		set_match(18);
-		set_match_pos(pos);
-		break;
 
-	case 2:
-		set_state(-1);
-		set_match(16);
-		set_match_pos(pos);
-		break;
+	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var st=DFA_DATA_2[state].line[chr];
+		if(typeof st == "undefined")st=-1;
+		var ac=DFA_DATA_2[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+	
+	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA_1[state].line;
+		var p,st;
+		for(p=1<<8,st=line;p;p>>=1){
+			st=st[!!(chr&p)+0];
+			if(st==null){
+				st=-1;
+				break;
+			}
+			if(st.constructor===Array)continue;
+			break;
+		}
+		var ac=DFA_DATA_1[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
 
-	case 3:
-		set_state(-1);
-		set_match(6);
-		set_match_pos(pos);
-		break;
+	function TERMINAL_ACTIONS(PCB,match){
+(({
+	"12":function(){			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
+		},
+	"16":function(){		 throw Continue;
+		},
+	"17":function(){		 throw Continue;
+		},
+	"18":function(){		 throw Continue;
+		},
 
-	case 4:
-		set_state(-1);
-		set_match(10);
-		set_match_pos(pos);
-		break;
-
-	case 5:
-		if( chr == 45 || ( chr >= 48 && chr <= 57 ) || ( chr >= 65 && chr <= 90 ) || chr == 95 || ( chr >= 97 && chr <= 122 ) ) set_state(5);
-		else set_state(-1);
-		set_match(15);
-		set_match_pos(pos);
-		break;
-
-	case 6:
-		set_state(-1);
-		set_match(8);
-		set_match_pos(pos);
-		break;
-
-	case 7:
-		set_state(-1);
-		set_match(7);
-		set_match_pos(pos);
-		break;
-
-	case 8:
-		set_state(-1);
-		set_match(3);
-		set_match_pos(pos);
-		break;
-
-	case 9:
-		set_state(-1);
-		set_match(4);
-		set_match_pos(pos);
-		break;
-
-	case 10:
-		set_state(-1);
-		set_match(5);
-		set_match_pos(pos);
-		break;
-
-	case 11:
-		set_state(-1);
-		set_match(9);
-		set_match_pos(pos);
-		break;
-
-	case 12:
-		set_state(-1);
-		set_match(11);
-		set_match_pos(pos);
-		break;
-
-	case 13:
-		set_state(-1);
-		set_match(14);
-		set_match_pos(pos);
-		break;
-
-	case 14:
-		set_state(-1);
-		set_match(2);
-		set_match_pos(pos);
-		break;
-
-	case 15:
-		set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-	case 16:
-		set_state(-1);
-		set_match(17);
-		set_match_pos(pos);
-		break;
-
-	case 17:
-		set_state(-1);
-		set_match(12);
-		set_match_pos(pos);
-		break;
-
-	case 18:
-		if( chr == 34 ) set_state(13);
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		break;
-
-	case 19:
-		if( chr == 34 ) set_state(13);
-		else if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		set_match(14);
-		set_match_pos(pos);
-		break;
-
-	case 20:
-		if( chr == 39 ) set_state(15);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-	case 21:
-		if( chr == 35 ) set_state(14);
-		else set_state(-1);
-		break;
-
-	case 22:
-		if( chr == 39 ) set_state(15);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		break;
-
-	case 23:
-		if( chr == 126 ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 24:
-		if( chr == 42 ) set_state(35);
-		else set_state(-1);
-		break;
-
-	case 25:
-		if( ( chr >= 0 && chr <= 33 ) || ( chr >= 35 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(18);
-		else if( chr == 34 ) set_state(19);
-		else if( chr == 92 ) set_state(25);
-		else set_state(-1);
-		break;
-
-	case 26:
-		if( chr == 39 ) set_state(20);
-		else if( ( chr >= 0 && chr <= 38 ) || ( chr >= 40 && chr <= 91 ) || ( chr >= 93 && chr <= 254 ) ) set_state(22);
-		else if( chr == 92 ) set_state(26);
-		else set_state(-1);
-		break;
-
-	case 27:
-		if( chr == 47 ) set_state(28);
-		else if( chr == 126 ) set_state(29);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-	case 28:
-		if( chr == 47 ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 29:
-		if( chr == 47 ) set_state(16);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 254 ) ) set_state(27);
-		else set_state(-1);
-		break;
-
-	case 30:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else set_state(-1);
-		break;
-
-	case 31:
-		if( chr == 93 ) set_state(17);
-		else if( ( chr >= 0 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(34);
-		else set_state(-1);
-		break;
-
-	case 32:
-		if( chr == 93 ) set_state(34);
-		else set_state(-1);
-		break;
-
-	case 33:
-		if( chr == 126 ) set_state(29);
-		else if( chr == 47 ) set_state(33);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-	case 34:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else if( chr == 93 ) set_state(32);
-		else set_state(-1);
-		break;
-
-	case 35:
-		if( ( chr >= 0 && chr <= 41 ) || ( chr >= 43 && chr <= 92 ) || ( chr >= 94 && chr <= 254 ) ) set_state(30);
-		else if( chr == 42 ) set_state(31);
-		else if( chr == 93 ) set_state(32);
-		else set_state(-1);
-		break;
-
-	case 36:
-		if( chr == 126 ) set_state(29);
-		else if( chr == 47 ) set_state(33);
-		else if( ( chr >= 0 && chr <= 46 ) || ( chr >= 48 && chr <= 125 ) || ( chr >= 127 && chr <= 254 ) ) set_state(36);
-		else set_state(-1);
-		break;
-
-}
-
-}
-
-	//function TERMINAL_ACTIONS(){
-//## TERMINAL_ACTIONS ##
-	//}
+})[match.toString()]||(function(){}))()
+	}
 	function lex( PCB ){
 		var state, match, match_pos, start, pos, chr;
 		while(true){
@@ -3116,7 +3416,7 @@ switch( state )
 					return 38;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -3134,17 +3434,7 @@ switch( state )
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-(({
-	"12":function(){			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
-		},
-	"16":function(){		 throw Continue;
-		},
-	"17":function(){		 throw Continue;
-		},
-	"18":function(){		 throw Continue;
-		},
-
-})[match.toString()]||(function(){}))()
+TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;
@@ -3816,114 +4106,129 @@ var __regexparse=(function(debug){
 	}
 
 
-var DFA_DATA=[];
+var DFA_DATA_1=[{"line":[[[[1,
+	[[1,
+	[[[2,
+	3],
+	[4,
+	5]],
+	[1,
+	[6,
+	1]]]],
+	[1,
+	[1,
+	[1,
+	[1,
+	7]]]]]],
+	[[1,
+	[1,
+	[[1,
+	[1,
+	8]],
+	[[13,
+	9],
+	1]]]],
+	[1,
+	[1,
+	[1,
+	[[10,
+	1],
+	1]]]]]],
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	[1,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[],
+	"accept":13},
+	{"line":[],
+	"accept":6},
+	{"line":[],
+	"accept":7},
+	{"line":[],
+	"accept":3},
+	{"line":[],
+	"accept":4},
+	{"line":[],
+	"accept":10},
+	{"line":[],
+	"accept":5},
+	{"line":[],
+	"accept":8},
+	{"line":[],
+	"accept":9},
+	{"line":[],
+	"accept":2},
+	{"line":[],
+	"accept":12},
+	{"line":[[[[null,
+	[null,
+	[12,
+	[[12,
+	null],
+	null]]]],
+	null],
+	null]],
+	"accept":11},
+	{"line":[[[[11,
+	[11,
+	[12,
+	[[12,
+	11],
+	11]]]],
+	11],
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	[11,
+	null]]]]]]]]],
+	"accept":13}];
 
-function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-switch( state )
-{
-	case 0:
-		if( ( chr >= 0 && chr <= 39 ) || ( chr >= 44 && chr <= 45 ) || ( chr >= 47 && chr <= 62 ) || ( chr >= 64 && chr <= 90 ) || ( chr >= 94 && chr <= 123 ) || ( chr >= 125 && chr <= 254 ) ) set_state(1);
-		else if( chr == 40 ) set_state(2);
-		else if( chr == 41 ) set_state(3);
-		else if( chr == 42 ) set_state(4);
-		else if( chr == 43 ) set_state(5);
-		else if( chr == 46 ) set_state(6);
-		else if( chr == 63 ) set_state(7);
-		else if( chr == 91 ) set_state(8);
-		else if( chr == 93 ) set_state(9);
-		else if( chr == 124 ) set_state(10);
-		else if( chr == 92 ) set_state(13);
-		else set_state(-1);
-		break;
 
-	case 1:
-		set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
 
-	case 2:
-		set_state(-1);
-		set_match(6);
-		set_match_pos(pos);
-		break;
+	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var st=DFA_DATA_2[state].line[chr];
+		if(typeof st == "undefined")st=-1;
+		var ac=DFA_DATA_2[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
+	
+	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA_1[state].line;
+		var p,st;
+		for(p=1<<8,st=line;p;p>>=1){
+			st=st[!!(chr&p)+0];
+			if(st==null){
+				st=-1;
+				break;
+			}
+			if(st.constructor===Array)continue;
+			break;
+		}
+		var ac=DFA_DATA_1[state].accept;
+		set_state(st)
+		if(ac!=-1){
+			set_match(ac);
+			set_match_pos(pos);
+		}
+	}
 
-	case 3:
-		set_state(-1);
-		set_match(7);
-		set_match_pos(pos);
-		break;
+	function TERMINAL_ACTIONS(PCB,match){
+(({
 
-	case 4:
-		set_state(-1);
-		set_match(3);
-		set_match_pos(pos);
-		break;
-
-	case 5:
-		set_state(-1);
-		set_match(4);
-		set_match_pos(pos);
-		break;
-
-	case 6:
-		set_state(-1);
-		set_match(10);
-		set_match_pos(pos);
-		break;
-
-	case 7:
-		set_state(-1);
-		set_match(5);
-		set_match_pos(pos);
-		break;
-
-	case 8:
-		set_state(-1);
-		set_match(8);
-		set_match_pos(pos);
-		break;
-
-	case 9:
-		set_state(-1);
-		set_match(9);
-		set_match_pos(pos);
-		break;
-
-	case 10:
-		set_state(-1);
-		set_match(2);
-		set_match_pos(pos);
-		break;
-
-	case 11:
-		set_state(-1);
-		set_match(12);
-		set_match_pos(pos);
-		break;
-
-	case 12:
-		if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
-		else set_state(-1);
-		set_match(11);
-		set_match_pos(pos);
-		break;
-
-	case 13:
-		if( ( chr >= 0 && chr <= 47 ) || ( chr >= 58 && chr <= 254 ) ) set_state(11);
-		else if( ( chr >= 48 && chr <= 57 ) ) set_state(12);
-		else set_state(-1);
-		set_match(13);
-		set_match_pos(pos);
-		break;
-
-}
-
-}
-
-	//function TERMINAL_ACTIONS(){
-//## TERMINAL_ACTIONS ##
-	//}
+})[match.toString()]||(function(){}))()
+	}
 	function lex( PCB ){
 		var state, match, match_pos, start, pos, chr;
 		while(true){
@@ -3945,7 +4250,7 @@ switch( state )
 					return 22;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);//## DFA ##
+					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -3963,9 +4268,7 @@ switch( state )
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-(({
-
-})[match.toString()]||(function(){}))()
+TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;

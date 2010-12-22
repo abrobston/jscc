@@ -39,8 +39,7 @@ function same_nfa_items( dfa_states, items )
 			
 			if( j == dfa_states[i].nfa_set.length )
 				return i;
-		}
-			
+		}	
 	return -1;
 }
 
@@ -49,8 +48,7 @@ function get_undone_dfa( dfa_states )
 {
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
-			return i;
-			
+			return i;	
 	return -1;
 }
 
@@ -82,7 +80,6 @@ function execute_nfa( machine, str )
 		result = move( result, machine, str.charCodeAt( chr_cnt ) );
 		chr_cnt++;
 	}
-	
 	return last_accept;
 }
 
@@ -112,14 +109,12 @@ function move( state_set, machine, ch )
 	var hits	= [];
 	var tos		= -1;
 	try{
-	do
-	{
-		tos = state_set.pop();
-		if( machine[ tos ].edge == EDGE_CHAR )
-			if( machine[ tos ].ccl.get( ch ) )
-				hits.push( machine[ tos ].follow );		
-	}
-	while( state_set.length > 0 );
+		do{
+			tos = state_set.pop();
+			if( machine[ tos ].edge == EDGE_CHAR )
+				if( machine[ tos ].ccl.get( ch ) )
+					hits.push( machine[ tos ].follow );		
+		}while( state_set.length > 0 );
 	}catch(e){
 		_print("\n state_set= " + state_set + " machine= " + machine + " ch= "+ch);
 		throw e;}
@@ -155,8 +150,7 @@ function epsilon_closure( state_set, machine )
 	for( var i = 0; i < state_set.length; i++ )
 		stack.push( state_set[i] );
 	
-	do
-	{
+	do{
 		tos = stack.pop();
 		if( machine[ tos ].accept >= 0 )
 			accept.push( machine[ tos ].accept );
@@ -189,8 +183,7 @@ function epsilon_closure( state_set, machine )
 				}
 			}
 		}
-	}
-	while( stack.length > 0 );
+	}while( stack.length > 0 );
 	return accept.sort();
 }
 
@@ -342,10 +335,8 @@ function minimize_dfa( dfa_states )
 		Now the minimization is performed on base of
 		these default groups
 	*/
-	do
-	{
+	do{
 		old_cnt = cnt;
-
 		for( i = 0; i < groups.length; i++ )
 		{
 			new_group = [];
@@ -393,8 +384,7 @@ function minimize_dfa( dfa_states )
 		
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
-	}
-	while( old_cnt != cnt );
+	}while( old_cnt != cnt );
 	
 	/*
 		Updating the dfa-state transitions;
