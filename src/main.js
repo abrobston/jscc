@@ -85,8 +85,7 @@ for( var i = 0; i < argv.length; i++ )
 			|| argv[i].toLowerCase() == "--debug" )
 	{
 		for( var j = 0; j < argv[i+1].length; j++ )
-			switch( argv[i+1].charAt( j ) )
-			{
+			switch( argv[i+1].charAt( j ) ){
 				case 'n':
 					dump_nfa = true;
 					break;
@@ -116,19 +115,16 @@ for( var i = 0; i < argv.length; i++ )
 //file is global source filename
 file = src_file;
 
-if( src_file != "" )
-{
+if( src_file != "" ){
 	var src = read_file( src_file );
 	parse_grammar( src, src_file );
 	
-	if( errors == 0 )
-	{
+	if( errors == 0 )	{
 		//Check grammar integrity
 		undef();
 		unreachable();
 		
-		if( errors == 0 )
-		{
+		if( errors == 0 )		{
 			//LALR(1) parse table generation
 			first();
 			
@@ -150,21 +146,7 @@ if( src_file != "" )
 				if( dump_dfa )
 					print_dfa( dfa_table );	
 					
-				//Here, we read the template from file.
-				//I think in this case it is useful to choose the
-				//way used in main_sm.js.
-				//we can read 2 files here
-				//driver and parse.js
-				
-				//No! parse.js is the driver!
-				//driver and debugger for current platform
-				//ah ok - so you think the Make target "driver" should be removed, and we put the platform selection logic here.
-				//yes
-				//and where is the decision done which
-				//platform is selected? New command line
-				//parameter?
-				
-				// tpl_file <_< what is this variable?
+
 				var driver = read_file( tpl_file );
 									
 				driver = driver.replace( /##HEADER##/gi, code_head );

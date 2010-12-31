@@ -5,45 +5,19 @@
 # You may use, modify and distribute this software under the terms and
 # conditions of the Artistic License. Please see ARTISTIC for more information.
 #
-# Platform:			Mozilla/Rhino
+# Platform:			Node.js
 #-------------------------------------------------------------------------------
 # HOW TO:
 #
 # JS/CC has been tested with Rhino 1.6R7 and newer on Windows, Mac OSX,
 # and Linux.
 #
-# Follow the following setup instructions:
-# *   Place js.jar from Rhino in your CLASSPATH or add it to your CLASSPATH.
-# **  On *nix systems, you would do something like this:
+# *** To build JS/CC for Node.js, change to src directory and type
 #
-#     sudo cp js.jar /usr/lib/
-#     export CLASSPATH=/usr/lib/js.jar:$CLASSPATH
-#     alias rhino='java org.mozilla.javascript.tools.shell.Main'
-#
-#
-#     Possibly your Linux distribution allows even for something like
-#
-#     sudo apt-get install rhino
-#
-#     to setup Rhino. Simply type
-#
-#     rhino
-#
-#     to find out if its in your PATH then.
-#
-# **  On Windows, you would do something like this:
-#
-#     copy js.jar C:\path\to\your\JDK\Install\lib
-#     set CLASSPATH=C:\path\to\your\JDK\Install\lib\js.js;%CLASSPATH%
-#     REM *** Need a Windows way to alias Rhino ***
-# 
-# *** To build JS/CC for Mozilla/Rhino, change to src directory and type
-#
-#     make -f Makefile.rhino
+#     make -f Makefile.node
 #-------------------------------------------------------------------------------
 
 PLATFORM		=	node
-RHINO			=	rhino
 NODE			=	node
 JSCC			=	../jscc.js
 
@@ -65,11 +39,9 @@ $(JSCC):		$(SRC_FINAL)
 	cat $(SRC_FINAL) >$@
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
-	#$(RHINO) $(JSCC_BOOTSTRAP) -w -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
 	$(NODE) $(JSCC_BOOTSTRAP) -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
 	
 $(SRC_REGEX_JS):$(SRC_REGEX)
-	#$(RHINO) $(JSCC_BOOTSTRAP) -w -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
 	$(NODE) $(JSCC_BOOTSTRAP) -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
 
 clean:

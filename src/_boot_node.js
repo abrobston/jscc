@@ -819,12 +819,8 @@ function print_dfa_table( dfa_states ){
 	
 	var test=JSON.stringify(pack_dfa(dfa_states));
 	test=test.replace(/,/g,",\n\t");
-	code+="\nvar DFA_DATA_1="+test+";\n\n";
-	/*
-	var json_str=JSON.stringify(json);
-	json_str=json_str.replace(/,/g,",\n\t");
-	code +="\nvar DFA_DATA_2="+json_str+";\n\n";
-	*/
+	code+="\nvar DFA_DATA="+test+";\n";
+
 	return code;
 }
 
@@ -1050,7 +1046,7 @@ function print_actions(){
 	var i, j, k, idx;
 	code += "rval=[";
 	for( i = 0; i < productions.length; i++ ){
-		semcode = "function(vstack){\n";
+		semcode = "function(){\n";
 		semcode+="var rval;"
 		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
 			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
@@ -1060,8 +1056,8 @@ function print_actions(){
 				else
 				{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
-					idx = productions[i].rhs.length - idx + 1;
-					semcode += "vstack[ vstack.length - " + idx + " ]";
+					idx = productions[i].rhs.length - idx;
+					semcode += "arguments[ " + idx + " ]";
 				}
 				j += strmatch[0].length - 1;
 				k = semcode.length;
@@ -1071,45 +1067,9 @@ function print_actions(){
 		}
 		code += "		" + semcode + "\nreturn rval;},\n";
 	}
-	code += "][act](vstack);\n\n";
+	code += "][act].apply(null,vstack);\n\n";
 	return code;
 }
-/*
-function print_actions_old(){
-	var code = "";
-	var re = /%[0-9]+|%%/;
-	var semcode, strmatch;
-	var i, j, k, idx;
-	code += "switch( act ){\n";
-	for( i = 0; i < productions.length; i++ ){
-		code += "	case " + i + ":\n";
-		code += "	{\n";
-		semcode = "";
-		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
-			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
-			if( strmatch && strmatch.index == 0 ){
-				if( strmatch[0] == "%%" )
-					semcode += "rval";
-				else
-				{
-					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
-					idx = productions[i].rhs.length - idx + 1;
-					semcode += "vstack[ vstack.length - " + idx + " ]";
-				}
-				j += strmatch[0].length - 1;
-				k = semcode.length;
-			}
-			else
-				semcode += productions[i].code.charAt( j );
-		}
-		code += "		" + semcode + "\n";
-		code += "	}\n";
-		code += "	break;\n";
-	}
-	code += "}\n\n";
-	return code;
-}
-*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_eof_symbol_id()
@@ -1288,7 +1248,7 @@ function get_table_entry( row, sym )
 function get_undone_state()
 {
 	for( var i = 0; i < states.length; i++ )
-		if( states[i].done == false )///???
+		if( states[i].done == false )
 			return i;		
 	return -1;
 }
@@ -2268,7 +2228,6 @@ function unreachable()
 			for( j = 0; j < reachable.length; j++ )
 				if( reachable[j] == i )
 					break;
-			
 			if( j == reachable.length )
 				_warning( "Unreachable non-terminal \"" + symbols[i].label + "\"" );
 		}
@@ -2846,18 +2805,9 @@ function line_error( line, txt ){
 }
 
 var __jsccparse=(function(debug){
-	with(debug){
-		var dbg_print = __dbg_print;
-		var dbg_withtrace = _dbg_withtrace;
-		var dbg_wait = __dbg_wait;
-		var dbg_withparsetree = _dbg_withparsetree;
-		var dbg_withstepbystep = _dbg_withstepbystep;
-		var dbg_flush = __dbg_flush;
-		var dbg_parsetree = __dbg_parsetree;
-	}
 
 
-var DFA_DATA_1=[{"line":[[[[[[null,
+var DFA_DATA=[{"line":[[[[[[null,
 	[[[null,
 	1],
 	[2,
@@ -3350,20 +3300,8 @@ var DFA_DATA_1=[{"line":[[[[[[null,
 	"accept":-1}];
 
 
-
-	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var st=DFA_DATA_2[state].line[chr];
-		if(typeof st == "undefined")st=-1;
-		var ac=DFA_DATA_2[state].accept;
-		set_state(st)
-		if(ac!=-1){
-			set_match(ac);
-			set_match_pos(pos);
-		}
-	}
-	
-	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var line = DFA_DATA_1[state].line;
+	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA[state].line;
 		var p,st;
 		for(p=1<<8,st=line;p;p>>=1){
 			st=st[!!(chr&p)+0];
@@ -3374,7 +3312,7 @@ var DFA_DATA_1=[{"line":[[[[[[null,
 			if(st.constructor===Array)continue;
 			break;
 		}
-		var ac=DFA_DATA_1[state].accept;
+		var ac=DFA_DATA[state].accept;
 		set_state(st)
 		if(ac!=-1){
 			set_match(ac);
@@ -3395,18 +3333,38 @@ var DFA_DATA_1=[{"line":[[[[[[null,
 
 })[match.toString()]||(function(){}))()
 	}
+	function lex_1(PCB){
+		var state=0, match=-1, match_pos=0, start=0, pos=0;
+			
+		///Functions for manipulation of variables
+		function set_match(v){match=v;}
+		function set_state(v){state=v;}
+		function set_match_pos(v){match_pos=v;}
+		return function(chr){
+			DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
+			if( state > -1 ){
+				if( chr === 10 ){
+					PCB.line++;
+					PCB.column = 0;
+				}
+				PCB.column++;
+			}
+		}
+	}
 	function lex( PCB ){
-		var state, match, match_pos, start, pos, chr;
+		var state=0, match, match_pos, start, pos, chr;
+		
+		///Functions for manipulation of variables
+		function set_match(v){match=v;}
+		function set_state(v){state=v;}
+		function set_match_pos(v){match_pos=v;}
+		
 		while(true){
 			state = 0;
 			match = -1;
 			match_pos = 0;
 			start = 0;
 			pos = PCB.offset + 1 + ( match_pos - start );
-			///Functions for manipulation of variables
-			function set_match(v){match=v;}
-			function set_state(v){state=v;}
-			function set_match_pos(v){match_pos=v;}
 			do{
 				pos--;
 				state = 0;
@@ -3416,7 +3374,7 @@ var DFA_DATA_1=[{"line":[[[[[[null,
 					return 38;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
+					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -3434,7 +3392,7 @@ var DFA_DATA_1=[{"line":[[[[[[null,
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-TERMINAL_ACTIONS(PCB,match);
+						TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;
@@ -3463,98 +3421,98 @@ var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":""
 
 
 
-	function ACTIONS(act,sstack,vstack){
+	function ACTIONS(act,vstack){
 		var rval;
-rval=[		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+rval=[		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 5 ];
+		function(){
+var rval;rval = arguments[ 4 ];
 return rval;},
-		function(vstack){
-var rval; code_head += vstack[ vstack.length - 1 ]; 
+		function(){
+var rval; code_head += arguments[ 0 ]; 
 return rval;},
-		function(vstack){
-var rval; code_foot += vstack[ vstack.length - 1 ]; 
+		function(){
+var rval; code_foot += arguments[ 0 ]; 
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 2 ];
+		function(){
+var rval;rval = arguments[ 1 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_LEFT;
+														for( var i = 0; i < arguments[ 1 ].length; i++ ){
+															symbols[ arguments[ 1 ][i] ].level = assoc_level;
+															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_LEFT;
 														}
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ )
+														for( var i = 0; i < arguments[ 1 ].length; i++ )
 														{
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_RIGHT;
+															symbols[ arguments[ 1 ][i] ].level = assoc_level;
+															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_RIGHT;
 														}
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
-															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
-															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_NOASSOC;
+														for( var i = 0; i < arguments[ 1 ].length; i++ ){
+															symbols[ arguments[ 1 ][i] ].level = assoc_level;
+															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_NOASSOC;
 														}
 													
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 2 ];
+		function(){
+var rval;rval = arguments[ 1 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	if( whitespace_token == -1 ){
-															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
+															var regex = arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, vstack[ vstack.length - 1 ].charAt( 0 ) != '\''  );
+															compile_regex( regex, whitespace_token, arguments[ 0 ][0] != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
 													
 return rval;},
-		function(vstack){
-var rval;	rval = vstack[ vstack.length - 2 ]; rval.push( vstack[ vstack.length - 1 ] );	
+		function(){
+var rval;	arguments[ 1 ].push(arguments[ 0 ]); return arguments[ 1 ]; 
 return rval;},
-		function(vstack){
-var rval;	return [vstack[ vstack.length - 1 ]]; 
+		function(){
+var rval;	return [arguments[ 0 ]]; 
 return rval;},
-		function(vstack){
-var rval;	rval = create_symbol( vstack[ vstack.length - 2 ], SYM_TERM, SPECIAL_NO_SPECIAL );
-														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
-														symbols[rval].code = vstack[ vstack.length - 1 ];
-														compile_regex( regex, symbols[ rval ].id, vstack[ vstack.length - 3 ].charAt( 0 ) != '\''  );
+		function(){
+var rval;	rval = create_symbol( arguments[ 1 ], SYM_TERM, SPECIAL_NO_SPECIAL );
+														var regex = arguments[ 2 ].substr( 1, arguments[ 2 ].length - 2 );
+														symbols[rval].code = arguments[ 0 ];
+														compile_regex( regex, symbols[ rval ].id, arguments[ 2 ].charAt( 0 ) != '\''  );
 													
 return rval;},
-		function(vstack){
-var rval;	var regex = vstack[ vstack.length - 2 ].substr( 1, vstack[ vstack.length - 2 ].length - 2 );
+		function(){
+var rval;	var regex = arguments[ 1 ].substr( 1, arguments[ 1 ].length - 2 );
 														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
-														symbols[rval].code = vstack[ vstack.length - 1 ];
+														symbols[rval].code = arguments[ 0 ];
 
-														compile_regex( regex, symbols[ rval ].id,  vstack[ vstack.length - 2 ].charAt( 0 ) != '\'' );
+														compile_regex( regex, symbols[ rval ].id,  arguments[ 1 ].charAt( 0 ) != '\'' );
 													
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 2 ];
+		function(){
+var rval;rval = arguments[ 1 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
-														var nonterm = create_symbol( vstack[ vstack.length - 4 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
+														var nonterm = create_symbol( arguments[ 3 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
-														for( var i = 0; i < vstack[ vstack.length - 2 ].length; i++ ){
-															productions[ vstack[ vstack.length - 2 ][i] ].lhs = nonterm;
-															symbols[nonterm].prods.push( vstack[ vstack.length - 2 ][i] );
+														for( var i = 0; i < arguments[ 1 ].length; i++ ){
+															productions[ arguments[ 1 ][i] ].lhs = nonterm;
+															symbols[nonterm].prods.push( arguments[ 1 ][i] );
 														}
 														
 														if( first_lhs ){
@@ -3564,22 +3522,22 @@ var rval;
 														}
 													
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 2 ];
+		function(){
+var rval;rval = arguments[ 1 ];
 return rval;},
-		function(vstack){
-var rval;	rval=vstack[ vstack.length - 3 ];rval.push(vstack[ vstack.length - 1 ]); 
+		function(){
+var rval;	arguments[ 2 ].push(arguments[ 0 ]); return arguments[ 2 ]; 
 return rval;},
-		function(vstack){
-var rval;	return [vstack[ vstack.length - 1 ]]; 
+		function(){
+var rval;	return [arguments[ 0 ]]; 
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
 														var prod = new PROD({
 															id:productions.length,
-															rhs:vstack[ vstack.length - 3 ],
-															level:vstack[ vstack.length - 2 ],
-															code:(vstack[ vstack.length - 1 ]=="")?DEF_PROD_CODE:(vstack[ vstack.length - 1 ])
+															rhs:arguments[ 2 ],
+															level:arguments[ 1 ],
+															code:(arguments[ 0 ]=="")?DEF_PROD_CODE:(arguments[ 0 ])
 														});
 														//Get level of the leftmost terminal
 														//as production level.
@@ -3599,75 +3557,75 @@ var rval;
 														return prod.id;
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval; 	var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+														if( ( index = find_symbol( arguments[ 0 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															return symbols[index].level;
 														else
-															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error( PCB.line, "Call to undefined terminal \"" + arguments[ 0 ] + "\"" );
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval;	var index;
-														if( ( index = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ),
+														if( ( index = find_symbol( arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															return symbols[index].level;
 														else
-															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
+															line_error(  PCB.line, "Call to undefined terminal \"" + arguments[ 0 ] + "\"" );
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval;	return 0; 
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	return []; 
 return rval;},
-		function(vstack){
-var rval; rval=vstack[ vstack.length - 2 ];rval.push(vstack[ vstack.length - 1 ]); 
+		function(){
+var rval; arguments[ 1 ].push(arguments[ 0 ]); return arguments[ 1 ] 
 return rval;},
-		function(vstack){
-var rval; return [vstack[ vstack.length - 1 ]]; 
+		function(){
+var rval; return [arguments[ 0 ]]; 
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
-														if( ( rval = find_symbol( vstack[ vstack.length - 1 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
-															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
+														if( ( rval = find_symbol( arguments[ 0 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
+															rval = create_symbol( arguments[ 0 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
-														if( ( rval = find_symbol( vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
-															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
+														if( ( rval = find_symbol( arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
+															line_error(  PCB.line, "Call to undefined terminal " + arguments[ 0 ] );
 													
 return rval;},
-		function(vstack){
+		function(){
 var rval; return find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); 
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval; return ""; 
 return rval;},
-		function(vstack){
-var rval; return vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+		function(){
+var rval; return arguments[ 1 ] + arguments[ 0 ]; 
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-][act](vstack);
+][act].apply(null,vstack);
 
 
 		return rval;
@@ -3705,40 +3663,31 @@ return rval;},
 		if( !err_la )
 			err_la = [];
 	
-		sstack.push( 0 );
-		vstack.push( 0 );
+		sstack.unshift( 0 );
+		vstack.unshift( 0 );
 	
 		PCB.la = lex( PCB );
 			
 		while(true){
 			PCB.act = 60;
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 ){
-				if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
-					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+			for( var i = 0; i < act_tab[sstack[0]].length; i+=2 ){
+				if( act_tab[sstack[0]][i] == PCB.la ){
+					PCB.act = act_tab[sstack[0]][i+1];
 					break;
 				}
 			}
 		
 			if( PCB.act == 60 ){
-				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				if( ( PCB.act = defact_tab[ sstack[0] ] ) < 0 )
 					PCB.act = 60;
 				else
 					PCB.act *= -1;
 			}
 
-			/*
-			_print( "state " + sstack[sstack.length-1] +
-					" la = " +
-					PCB.la + " att = >" +
-					PCB.att + "< act = " +
-					PCB.act + " src = >" +
-					PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
-			*/
-		
-			if( dbg_withtrace && sstack.length > 0 )
+
+			if( debug._dbg_withtrace && sstack.length > 0 )
 			{
-				dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
+				debug.__dbg_print( "\nState " + sstack[0] + "\n" +
 							"\tLookahead: " + labels[PCB.la] +
 								" (\"" + PCB.att + "\")\n" +
 							"\tAction: " + PCB.act + "\n" + 
@@ -3748,34 +3697,34 @@ return rval;},
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
-				if( dbg_withstepbystep )
-					dbg_wait();
+				if( debug._dbg_withstepbystep )
+					debug.__dbg_wait();
 			}
 		
 			
 			//Parse error? Try to recover!
 			if( PCB.act == 60 )
 			{
-				if( dbg_withtrace )
+				if( debug._dbg_withtrace )
 				{
 					var expect = "";
 				
-					dbg_print( "Error detected: " +
+					debug.__dbg_print( "Error detected: " +
 						"There is no reduce or shift on the symbol " +
 							labels[PCB.la] );
 				
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 )
 					{
 						if( expect != "" )
 							expect += ", ";
 						
 						expect += "\"" +
-								labels[ act_tab[sstack[sstack.length-1]][i] ]
+								labels[ act_tab[sstack[0]][i] ]
 									+ "\"";
 					}
-					dbg_print( "Expecting: " + expect );
+					debug.__dbg_print( "Expecting: " + expect );
 				}
 			
 				//Report errors only when error_step is 0, and this is not a
@@ -3785,30 +3734,30 @@ return rval;},
 					err_off.push( PCB.offset - PCB.att.length );
 					err_la.push([]);
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 )
 						err_la[err_la.length-1].push(
-							labels[act_tab[sstack[sstack.length-1]][i]] );
+							labels[act_tab[sstack[0]][i]] );
 				}
 			
 				//Perform error recovery			
 				while( sstack.length > 1 && PCB.act == 60 ){
-					sstack.pop();
-					vstack.pop();
+					sstack.shift();
+					vstack.shift();
 				
 					//Try to shift on error token
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 ){
-						if( act_tab[sstack[sstack.length-1]][i] == 1 ){
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+						if( act_tab[sstack[0]][i] == 1 ){
+							PCB.act = act_tab[sstack[0]][i+1];
 						
-							sstack.push( PCB.act );
-							vstack.push("");
+							sstack.unshift( PCB.act );
+							vstack.unshift("");
 						
-							if( dbg_withtrace ){
-								dbg_print("Error recovery: error token could be shifted!" );
-								dbg_print( "Error recovery: current stack is " + sstack.join() );
+							if( debug._dbg_withtrace ){
+								debug.__dbg_print("Error recovery: error token could be shifted!" );
+								debug.__dbg_print( "Error recovery: current stack is " + sstack.join() );
 							}
 							break;
 						}
@@ -3819,18 +3768,18 @@ return rval;},
 				if( sstack.length > 1 && PCB.act != 60 ){
 					//Ok, now try to shift on the next tokens
 					while( PCB.la != 38 ){
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: " +
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: " +
 								"Trying to shift on \""
 								+ labels[ PCB.la ] + "\"" );
 
 						PCB.act = 60;
 					
 						for( var i = 0;
-							i < act_tab[sstack[sstack.length-1]].length;
+							i < act_tab[sstack[0]].length;
 							i+=2 ){
-							if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
-								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+							if( act_tab[sstack[0]][i] == PCB.la ){
+								PCB.act = act_tab[sstack[0]][i+1];
 								break;
 							}
 						}
@@ -3838,28 +3787,28 @@ return rval;},
 						if( PCB.act != 60 )
 							break;
 						
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: Discarding \""
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: Discarding \""
 								+ labels[ PCB.la ] + "\"" );
 					
 						while( ( PCB.la = lex( PCB ) ) < 0 )
 							PCB.offset++;
 				
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: New token \""
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: New token \""
 								+ labels[ PCB.la ] + "\"" );
 					}
 				}
 			
 				if( PCB.act == 60 || PCB.la == 38 )
 				{
-					if( dbg_withtrace )
-						dbg_print( "\tError recovery failed, terminating parse process..." );
+					if( debug._dbg_withtrace )
+						debug.__dbg_print( "\tError recovery failed, terminating parse process..." );
 					break;
 				}
 
-				if( dbg_withtrace )
-					dbg_print( "\tError recovery succeeded, continuing" );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tError recovery succeeded, continuing" );
 			
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
@@ -3868,7 +3817,7 @@ return rval;},
 			//Shift
 			if( PCB.act > 0 ){
 				//Parse tree generation
-				if( dbg_withparsetree ){
+				if( debug._dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push({
 						sym:labels[ PCB.la ],
@@ -3877,17 +3826,17 @@ return rval;},
 					});
 				}
 			
-				if( dbg_withtrace )
-					dbg_print( "Shifting symbol: " +
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "Shifting symbol: " +
 						labels[PCB.la] + " (" + PCB.att + ")" );
 		
-				sstack.push( PCB.act );
-				vstack.push( PCB.att );
+				sstack.unshift( PCB.act );
+				vstack.unshift( PCB.att );
 			
 				PCB.la = lex( PCB );
 			
-				if( dbg_withtrace )
-					dbg_print( "\tNew lookahead symbol: " +
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tNew lookahead symbol: " +
 						labels[PCB.la] + " (" + PCB.att + ")" );
 				
 				//Successfull shift and right beyond error recovery?
@@ -3899,42 +3848,42 @@ return rval;},
 			{		
 				act = PCB.act * -1;
 			
-				if( dbg_withtrace )
-					dbg_print( "Reducing by production: " + act );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "Reducing by production: " + act );
 			
 				rval = void( 0 );
 			
-				if( dbg_withtrace )
-					dbg_print( "\tPerforming semantic action..." );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPerforming semantic action..." );
 			
-				rval=ACTIONS(act,sstack,vstack);
+				rval=ACTIONS(act,vstack);
 	
-				if( dbg_withparsetree )
+				if( debug._dbg_withparsetree )
 					tmptree = [];
 
-				if( dbg_withtrace )
-					dbg_print( "\tPopping " + 
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPopping " + 
 									pop_tab[act][1] +  " off the stack..." );
 				
 				for( var i = 0; i < pop_tab[act][1]; i++ ){
-					if( dbg_withparsetree )
+					if( debug._dbg_withparsetree )
 						tmptree.push( tree.pop() );
 					
-					sstack.pop();
-					vstack.pop();
+					sstack.shift();
+					vstack.shift();
 				}
 
 				//Get goto-table entry
 				PCB.act = 60;
-				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 ){
-					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] ){
-						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+				for( var i = 0; i < goto_tab[sstack[0]].length; i+=2 ){
+					if( goto_tab[sstack[0]][i] == pop_tab[act][0] ){
+						PCB.act = goto_tab[sstack[0]][i+1];
 						break;
 					}
 				}
 			
 				//Do some parse tree construction if desired
-				if( dbg_withparsetree ){
+				if( debug._dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push( {
 						sym:labels[ pop_tab[act][0] ],
@@ -3944,28 +3893,28 @@ return rval;},
 				}
 				//Goal symbol match?
 				if( act == 0 ) break; //Don't use PCB.act here!
-				if( dbg_withtrace )
-					dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
 			
 				//...and push it!
-				sstack.push( PCB.act );
-				vstack.push( rval );
+				sstack.unshift( PCB.act );
+				vstack.unshift( rval );
 			}
 		}
 
-		if( dbg_withtrace ){
-			dbg_print( "\nParse complete." );
+		if( debug._dbg_withtrace ){
+			debug.__dbg_print( "\nParse complete." );
 			//This function is used for parser drivers that will output
 			//the entire debug messages in a row.
-			dbg_flush();
+			debug.__dbg_flush();
 		}
 
-		if( dbg_withparsetree ){
+		if( debug._dbg_withparsetree ){
 			if( err_cnt == 0 ){
-				dbg_print( "\n\n--- Parse tree ---" );
-				dbg_parsetree( 0, treenodes, tree );
+				debug.__dbg_print( "\n\n--- Parse tree ---" );
+				debug.__dbg_parsetree( 0, treenodes, tree );
 			}
-			else dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+			else debug.__dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
 		return err_cnt;
 	}
@@ -4079,7 +4028,7 @@ function create_nfa( where )
 		nfa = new NFA()			
 		where.push( nfa );
 	}else
-		nfa=where[i];
+		nfa = where[i];
 	
 	nfa.edge = EDGE_EPSILON;
 	nfa.ccl=new BitSet(MAX_CHAR);
@@ -4095,18 +4044,9 @@ function create_nfa( where )
 
 
 var __regexparse=(function(debug){
-	with(debug){
-		var dbg_print = __dbg_print;
-		var dbg_withtrace = _dbg_withtrace;
-		var dbg_wait = __dbg_wait;
-		var dbg_withparsetree = _dbg_withparsetree;
-		var dbg_withstepbystep = _dbg_withstepbystep;
-		var dbg_flush = __dbg_flush;
-		var dbg_parsetree = __dbg_parsetree;
-	}
 
 
-var DFA_DATA_1=[{"line":[[[[1,
+var DFA_DATA=[{"line":[[[[1,
 	[[1,
 	[[[2,
 	3],
@@ -4192,20 +4132,8 @@ var DFA_DATA_1=[{"line":[[[[1,
 	"accept":13}];
 
 
-
-	function DFA_2(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var st=DFA_DATA_2[state].line[chr];
-		if(typeof st == "undefined")st=-1;
-		var ac=DFA_DATA_2[state].accept;
-		set_state(st)
-		if(ac!=-1){
-			set_match(ac);
-			set_match_pos(pos);
-		}
-	}
-	
-	function DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var line = DFA_DATA_1[state].line;
+	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
+		var line = DFA_DATA[state].line;
 		var p,st;
 		for(p=1<<8,st=line;p;p>>=1){
 			st=st[!!(chr&p)+0];
@@ -4216,7 +4144,7 @@ var DFA_DATA_1=[{"line":[[[[1,
 			if(st.constructor===Array)continue;
 			break;
 		}
-		var ac=DFA_DATA_1[state].accept;
+		var ac=DFA_DATA[state].accept;
 		set_state(st)
 		if(ac!=-1){
 			set_match(ac);
@@ -4229,18 +4157,38 @@ var DFA_DATA_1=[{"line":[[[[1,
 
 })[match.toString()]||(function(){}))()
 	}
+	function lex_1(PCB){
+		var state=0, match=-1, match_pos=0, start=0, pos=0;
+			
+		///Functions for manipulation of variables
+		function set_match(v){match=v;}
+		function set_state(v){state=v;}
+		function set_match_pos(v){match_pos=v;}
+		return function(chr){
+			DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
+			if( state > -1 ){
+				if( chr === 10 ){
+					PCB.line++;
+					PCB.column = 0;
+				}
+				PCB.column++;
+			}
+		}
+	}
 	function lex( PCB ){
-		var state, match, match_pos, start, pos, chr;
+		var state=0, match, match_pos, start, pos, chr;
+		
+		///Functions for manipulation of variables
+		function set_match(v){match=v;}
+		function set_state(v){state=v;}
+		function set_match_pos(v){match_pos=v;}
+		
 		while(true){
 			state = 0;
 			match = -1;
 			match_pos = 0;
 			start = 0;
 			pos = PCB.offset + 1 + ( match_pos - start );
-			///Functions for manipulation of variables
-			function set_match(v){match=v;}
-			function set_state(v){state=v;}
-			function set_match_pos(v){match_pos=v;}
 			do{
 				pos--;
 				state = 0;
@@ -4250,7 +4198,7 @@ var DFA_DATA_1=[{"line":[[[[1,
 					return 22;
 				do{
 					chr = PCB.src.charCodeAt( pos );
-					DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
+					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
 					//Line- and column-counter
 					if( state > -1 ){
 						if( chr == 10 ){
@@ -4268,7 +4216,7 @@ var DFA_DATA_1=[{"line":[[[[1,
 				PCB.offset = match_pos;
 				if((function(){
 					try{
-TERMINAL_ACTIONS(PCB,match);
+						TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
 						if(e===Continue)return true;
 						else throw e;
@@ -4297,104 +4245,104 @@ var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":
 
 
 
-	function ACTIONS(act,sstack,vstack){
+	function ACTIONS(act,vstack){
 		var rval;
-rval=[		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+rval=[		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	rval = new PARAM();
-													nfa_states[ first_nfa ].follow = vstack[ vstack.length - 1 ].start;
-													last_nfa = vstack[ vstack.length - 1 ].end;
+													nfa_states[ first_nfa ].follow = arguments[ 0 ].start;
+													last_nfa = arguments[ 0 ].end;
 												
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
 														});
-													nfa_states[rval.start].follow = vstack[ vstack.length - 3 ].start;
-													nfa_states[rval.start].follow2 = vstack[ vstack.length - 1 ].start;
+													nfa_states[rval.start].follow = arguments[ 2 ].start;
+													nfa_states[rval.start].follow2 = arguments[ 0 ].start;
 													
-													nfa_states[vstack[ vstack.length - 3 ].end].follow = rval.end;
-													nfa_states[vstack[ vstack.length - 1 ].end].follow = rval.end;
+													nfa_states[arguments[ 2 ].end].follow = rval.end;
+													nfa_states[arguments[ 0 ].end].follow = rval.end;
 												
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	
-													var weight=nfa_states[vstack[ vstack.length - 2 ].end].weight;///SV: if weight unused - delete this
-													nfa_states[vstack[ vstack.length - 2 ].end]=new NFA(nfa_states[vstack[ vstack.length - 1 ].start]);
-													nfa_states[vstack[ vstack.length - 2 ].end].weight=weight;///SV: if weight unused - delete this
-													nfa_states[vstack[ vstack.length - 1 ].start].edge = EDGE_FREE;
+													var weight=nfa_states[arguments[ 1 ].end].weight;///SV: if weight unused - delete this
+													nfa_states[arguments[ 1 ].end]=new NFA(nfa_states[arguments[ 0 ].start]);
+													nfa_states[arguments[ 1 ].end].weight=weight;///SV: if weight unused - delete this
+													nfa_states[arguments[ 0 ].start].edge = EDGE_FREE;
 													
-													vstack[ vstack.length - 2 ].end = vstack[ vstack.length - 1 ].end;
+													arguments[ 1 ].end = arguments[ 0 ].end;
 													
-													rval = vstack[ vstack.length - 2 ];
+													return arguments[ 1 ];
 												
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
 													});
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
+													nfa_states[rval.start].follow = arguments[ 1 ].start;
+													nfa_states[arguments[ 1 ].end].follow = rval.end;
 
 													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
+													nfa_states[arguments[ 1 ].end].follow2 = arguments[ 1 ].start;
 												
 return rval;},
-		function(vstack){
+		function(){
 var rval; 	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
 													});
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
+													nfa_states[rval.start].follow = arguments[ 1 ].start;
+													nfa_states[arguments[ 1 ].end].follow = rval.end;
 
-													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
+													nfa_states[arguments[ 1 ].end].follow2 = arguments[ 1 ].start;
 												
 return rval;},
-		function(vstack){
+		function(){
 var rval; 	
 													rval = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
 														});
-													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
+													nfa_states[rval.start].follow = arguments[ 1 ].start;
 													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
+													nfa_states[arguments[ 1 ].end].follow = rval.end;
 												
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
+		function(){
 var rval;	rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													
-													nfa_states[rval.start].ccl.set(vstack[ vstack.length - 1 ].charCodeAt( 0 ), true );
+													nfa_states[rval.start].ccl.set(arguments[ 0 ].charCodeAt( 0 ), true );
 												
 return rval;},
-		function(vstack){
-var rval;rval = vstack[ vstack.length - 1 ];
+		function(){
+var rval;rval = arguments[ 0 ];
 return rval;},
-		function(vstack){
-var rval;	rval = vstack[ vstack.length - 2 ]; 
+		function(){
+var rval;	return arguments[ 1 ]; 
 return rval;},
-		function(vstack){
+		function(){
 var rval;	var negate = false;
 													var i = 0, j, start;													
 													rval = new PARAM();
@@ -4403,28 +4351,27 @@ var rval;	var negate = false;
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													
-													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' ){
+													if( arguments[ 1 ].charAt( i ) == '^' ){
 														negate = true;
 														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
 															nfa_states[rval.start].ccl.set(j,true);
 														i++;
 													}
-													for( ; i < vstack[ vstack.length - 2 ].length; i++ ){
-														if( vstack[ vstack.length - 2 ].charAt( i+1 ) == '-'	&& i+2 < vstack[ vstack.length - 2 ].length ){
+													for( ; i < arguments[ 1 ].length; i++ ){
+														if( arguments[ 1 ].charAt( i+1 ) == '-'	&& i+2 < arguments[ 1 ].length ){
 															i++;
-															for( j = vstack[ vstack.length - 2 ].charCodeAt( i-1 );
-																	j < vstack[ vstack.length - 2 ].charCodeAt( i+1 );
+															for( j = arguments[ 1 ].charCodeAt( i-1 );
+																	j < arguments[ 1 ].charCodeAt( i+1 );
 																		j++ )		
 																nfa_states[rval.start].ccl.set(j, !negate);
 														}
 														else
-															nfa_states[rval.start].ccl.set(vstack[ vstack.length - 2 ].charCodeAt(i), !negate);
+															nfa_states[rval.start].ccl.set(arguments[ 1 ].charCodeAt(i), !negate);
 													}
 												
 return rval;},
-		function(vstack){
+		function(){
 var rval;	rval = new PARAM();
-				
 													
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
@@ -4434,22 +4381,22 @@ var rval;	rval = new PARAM();
 														nfa_states[rval.start].ccl.set(i, true);
 												
 return rval;},
-		function(vstack){
-var rval;	return vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+		function(){
+var rval;	return arguments[ 1 ] + arguments[ 0 ]; 
 return rval;},
-		function(vstack){
+		function(){
 var rval;	return ""; 
 return rval;},
-		function(vstack){
-var rval;	return String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
+		function(){
+var rval;	return String.fromCharCode( arguments[ 0 ].substr( 1 ) ); 
 return rval;},
-		function(vstack){
-var rval;	return {n:'\n',r:'\r',t:'\t',a:'\a'}[vstack[ vstack.length - 1 ].substr(1)]||vstack[ vstack.length - 1 ].substr(1); 
+		function(){
+var rval;	return {n:'\n',r:'\r',t:'\t',a:'\a'}[arguments[ 0 ].substr(1)]||arguments[ 0 ].substr(1); 
 return rval;},
-		function(vstack){
-var rval;	return vstack[ vstack.length - 1 ]; 
+		function(){
+var rval;	return arguments[ 0 ]; 
 return rval;},
-][act](vstack);
+][act].apply(null,vstack);
 
 
 		return rval;
@@ -4487,40 +4434,31 @@ return rval;},
 		if( !err_la )
 			err_la = [];
 	
-		sstack.push( 0 );
-		vstack.push( 0 );
+		sstack.unshift( 0 );
+		vstack.unshift( 0 );
 	
 		PCB.la = lex( PCB );
 			
 		while(true){
 			PCB.act = 26;
-			for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 ){
-				if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
-					PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+			for( var i = 0; i < act_tab[sstack[0]].length; i+=2 ){
+				if( act_tab[sstack[0]][i] == PCB.la ){
+					PCB.act = act_tab[sstack[0]][i+1];
 					break;
 				}
 			}
 		
 			if( PCB.act == 26 ){
-				if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
+				if( ( PCB.act = defact_tab[ sstack[0] ] ) < 0 )
 					PCB.act = 26;
 				else
 					PCB.act *= -1;
 			}
 
-			/*
-			_print( "state " + sstack[sstack.length-1] +
-					" la = " +
-					PCB.la + " att = >" +
-					PCB.att + "< act = " +
-					PCB.act + " src = >" +
-					PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
-					" sstack = " + sstack.join() );
-			*/
-		
-			if( dbg_withtrace && sstack.length > 0 )
+
+			if( debug._dbg_withtrace && sstack.length > 0 )
 			{
-				dbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
+				debug.__dbg_print( "\nState " + sstack[0] + "\n" +
 							"\tLookahead: " + labels[PCB.la] +
 								" (\"" + PCB.att + "\")\n" +
 							"\tAction: " + PCB.act + "\n" + 
@@ -4530,34 +4468,34 @@ return rval;},
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
 			
-				if( dbg_withstepbystep )
-					dbg_wait();
+				if( debug._dbg_withstepbystep )
+					debug.__dbg_wait();
 			}
 		
 			
 			//Parse error? Try to recover!
 			if( PCB.act == 26 )
 			{
-				if( dbg_withtrace )
+				if( debug._dbg_withtrace )
 				{
 					var expect = "";
 				
-					dbg_print( "Error detected: " +
+					debug.__dbg_print( "Error detected: " +
 						"There is no reduce or shift on the symbol " +
 							labels[PCB.la] );
 				
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 )
 					{
 						if( expect != "" )
 							expect += ", ";
 						
 						expect += "\"" +
-								labels[ act_tab[sstack[sstack.length-1]][i] ]
+								labels[ act_tab[sstack[0]][i] ]
 									+ "\"";
 					}
-					dbg_print( "Expecting: " + expect );
+					debug.__dbg_print( "Expecting: " + expect );
 				}
 			
 				//Report errors only when error_step is 0, and this is not a
@@ -4567,30 +4505,30 @@ return rval;},
 					err_off.push( PCB.offset - PCB.att.length );
 					err_la.push([]);
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 )
 						err_la[err_la.length-1].push(
-							labels[act_tab[sstack[sstack.length-1]][i]] );
+							labels[act_tab[sstack[0]][i]] );
 				}
 			
 				//Perform error recovery			
 				while( sstack.length > 1 && PCB.act == 26 ){
-					sstack.pop();
-					vstack.pop();
+					sstack.shift();
+					vstack.shift();
 				
 					//Try to shift on error token
 					for( var i = 0;
-						i < act_tab[sstack[sstack.length-1]].length;
+						i < act_tab[sstack[0]].length;
 						i+=2 ){
-						if( act_tab[sstack[sstack.length-1]][i] == 1 ){
-							PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+						if( act_tab[sstack[0]][i] == 1 ){
+							PCB.act = act_tab[sstack[0]][i+1];
 						
-							sstack.push( PCB.act );
-							vstack.push("");
+							sstack.unshift( PCB.act );
+							vstack.unshift("");
 						
-							if( dbg_withtrace ){
-								dbg_print("Error recovery: error token could be shifted!" );
-								dbg_print( "Error recovery: current stack is " + sstack.join() );
+							if( debug._dbg_withtrace ){
+								debug.__dbg_print("Error recovery: error token could be shifted!" );
+								debug.__dbg_print( "Error recovery: current stack is " + sstack.join() );
 							}
 							break;
 						}
@@ -4601,18 +4539,18 @@ return rval;},
 				if( sstack.length > 1 && PCB.act != 26 ){
 					//Ok, now try to shift on the next tokens
 					while( PCB.la != 22 ){
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: " +
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: " +
 								"Trying to shift on \""
 								+ labels[ PCB.la ] + "\"" );
 
 						PCB.act = 26;
 					
 						for( var i = 0;
-							i < act_tab[sstack[sstack.length-1]].length;
+							i < act_tab[sstack[0]].length;
 							i+=2 ){
-							if( act_tab[sstack[sstack.length-1]][i] == PCB.la ){
-								PCB.act = act_tab[sstack[sstack.length-1]][i+1];
+							if( act_tab[sstack[0]][i] == PCB.la ){
+								PCB.act = act_tab[sstack[0]][i+1];
 								break;
 							}
 						}
@@ -4620,28 +4558,28 @@ return rval;},
 						if( PCB.act != 26 )
 							break;
 						
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: Discarding \""
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: Discarding \""
 								+ labels[ PCB.la ] + "\"" );
 					
 						while( ( PCB.la = lex( PCB ) ) < 0 )
 							PCB.offset++;
 				
-						if( dbg_withtrace )
-							dbg_print( "Error recovery: New token \""
+						if( debug._dbg_withtrace )
+							debug.__dbg_print( "Error recovery: New token \""
 								+ labels[ PCB.la ] + "\"" );
 					}
 				}
 			
 				if( PCB.act == 26 || PCB.la == 22 )
 				{
-					if( dbg_withtrace )
-						dbg_print( "\tError recovery failed, terminating parse process..." );
+					if( debug._dbg_withtrace )
+						debug.__dbg_print( "\tError recovery failed, terminating parse process..." );
 					break;
 				}
 
-				if( dbg_withtrace )
-					dbg_print( "\tError recovery succeeded, continuing" );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tError recovery succeeded, continuing" );
 			
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
@@ -4650,7 +4588,7 @@ return rval;},
 			//Shift
 			if( PCB.act > 0 ){
 				//Parse tree generation
-				if( dbg_withparsetree ){
+				if( debug._dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push({
 						sym:labels[ PCB.la ],
@@ -4659,17 +4597,17 @@ return rval;},
 					});
 				}
 			
-				if( dbg_withtrace )
-					dbg_print( "Shifting symbol: " +
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "Shifting symbol: " +
 						labels[PCB.la] + " (" + PCB.att + ")" );
 		
-				sstack.push( PCB.act );
-				vstack.push( PCB.att );
+				sstack.unshift( PCB.act );
+				vstack.unshift( PCB.att );
 			
 				PCB.la = lex( PCB );
 			
-				if( dbg_withtrace )
-					dbg_print( "\tNew lookahead symbol: " +
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tNew lookahead symbol: " +
 						labels[PCB.la] + " (" + PCB.att + ")" );
 				
 				//Successfull shift and right beyond error recovery?
@@ -4681,42 +4619,42 @@ return rval;},
 			{		
 				act = PCB.act * -1;
 			
-				if( dbg_withtrace )
-					dbg_print( "Reducing by production: " + act );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "Reducing by production: " + act );
 			
 				rval = void( 0 );
 			
-				if( dbg_withtrace )
-					dbg_print( "\tPerforming semantic action..." );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPerforming semantic action..." );
 			
-				rval=ACTIONS(act,sstack,vstack);
+				rval=ACTIONS(act,vstack);
 	
-				if( dbg_withparsetree )
+				if( debug._dbg_withparsetree )
 					tmptree = [];
 
-				if( dbg_withtrace )
-					dbg_print( "\tPopping " + 
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPopping " + 
 									pop_tab[act][1] +  " off the stack..." );
 				
 				for( var i = 0; i < pop_tab[act][1]; i++ ){
-					if( dbg_withparsetree )
+					if( debug._dbg_withparsetree )
 						tmptree.push( tree.pop() );
 					
-					sstack.pop();
-					vstack.pop();
+					sstack.shift();
+					vstack.shift();
 				}
 
 				//Get goto-table entry
 				PCB.act = 26;
-				for( var i = 0; i < goto_tab[sstack[sstack.length-1]].length; i+=2 ){
-					if( goto_tab[sstack[sstack.length-1]][i] == pop_tab[act][0] ){
-						PCB.act = goto_tab[sstack[sstack.length-1]][i+1];
+				for( var i = 0; i < goto_tab[sstack[0]].length; i+=2 ){
+					if( goto_tab[sstack[0]][i] == pop_tab[act][0] ){
+						PCB.act = goto_tab[sstack[0]][i+1];
 						break;
 					}
 				}
 			
 				//Do some parse tree construction if desired
-				if( dbg_withparsetree ){
+				if( debug._dbg_withparsetree ){
 					tree.push( treenodes.length );
 					treenodes.push( {
 						sym:labels[ pop_tab[act][0] ],
@@ -4726,28 +4664,28 @@ return rval;},
 				}
 				//Goal symbol match?
 				if( act == 0 ) break; //Don't use PCB.act here!
-				if( dbg_withtrace )
-					dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+				if( debug._dbg_withtrace )
+					debug.__dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
 			
 				//...and push it!
-				sstack.push( PCB.act );
-				vstack.push( rval );
+				sstack.unshift( PCB.act );
+				vstack.unshift( rval );
 			}
 		}
 
-		if( dbg_withtrace ){
-			dbg_print( "\nParse complete." );
+		if( debug._dbg_withtrace ){
+			debug.__dbg_print( "\nParse complete." );
 			//This function is used for parser drivers that will output
 			//the entire debug messages in a row.
-			dbg_flush();
+			debug.__dbg_flush();
 		}
 
-		if( dbg_withparsetree ){
+		if( debug._dbg_withparsetree ){
 			if( err_cnt == 0 ){
-				dbg_print( "\n\n--- Parse tree ---" );
-				dbg_parsetree( 0, treenodes, tree );
+				debug.__dbg_print( "\n\n--- Parse tree ---" );
+				debug.__dbg_parsetree( 0, treenodes, tree );
 			}
-			else dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
+			else debug.__dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
 		return err_cnt;
 	}
@@ -4917,8 +4855,7 @@ for( var i = 0; i < argv.length; i++ )
 			|| argv[i].toLowerCase() == "--debug" )
 	{
 		for( var j = 0; j < argv[i+1].length; j++ )
-			switch( argv[i+1].charAt( j ) )
-			{
+			switch( argv[i+1].charAt( j ) ){
 				case 'n':
 					dump_nfa = true;
 					break;
@@ -4948,19 +4885,16 @@ for( var i = 0; i < argv.length; i++ )
 //file is global source filename
 file = src_file;
 
-if( src_file != "" )
-{
+if( src_file != "" ){
 	var src = read_file( src_file );
 	parse_grammar( src, src_file );
 	
-	if( errors == 0 )
-	{
+	if( errors == 0 )	{
 		//Check grammar integrity
 		undef();
 		unreachable();
 		
-		if( errors == 0 )
-		{
+		if( errors == 0 )		{
 			//LALR(1) parse table generation
 			first();
 			
@@ -4982,21 +4916,7 @@ if( src_file != "" )
 				if( dump_dfa )
 					print_dfa( dfa_table );	
 					
-				//Here, we read the template from file.
-				//I think in this case it is useful to choose the
-				//way used in main_sm.js.
-				//we can read 2 files here
-				//driver and parse.js
-				
-				//No! parse.js is the driver!
-				//driver and debugger for current platform
-				//ah ok - so you think the Make target "driver" should be removed, and we put the platform selection logic here.
-				//yes
-				//and where is the decision done which
-				//platform is selected? New command line
-				//parameter?
-				
-				// tpl_file <_< what is this variable?
+
 				var driver = read_file( tpl_file );
 									
 				driver = driver.replace( /##HEADER##/gi, code_head );
