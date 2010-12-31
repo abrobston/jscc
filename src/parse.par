@@ -93,7 +93,7 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 				| '!' string						[*	if( whitespace_token == -1 ){
 															var regex = %2.substr( 1, %2.length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, %2.charAt( 0 ) != '\''  );
+															compile_regex( regex, whitespace_token, %2[0] != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
@@ -101,7 +101,7 @@ token_assoc:	'<' token_defs	';'					[*	assoc_level++;
 				;
 
 
-token_defs:		token_defs token_def 				[*	%% = %1; %%.push( %2 );	*]
+token_defs:		token_defs token_def 				[*	%1.push(%2); return %1; *]
 				| token_def							[*	return [%1]; *]
 				;
 token_def:		string identifier code_opt 			[*	%% = create_symbol( %2, SYM_TERM, SPECIAL_NO_SPECIAL );
@@ -141,7 +141,7 @@ grammar_def:	identifier ':' productions ';'		[*
 				| ~ ';'
 				;
 
-productions:	productions '|' rhs					[*	%%=%1;%%.push(%3); *]
+productions:	productions '|' rhs					[*	%1.push(%3); return %1; *]
 				| rhs								[*	return [%1]; *]
 				;
 
@@ -191,7 +191,7 @@ sequence_opt:	sequence
 				|									[*	return []; *]
 				;
 
-sequence:		sequence symbol						[* %%=%1;%%.push(%2); *]
+sequence:		sequence symbol						[* %1.push(%2); return %1 *]
 				| symbol							[* return [%1]; *]
 				;
 

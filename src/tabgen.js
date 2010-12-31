@@ -79,7 +79,7 @@ function get_table_entry( row, sym )
 function get_undone_state()
 {
 	for( var i = 0; i < states.length; i++ )
-		if( states[i].done == false )///???
+		if( states[i].done == false )
 			return i;		
 	return -1;
 }

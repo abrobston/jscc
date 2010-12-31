@@ -103,7 +103,6 @@ function unreachable()
 			for( j = 0; j < reachable.length; j++ )
 				if( reachable[j] == i )
 					break;
-			
 			if( j == reachable.length )
 				_warning( "Unreachable non-terminal \"" + symbols[i].label + "\"" );
 		}

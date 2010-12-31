@@ -38,7 +38,7 @@ function create_nfa( where )
 		nfa = new NFA()			
 		where.push( nfa );
 	}else
-		nfa=where[i];
+		nfa = where[i];
 	
 	nfa.edge = EDGE_EPSILON;
 	nfa.ccl=new BitSet(MAX_CHAR);
@@ -101,7 +101,7 @@ Catenation:		Catenation Factor				[*
 													
 													%1.end = %2.end;
 													
-													%% = %1;
+													return %1;
 												*]
 				| Factor
 				;
@@ -148,7 +148,7 @@ Term:			Character						[*	%% = new PARAM();
 													nfa_states[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
 												*]
 				| CharacterSet
-				| '(' Expression ')'			[*	%% = %2; *]
+				| '(' Expression ')'			[*	return %2; *]
 				;
 
 CharacterSet:	'[' CharClass ']'				[*	var negate = false;
@@ -177,8 +177,7 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 															nfa_states[%%.start].ccl.set(%2.charCodeAt(i), !negate);
 													}
 												*]
-				| ANY_CHAR							[*	%% = new PARAM();
-				
+				| ANY_CHAR						[*	%% = new PARAM();
 													
 													%%.start = create_nfa( nfa_states );
 													%%.end = nfa_states[%%.start].follow
