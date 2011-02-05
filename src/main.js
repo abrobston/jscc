@@ -29,23 +29,17 @@ function version()
 	_print( info );
 }
 
-function help()
-{
-	var help = "";
-
-	help += "usage: jscc [options] filename\n\n";
-
-	help += "       -h   --help               Print this usage help\n";
-	help += "       -i   --version            Print version and copyright\n";
-	help += "       -o   --output <file>      Save output source to <file>\n";
-	help += "       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n";
-	help += "                                 fixing methods and variables\n";
-	help += "       -t   --template <file>    Use template file <file> as\n";
-	help += "                                 parser template\n";
-	help += "       -v   --verbose            Run in verbose mode\n";
-	help += "       -w   --warnings           Print warnings\n";
-		
-	_print( help );
+function help(){
+	_print([ "usage: jscc [options] filename\n\n",
+	"       -h   --help               Print this usage help\n",
+	"       -i   --version            Print version and copyright\n",
+	"       -o   --output <file>      Save output source to <file>\n",
+	"       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n",
+	"                                 fixing methods and variables\n",
+	"       -t   --template <file>    Use template file <file> as\n",
+	"                                 parser template\n",
+	"       -v   --verbose            Run in verbose mode\n",
+	"       -w   --warnings           Print warnings\n"].join(""));
 }
 
 // --- JS/CC entry ---
@@ -157,7 +151,7 @@ if( src_file != "" ){
 				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
 				driver = driver.replace( /##FOOTER##/gi, code_foot );
 				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				driver = driver.replace( /##ERROR##/gi, get_error_state() );
+				//driver = driver.replace( /##ERROR##/gi, get_error_state() );
 				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
