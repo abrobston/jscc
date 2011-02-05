@@ -235,7 +235,7 @@ function pack_dfa(dfa_states){
 	})(i);
 	return json;
 }
-function print_dfa_table( dfa_states ){
+function print_dfa_table(dfa_states){
 	var code="";
 	var json=[];
 	for(var i=0;i<dfa_states.length;i++)(function(i){
@@ -255,79 +255,6 @@ function print_dfa_table( dfa_states ){
 
 	return code;
 }
-
-
-function print_dfa_table_odl (dfa_states ){
-	var code="";
-	code+=print_dfa_table_new( dfa_states );
-	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
-	var i, j, k, eof_id = -1;
-	var grp_start, grp_first, first;
-	
-	code += "switch( state )\n{\n";
-	for( i = 0; i < dfa_states.length; i++ )
-	{
-		code += "	case " + i + ":\n";
-		
-		first = true;
-		for( j = 0; j < dfa_states.length; j++ )
-		{
-			grp_start = -1;
-			grp_first = true;
-			for( k = 0; k < dfa_states[i].line.length + 1; k++ )
-			{
-				if( k < dfa_states[i].line.length && dfa_states[i].line[k] == j )
-				{
-					if( grp_start == -1 )
-						grp_start = k;
-				}
-				else if( grp_start > -1 )
-				{
-					if( grp_first )
-					{
-						code += "		";
-						if( !first )
-							code += "else ";
-						code += "if( ";
-						
-						grp_first = false;
-						first = false;
-					}
-					else
-						code += " || ";
-					
-					if( grp_start == k - 1 )
-						code += "chr == " + grp_start;
-					else					
-						code += "( chr >= " + grp_start +
-									" && chr <= " + (k-1) + " )";
-					grp_start = -1;
-					k--;
-				}
-			}
-			
-			if( !grp_first )
-				code += " ) set_state(" + j + ");\n";
-		}
-				
-		code += "		";
-		if( !first )
-			code += "else ";
-		code += "set_state(-1);\n"
-		
-		if( dfa_states[i].accept > -1 )
-		{
-			code += "		set_match(" + dfa_states[i].accept + ");\n";
-			code += "		set_match_pos(pos);\n";
-		}
-		
-		code += "		break;\n\n";
-	}
-	
-	code += "}\n\n";
-	code += "}\n";
-	return code;
-}//*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -384,14 +311,12 @@ function print_term_actions(){
 	var i, j, k;	
 	var semcode;
 	var strmatch;
-	
 	for( i = 0; i < symbols.length; i++ ){
 		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
 			code += "	\"" + i + "\":";
 			code += "function(){";
 			semcode = "";
-			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
-			{
+			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ ){
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
 				if( strmatch && strmatch.index == 0 )
 				{
@@ -415,44 +340,6 @@ function print_term_actions(){
 	code+="\n})[match.toString()]||(function(){}))()";
 	return code;
 }
-function print_term_actions_old(){
-	var code = "";
-	var re = /%match|%offset|%source/;
-	var i, j, k;	
-	var semcode;
-	var strmatch;
-	
-	for( i = 0; i < symbols.length; i++ ){
-		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
-			code += "	" + ( code != "" ? "else " : "" ) +
-						"if( match == " + i + " )\n";
-			code += "	{\n";
-			semcode = "";
-			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
-			{
-				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
-				if( strmatch && strmatch.index == 0 )
-				{
-					if( strmatch[0] == "%match" )
-						semcode += "PCB.att";
-					else if( strmatch[0] == "%offset" )
-						semcode += "( PCB.offset - PCB.att.length )";
-					else if( strmatch[0] == "%source" )
-						semcode += "PCB.src";
-					
-					j += strmatch[0].length - 1;
-					k = semcode.length;
-				}
-				else
-					semcode += symbols[i].code.charAt( j );
-			}
-			code += "		" + semcode + "\n";
-			code += "		}\n";
-		}
-	}
-	return code;
-}
-
 	
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_actions()
@@ -480,13 +367,12 @@ function print_actions(){
 	for( i = 0; i < productions.length; i++ ){
 		semcode = "function(){\n";
 		semcode+="var rval;"
-		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
-			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
-			if( strmatch && strmatch.index == 0 ){
-				if( strmatch[0] == "%%" )
+		for(j = 0, k = 0; j < productions[i].code.length; j++, k++){
+			strmatch = re.exec(productions[i].code.substr(j, productions[i].code.length));
+			if(strmatch && strmatch.index == 0){
+				if(strmatch[0] == "%%")
 					semcode += "rval";
-				else
-				{
+				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
 					semcode += "arguments[ " + idx + " ]";
@@ -495,7 +381,7 @@ function print_actions(){
 				k = semcode.length;
 			}
 			else
-				semcode += productions[i].code.charAt( j );
+				semcode += productions[i].code.charAt(j);
 		}
 		code += "		" + semcode + "\nreturn rval;},\n";
 	}
@@ -520,7 +406,7 @@ function print_actions(){
 function get_eof_symbol_id(){
 	var eof_id = -1;
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ ){
+	for(var i = 0; i < symbols.length; i++){
 		if( symbols[i].special == SPECIAL_EOF ){
 			eof_id = i;
 			break;
@@ -547,20 +433,15 @@ function get_eof_symbol_id(){
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id(){
 	var error_id = -1;
-	
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].special == SPECIAL_ERROR )
-		{
+	for( var i = 0; i < symbols.length; i++ ){
+		if(symbols[i].special == SPECIAL_ERROR){
 			error_id = i;
 			break;
 		}
 	}
-
 	if( error_id == -1 )
 		_error( "No ERROR-symbol defined - This might not be possible (bug!)" );
-	
 	return error_id;
 }
 

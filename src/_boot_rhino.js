@@ -1081,7 +1081,7 @@ function pack_dfa(dfa_states){
 	})(i);
 	return json;
 }
-function print_dfa_table( dfa_states ){
+function print_dfa_table(dfa_states){
 	var code="";
 	var json=[];
 	for(var i=0;i<dfa_states.length;i++)(function(i){
@@ -1101,79 +1101,6 @@ function print_dfa_table( dfa_states ){
 
 	return code;
 }
-
-
-function print_dfa_table_odl (dfa_states ){
-	var code="";
-	code+=print_dfa_table_new( dfa_states );
-	code += "function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){\n";
-	var i, j, k, eof_id = -1;
-	var grp_start, grp_first, first;
-	
-	code += "switch( state )\n{\n";
-	for( i = 0; i < dfa_states.length; i++ )
-	{
-		code += "	case " + i + ":\n";
-		
-		first = true;
-		for( j = 0; j < dfa_states.length; j++ )
-		{
-			grp_start = -1;
-			grp_first = true;
-			for( k = 0; k < dfa_states[i].line.length + 1; k++ )
-			{
-				if( k < dfa_states[i].line.length && dfa_states[i].line[k] == j )
-				{
-					if( grp_start == -1 )
-						grp_start = k;
-				}
-				else if( grp_start > -1 )
-				{
-					if( grp_first )
-					{
-						code += "		";
-						if( !first )
-							code += "else ";
-						code += "if( ";
-						
-						grp_first = false;
-						first = false;
-					}
-					else
-						code += " || ";
-					
-					if( grp_start == k - 1 )
-						code += "chr == " + grp_start;
-					else					
-						code += "( chr >= " + grp_start +
-									" && chr <= " + (k-1) + " )";
-					grp_start = -1;
-					k--;
-				}
-			}
-			
-			if( !grp_first )
-				code += " ) set_state(" + j + ");\n";
-		}
-				
-		code += "		";
-		if( !first )
-			code += "else ";
-		code += "set_state(-1);\n"
-		
-		if( dfa_states[i].accept > -1 )
-		{
-			code += "		set_match(" + dfa_states[i].accept + ");\n";
-			code += "		set_match_pos(pos);\n";
-		}
-		
-		code += "		break;\n\n";
-	}
-	
-	code += "}\n\n";
-	code += "}\n";
-	return code;
-}//*/
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
@@ -1230,14 +1157,12 @@ function print_term_actions(){
 	var i, j, k;	
 	var semcode;
 	var strmatch;
-	
 	for( i = 0; i < symbols.length; i++ ){
 		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
 			code += "	\"" + i + "\":";
 			code += "function(){";
 			semcode = "";
-			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
-			{
+			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ ){
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
 				if( strmatch && strmatch.index == 0 )
 				{
@@ -1261,44 +1186,6 @@ function print_term_actions(){
 	code+="\n})[match.toString()]||(function(){}))()";
 	return code;
 }
-function print_term_actions_old(){
-	var code = "";
-	var re = /%match|%offset|%source/;
-	var i, j, k;	
-	var semcode;
-	var strmatch;
-	
-	for( i = 0; i < symbols.length; i++ ){
-		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
-			code += "	" + ( code != "" ? "else " : "" ) +
-						"if( match == " + i + " )\n";
-			code += "	{\n";
-			semcode = "";
-			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
-			{
-				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
-				if( strmatch && strmatch.index == 0 )
-				{
-					if( strmatch[0] == "%match" )
-						semcode += "PCB.att";
-					else if( strmatch[0] == "%offset" )
-						semcode += "( PCB.offset - PCB.att.length )";
-					else if( strmatch[0] == "%source" )
-						semcode += "PCB.src";
-					
-					j += strmatch[0].length - 1;
-					k = semcode.length;
-				}
-				else
-					semcode += symbols[i].code.charAt( j );
-			}
-			code += "		" + semcode + "\n";
-			code += "		}\n";
-		}
-	}
-	return code;
-}
-
 	
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_actions()
@@ -1326,13 +1213,12 @@ function print_actions(){
 	for( i = 0; i < productions.length; i++ ){
 		semcode = "function(){\n";
 		semcode+="var rval;"
-		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ ){
-			strmatch = re.exec( productions[i].code.substr( j, productions[i].code.length ) );
-			if( strmatch && strmatch.index == 0 ){
-				if( strmatch[0] == "%%" )
+		for(j = 0, k = 0; j < productions[i].code.length; j++, k++){
+			strmatch = re.exec(productions[i].code.substr(j, productions[i].code.length));
+			if(strmatch && strmatch.index == 0){
+				if(strmatch[0] == "%%")
 					semcode += "rval";
-				else
-				{
+				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
 					semcode += "arguments[ " + idx + " ]";
@@ -1341,7 +1227,7 @@ function print_actions(){
 				k = semcode.length;
 			}
 			else
-				semcode += productions[i].code.charAt( j );
+				semcode += productions[i].code.charAt(j);
 		}
 		code += "		" + semcode + "\nreturn rval;},\n";
 	}
@@ -1366,7 +1252,7 @@ function print_actions(){
 function get_eof_symbol_id(){
 	var eof_id = -1;
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ ){
+	for(var i = 0; i < symbols.length; i++){
 		if( symbols[i].special == SPECIAL_EOF ){
 			eof_id = i;
 			break;
@@ -1393,20 +1279,15 @@ function get_eof_symbol_id(){
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id(){
 	var error_id = -1;
-	
 	//Find out which symbol is for EOF!	
-	for( var i = 0; i < symbols.length; i++ )
-	{
-		if( symbols[i].special == SPECIAL_ERROR )
-		{
+	for( var i = 0; i < symbols.length; i++ ){
+		if(symbols[i].special == SPECIAL_ERROR){
 			error_id = i;
 			break;
 		}
 	}
-
 	if( error_id == -1 )
 		_error( "No ERROR-symbol defined - This might not be possible (bug!)" );
-	
 	return error_id;
 }
 
@@ -2552,8 +2433,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 
 //Utility functions; I think there is no documentation required about them.
 
-function create_dfa( where )
-{
+function create_dfa(where){
 	var dfa = new DFA({
 		line:new Array( MAX_CHAR ),
 		accept:-1,
@@ -2564,64 +2444,25 @@ function create_dfa( where )
 	where.push( dfa );
 	return where.length - 1;
 }
-
-
-function same_nfa_items( dfa_states, items )
-{
+function same_nfa_items(dfa_states, items){
 	var i, j;
-	for( i = 0; i < dfa_states.length; i++ )
-		if( dfa_states[i].nfa_set.length == items.length )
-		{
-			for( j = 0; j < dfa_states[i].nfa_set.length; j++ )
-				if( dfa_states[i].nfa_set[j] != items[j] )
+	for(i = 0; i < dfa_states.length; i++)
+		if( dfa_states[i].nfa_set.length == items.length ){
+			for(j = 0; j < dfa_states[i].nfa_set.length; j++)
+				if(dfa_states[i].nfa_set[j] != items[j])
 					break;
-			
-			if( j == dfa_states[i].nfa_set.length )
+			if(j == dfa_states[i].nfa_set.length)
 				return i;
 		}	
 	return -1;
 }
 
-
-function get_undone_dfa( dfa_states )
-{
+function get_undone_dfa( dfa_states ){
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
 			return i;	
 	return -1;
 }
-
-
-//NFA test function; Has no use currently.
-function execute_nfa( machine, str )
-{
-	var	result		= [];
-	var	accept;
-	var	last_accept	= [];
-	var last_length = 0;
-	var	chr_cnt		= 0;
-
-	if( machine.length == 0 )
-		return -1;
-		
-	result.push( 0 );
-	while( result.length > 0
-		&& chr_cnt < str.length )
-	{
-		accept = epsilon_closure( result, machine );
-		
-		if( accept.length > 0 )
-		{
-			last_accept = accept;
-			last_length = chr_cnt;
-		}
-		
-		result = move( result, machine, str.charCodeAt( chr_cnt ) );
-		chr_cnt++;
-	}
-	return last_accept;
-}
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		move()
@@ -2643,8 +2484,7 @@ function execute_nfa( machine, str )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function move( state_set, machine, ch )
-{
+function move(state_set, machine, ch){
 	var hits	= [];
 	var tos		= -1;
 	try{
@@ -2680,43 +2520,31 @@ function move( state_set, machine, ch )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function epsilon_closure( state_set, machine )
-{
+function epsilon_closure( state_set, machine ){
 	var 	stack	= [];
 	var		accept	= [];
 	var		tos		= -1;
-	
-	for( var i = 0; i < state_set.length; i++ )
-		stack.push( state_set[i] );
-	
+	for(var i = 0; i < state_set.length; i++)
+		stack.push(state_set[i]);
 	do{
 		tos = stack.pop();
-		if( machine[ tos ].accept >= 0 )
-			accept.push( machine[ tos ].accept );
-			
-		if( machine[ tos ].edge == EDGE_EPSILON )
-		{
-			if( machine[ tos ].follow > -1 )
-			{
-				for( var i = 0; i < state_set.length; i++ )
-					if( state_set[i] == machine[ tos ].follow )
+		if(machine[ tos ].accept >= 0)
+			accept.push(machine[tos].accept);
+		if(machine[tos].edge == EDGE_EPSILON){
+			if(machine[ tos ].follow > -1){
+				for(var i = 0; i < state_set.length; i++)
+					if(state_set[i] == machine[ tos ].follow)
 						break;
-				
-				if( i == state_set.length )
-				{
+				if(i == state_set.length){
 					state_set.push( machine[ tos ].follow );
 					stack.push( machine[ tos ].follow );
 				}
-			}
-			
-			if( machine[ tos ].follow2 > -1 )
-			{
-				for( var i = 0; i < state_set.length; i++ )
-					if( state_set[i] == machine[ tos ].follow2 )
+			}	
+			if(machine[ tos ].follow2 > -1){
+				for(var i = 0; i < state_set.length; i++)
+					if(state_set[i] == machine[ tos ].follow2)
 						break;
-				
-				if( i == state_set.length )
-				{
+				if(i == state_set.length){
 					state_set.push( machine[ tos ].follow2 );
 					stack.push( machine[ tos ].follow2 );
 				}
@@ -2725,7 +2553,6 @@ function epsilon_closure( state_set, machine )
 	}while( stack.length > 0 );
 	return accept.sort();
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
@@ -2745,70 +2572,52 @@ function epsilon_closure( state_set, machine )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function create_subset( nfa_states )
-{
+function create_subset(nfa_states){
 	var dfa_states = [];
-	var stack = [];
-	var current = create_dfa( dfa_states );
+	var stack = [0];
+	var current = create_dfa(dfa_states);
 	var trans;
 	var next = -1;
 	var lowest_weight;
 	
-	if( nfa_states.length == 0 )
+	if(nfa_states.length == 0)
 		return dfa_states;
-		
-	stack.push( 0 );
 	epsilon_closure( stack, nfa_states );
-		
-	dfa_states[ current ].nfa_set = dfa_states[ current ].nfa_set.concat( stack );
-	
-	while( ( current = get_undone_dfa( dfa_states ) ) > -1 )
-	{
+	dfa_states[current].nfa_set = dfa_states[current].nfa_set.concat(stack);
+	while((current = get_undone_dfa( dfa_states)) > -1 ){
 		//_print( "Next DFA-state to process is " + current );
-		dfa_states[ current ].done = true;
-		
+		dfa_states[current].done = true;
 		lowest_weight = -1;
-		for( var i = 0; i < dfa_states[ current ].nfa_set.length; i++ )
-		{
-			if( nfa_states[ dfa_states[ current ].nfa_set[i] ].accept > -1
-					&& nfa_states[ dfa_states[ current ].nfa_set[i] ].weight < lowest_weight 
-						|| lowest_weight == -1 )
-			{
-				dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
-				lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
+		for(var i = 0; i < dfa_states[current].nfa_set.length; i++){
+			if(nfa_states[ dfa_states[current].nfa_set[i]].accept > -1
+				&& nfa_states[dfa_states[current].nfa_set[i]].weight < lowest_weight 
+				|| lowest_weight == -1){
+					dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
+					lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
 			}
-		}
+		}	
+		for(var i = MIN_CHAR; i < MAX_CHAR; i++){
+			trans = [].concat(dfa_states[current].nfa_set);
+			trans = move(trans, nfa_states, i);
 			
-		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-		{
-			trans = [];
-			trans = trans.concat( dfa_states[ current ].nfa_set );
-			
-			trans = move( trans, nfa_states, i );
-			
-			if( trans.length > 0 )
-			{
+			if(trans.length > 0){
 				//_print( "Character >" + String.fromCharCode( i ) + "< from " + dfa_states[ current ].nfa_set.join() + " to " + trans.join() );
 				epsilon_closure( trans, nfa_states );
 			}
 
-			if( trans.length == 0 )
+			if(trans.length == 0)
 				next = -1;
-			else if( ( next = same_nfa_items( dfa_states, trans ) ) == -1 )
-			{				
+			else if((next = same_nfa_items( dfa_states, trans)) == -1 ){				
 				next = create_dfa( dfa_states );
 				dfa_states[ next ].nfa_set = trans;
-				
 				//_print( "Creating new state " + next );
 			}
-			
 			dfa_states[ current ].line[ i ] = next;
 		}
 	}
 	//_print("\ndfa_states = "+dfa_states);
 	return dfa_states;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
@@ -2827,9 +2636,8 @@ function create_subset( nfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function minimize_dfa( dfa_states )
-{
-	var		groups			= [];
+function minimize_dfa( dfa_states ){
+	var		groups			= [[]];
 	var		group			= [];
 	var		accept_groups	= [];
 	var		min_dfa_states	= [];
@@ -2840,33 +2648,25 @@ function minimize_dfa( dfa_states )
 	
 	if( dfa_states.length == 0 )
 		return min_dfa_states;
-
 	/*
 		Forming a general starting state:
 		Accepting and non-accepting states are pushed in
 		separate groups first
 	*/
-	groups.push( [] );
-	for( i = 0; i < dfa_states.length; i++ )
-	{
-		if( dfa_states[i].accept > -1 )
-		{
-			for( j = 0; j < accept_groups.length; j++ )
-				if( accept_groups[j] == dfa_states[i].accept )
+	for(i = 0; i < dfa_states.length; i++){
+		if(dfa_states[i].accept > -1){
+			for(j = 0; j < accept_groups.length; j++)
+				if(accept_groups[j] == dfa_states[i].accept)
 					break;
-			
-			if( j == accept_groups.length )
-			{
-				accept_groups.push( dfa_states[i].accept );
-				groups.push( [] );
+			if(j == accept_groups.length){
+				accept_groups.push(dfa_states[i].accept);
+				groups.push([]);
 			}
-			groups[ j+1 ].push( i );
-			dfa_states[ i ].group = j+1;
-		}
-		else
-		{
-			groups[ 0 ].push( i );
-			dfa_states[ i ].group = 0;
+			groups[j+1].push( i );
+			dfa_states[i].group = j+1;
+		}else{
+			groups[0].push(i);
+			dfa_states[i].group = 0;
 		}
 	}
 
@@ -2876,16 +2676,11 @@ function minimize_dfa( dfa_states )
 	*/
 	do{
 		old_cnt = cnt;
-		for( i = 0; i < groups.length; i++ )
-		{
+		for( i = 0; i < groups.length; i++ ){
 			new_group = [];
-			
-			if( groups[i].length > 0 )
-			{
-				for( j = 1; j < groups[i].length; j++ )
-				{
-					for( k = MIN_CHAR; k < MAX_CHAR; k++ )
-					{
+			if( groups[i].length > 0 ){
+				for(j = 1; j < groups[i].length; j++){
+					for(k = MIN_CHAR; k < MAX_CHAR; k++){
 						/*
 							This verifies the equality of the
 							first state in this group with its
@@ -2900,43 +2695,34 @@ function minimize_dfa( dfa_states )
 										dfa_states[ dfa_states[ groups[i][0] ].line[k] ].group
 											!= dfa_states[ dfa_states[ groups[i][j] ].line[k] ].group ) )
 						{
-							/*
-								If this item does not match, but it to a new group
-							*/
+							//	If this item does not match, but it to a new group
 							dfa_states[ groups[i][j] ].group = groups.length;
 							new_group = new_group.concat( groups[i].splice( j, 1 ) );
 							j--;
-							
 							break;
 						}
 					}
 				}
 			}
-
-			if( new_group.length > 0 )
-			{
-				groups[ groups.length ] = [];
-				groups[ groups.length-1 ] = groups[ groups.length-1 ].concat( new_group );
+			if(new_group.length > 0){
+				groups[groups.length] = [];
+				groups[groups.length-1] = groups[groups.length-1].concat(new_group);
 				cnt += new_group.length;
 			}
 		}
-		
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
-	}while( old_cnt != cnt );
-	
+	}while(old_cnt != cnt);
 	/*
 		Updating the dfa-state transitions;
 		Each group forms a new state.
 	*/
-	for( i = 0; i < dfa_states.length; i++ )
-		for( j = MIN_CHAR; j < MAX_CHAR; j++ )
-			if( dfa_states[i].line[j] > -1 )
+	for(i = 0; i < dfa_states.length; i++)
+		for(j = MIN_CHAR; j < MAX_CHAR; j++)
+			if(dfa_states[i].line[j] > -1)
 				dfa_states[i].line[j] = dfa_states[ dfa_states[i].line[j] ].group;
-
-	for( i = 0; i < groups.length; i++ )			
-		min_dfa_states.push( dfa_states[ groups[i][0] ] );
-
+	for(i = 0; i < groups.length; i++)			
+		min_dfa_states.push(dfa_states[groups[i][0]]);
 	return min_dfa_states;
 }
 
@@ -3081,7 +2867,7 @@ var __jscc_debug=(function(){///@TODO: create this variable without function
 	Input-/Output and Feature-Functions are done by the particular drivers
 	created for the particular platform.
 */
-	
+
 var		first_lhs;
 var		cur_line;
 
@@ -3090,8 +2876,7 @@ function line_error( line, txt ){
 	_error( "line " + line + ": " + txt );
 }
 
-var __jsccparse=(function(debug){
-
+var __jsccparse=(function(debug,eof,whitespace,error_token){
 
 var DFA_DATA=[{"line":[[[[[[null,
 	[[[null,
@@ -3585,17 +3370,13 @@ var DFA_DATA=[{"line":[[[[[[null,
 	null]]]]]]]]],
 	"accept":-1}];
 
-
 	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 		var line = DFA_DATA[state].line;
 		var p,st;
 		for(p=1<<8,st=line;p;p>>=1){
 			st=st[!!(chr&p)+0];
-			if(st==null){
-				st=-1;
-				break;
-			}
-			if(st.constructor===Array)continue;
+			if(st==null)break;
+			if(st instanceof Array)continue;
 			break;
 		}
 		var ac=DFA_DATA[state].accept;
@@ -3605,7 +3386,6 @@ var DFA_DATA=[{"line":[[[[[[null,
 			set_match_pos(pos);
 		}
 	}
-
 	function TERMINAL_ACTIONS(PCB,match){
 (({
 	"12":function(){			PCB.att = PCB.att.substr(2, PCB.att.length - 4 ); 
@@ -3619,26 +3399,8 @@ var DFA_DATA=[{"line":[[[[[[null,
 
 })[match.toString()]||(function(){}))()
 	}
-	function lex_1(PCB){
-		var state=0, match=-1, match_pos=0, start=0, pos=0;
-			
-		///Functions for manipulation of variables
-		function set_match(v){match=v;}
-		function set_state(v){state=v;}
-		function set_match_pos(v){match_pos=v;}
-		return function(chr){
-			DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
-			if( state > -1 ){
-				if( chr === 10 ){
-					PCB.line++;
-					PCB.column = 0;
-				}
-				PCB.column++;
-			}
-		}
-	}
-	function lex( PCB ){
-		var state=0, match, match_pos, start, pos, chr;
+	function lex(PCB){
+		var state, match, match_pos, start, pos, chr;
 		
 		///Functions for manipulation of variables
 		function set_match(v){match=v;}
@@ -3646,35 +3408,30 @@ var DFA_DATA=[{"line":[[[[[[null,
 		function set_match_pos(v){match_pos=v;}
 		
 		while(true){
-			state = 0;
-			match = -1;
 			match_pos = 0;
-			start = 0;
-			pos = PCB.offset + 1 + ( match_pos - start );
+			pos = PCB.offset + 1;
 			do{
 				pos--;
 				state = 0;
-				match = -2;
+				match = null;
 				start = pos;
-				if( PCB.src.length <= start )
-					return 38;
+				if(PCB.src.length <= start)
+					return eof;
 				do{
-					chr = PCB.src.charCodeAt( pos );
+					chr = PCB.src.charCodeAt(pos);
 					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
-					//Line- and column-counter
-					if( state > -1 ){
-						if( chr == 10 ){
+					if(state != null){
+						if( chr === 10 ){
 							PCB.line++;
 							PCB.column = 0;
 						}
 						PCB.column++;
 					}
 					pos++;
-				}while( state > -1 );
-			}while( -1 > -1 && match == -1 );
-	
-			if( match > -1 ){
-				PCB.att = PCB.src.substr( start, match_pos - start );
+				}while(state != null);
+			}while(whitespace > -1 && match == whitespace);
+			if(match != null){
+				PCB.att = PCB.src.slice(start, match_pos);
 				PCB.offset = match_pos;
 				if((function(){
 					try{
@@ -3684,15 +3441,11 @@ var DFA_DATA=[{"line":[[[[[[null,
 						else throw e;
 					}
 				})())continue;
-			}else{
+			}else
 				PCB.att = "";
-				match = -1;
-			}
-			break;
+			return match;
 		}
-		return match;
 	}
-
 
 var pop_tab =[[0,1],[23,5],[19,1],[22,1],[20,2],[20,1],[25,3],[25,3],[25,3],[25,2],[25,2],[26,2],[26,1],[28,3],[28,2],[21,2],[21,1],[30,4],[30,2],[31,3],[31,1],[32,3],[34,2],[34,2],[34,0],[33,1],[33,0],[35,2],[35,1],[36,1],[36,1],[36,1],[24,1],[24,0],[37,2],[37,1],[27,1],[27,1],[29,1]];
 
@@ -3702,9 +3455,7 @@ var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[
 
 var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
 
-
 var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(2, %match.length - 4 ); ","level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","level":0,"special":1,"defined":false,"first":[38]}];
-
 
 
 	function ACTIONS(act,vstack){
@@ -3916,296 +3667,198 @@ return rval;},
 
 		return rval;
 	}
-	function parse( src, err_off, err_la ){
-		var		sstack			= [];
-		var		vstack			= [];
+	function get_act(top, la){	
+		for(var i = 0; i < act_tab[top].length; i+=2)
+			if(act_tab[top][i] === la)
+				return act_tab[top][i+1];
+		return null;
+	}
+	function get_goto(top, pop){	
+		for(var i = 0; i < goto_tab[top].length; i+=2)
+			if(goto_tab[top][i] === pop)
+				return goto_tab[top][i+1];
+		return null;
+	}
+	function parse(src, err_off, err_la){
+		var		sstack			= [0];
+		var		vstack			= [0];
 		var 	err_cnt			= 0;
 		var		rval;
 		var		act;
-	
-		//Visual parse tree generation
+		var		treenodes		= [];//DEBUG!!!
+		var		tree			= [];//DEBUG!!!
+		var		tmptree			= null;//DEBUG!!!
+		var i;
 
-		var		treenodes		= [];
-		var		tree			= [];
-		var		tmptree			= null;
-		
-		/*
-			This is the parser control block (PCB);
-			It is used to hold the entire parser state
-			in one object, to be quickly accessed from
-			various functions.
-		*/ 
 		var PCB	= {
 			line:1,
 			column:1,
 			offset:0,
 			error_step:0,
 			src:src,
-			att:""
+			att:"",
+			lex:function(){return this.la = lex(this);}///@TODO: change `lex` function
 		};
-
-		if( !err_off )
-			err_off	= [];
-		if( !err_la )
-			err_la = [];
-	
-		sstack.unshift( 0 );
-		vstack.unshift( 0 );
-	
-		PCB.la = lex( PCB );
-			
+		err_off	= err_off || [];
+		err_la = err_la || [];
+		PCB.lex();
 		while(true){
-			PCB.act = 60;
-			for( var i = 0; i < act_tab[sstack[0]].length; i+=2 ){
-				if( act_tab[sstack[0]][i] == PCB.la ){
-					PCB.act = act_tab[sstack[0]][i+1];
-					break;
-				}
-			}
-		
-			if( PCB.act == 60 ){
-				if( ( PCB.act = defact_tab[ sstack[0] ] ) < 0 )
-					PCB.act = 60;
-				else
-					PCB.act *= -1;
-			}
-
-
-			if( debug._dbg_withtrace && sstack.length > 0 )
-			{
-				debug.__dbg_print( "\nState " + sstack[0] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-			
-				if( debug._dbg_withstepbystep )
-					debug.__dbg_wait();
-			}
-		
-			
-			//Parse error? Try to recover!
-			if( PCB.act == 60 )
-			{
-				if( debug._dbg_withtrace )
-				{
-					var expect = "";
-				
-					debug.__dbg_print( "Error detected: " +
-						"There is no reduce or shift on the symbol " +
-							labels[PCB.la] );
-				
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 )
-					{
-						if( expect != "" )
-							expect += ", ";
-						
-						expect += "\"" +
-								labels[ act_tab[sstack[0]][i] ]
-									+ "\"";
-					}
-					debug.__dbg_print( "Expecting: " + expect );
-				}
-			
+			PCB.act = get_act(sstack[0],PCB.la);
+			if(PCB.act == null && defact_tab[sstack[0]] >= 0)
+				PCB.act = -defact_tab[sstack[0]];
+			if(debug._dbg_withtrace && sstack.length > 0){//DEBUG!!!
+				debug.__dbg_print( "\nState " + sstack[0] + "\n" +//DEBUG!!!
+							"\tLookahead: " + labels[PCB.la] +//DEBUG!!!
+								" (\"" + PCB.att + "\")\n" +//DEBUG!!!
+							"\tAction: " + PCB.act + "\n" + //DEBUG!!!
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +//DEBUG!!!
+									( ( PCB.offset + 30 < PCB.src.length ) ?//DEBUG!!!
+										"..." : "" ) + "\"\n" +//DEBUG!!!
+							"\tStack: " + sstack.join() + "\n" +//DEBUG!!!
+							"\tValue stack: " + vstack.join() + "\n" );//DEBUG!!!
+				if(debug._dbg_withstepbystep)//DEBUG!!!
+					debug.__dbg_wait();//DEBUG!!!
+			}//DEBUG!!!
+			if(PCB.act == null){//Parse error? Try to recover!
+				if( debug._dbg_withtrace ){//DEBUG!!!
+					var expect = "";//DEBUG!!!
+					debug.__dbg_print("Error detected: There is no reduce or shift on the symbol " + labels[PCB.la]);//DEBUG!!!
+					for(i = 0; i < act_tab[sstack[0]].length; i+=2){//DEBUG!!!
+						if( expect != "" )//DEBUG!!!
+							expect += ", ";//DEBUG!!!
+						expect += "\"" + labels[act_tab[sstack[0]][i]] + "\"";//DEBUG!!!
+					}//DEBUG!!!
+					debug.__dbg_print( "Expecting: " + expect );//DEBUG!!!
+				}//DEBUG!!!
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
-				if( PCB.error_step == 0 ){
+				if(PCB.error_step === 0){
 					err_cnt++;
-					err_off.push( PCB.offset - PCB.att.length );
-					err_la.push([]);
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 )
-						err_la[err_la.length-1].push(
-							labels[act_tab[sstack[0]][i]] );
+					err_off.unshift(PCB.offset - PCB.att.length);
+					err_la.unshift([]);
+					for(i = 0; i < act_tab[sstack[0]].length; i+=2)
+						err_la[0].push(labels[act_tab[sstack[0]][i]]);
 				}
-			
 				//Perform error recovery			
-				while( sstack.length > 1 && PCB.act == 60 ){
+				while(sstack.length > 1 && PCB.act == null){
 					sstack.shift();
 					vstack.shift();
-				
 					//Try to shift on error token
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 ){
-						if( act_tab[sstack[0]][i] == 1 ){
-							PCB.act = act_tab[sstack[0]][i+1];
-						
-							sstack.unshift( PCB.act );
-							vstack.unshift("");
-						
-							if( debug._dbg_withtrace ){
-								debug.__dbg_print("Error recovery: error token could be shifted!" );
-								debug.__dbg_print( "Error recovery: current stack is " + sstack.join() );
-							}
-							break;
-						}
+					PCB.act = get_act(sstack[0],PCB.la);
+					if(PCB.act === error_token){
+						sstack.unshift(PCB.act);
+						vstack.unshift("");
+						if( debug._dbg_withtrace ){//DEBUG!!!
+							debug.__dbg_print("Error recovery: error token could be shifted!" );//DEBUG!!!
+							debug.__dbg_print("Error recovery: current stack is " + sstack.join());//DEBUG!!!
+						}//DEBUG!!!
 					}
 				}
-			
 				//Is it better to leave the parser now?
-				if( sstack.length > 1 && PCB.act != 60 ){
+				if(sstack.length > 1 && PCB.act != null){
 					//Ok, now try to shift on the next tokens
-					while( PCB.la != 38 ){
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: " +
-								"Trying to shift on \""
-								+ labels[ PCB.la ] + "\"" );
+					while(PCB.la !== eof){
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: Trying to shift on \""	+ labels[ PCB.la ] + "\"" );//DEBUG!!!
+						PCB.act = act_tab[sstack[0]][i+1];
+						if(PCB.act != null)break;
 
-						PCB.act = 60;
-					
-						for( var i = 0;
-							i < act_tab[sstack[0]].length;
-							i+=2 ){
-							if( act_tab[sstack[0]][i] == PCB.la ){
-								PCB.act = act_tab[sstack[0]][i+1];
-								break;
-							}
-						}
-					
-						if( PCB.act != 60 )
-							break;
-						
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: Discarding \""
-								+ labels[ PCB.la ] + "\"" );
-					
-						while( ( PCB.la = lex( PCB ) ) < 0 )
-							PCB.offset++;
-				
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: New token \""
-								+ labels[ PCB.la ] + "\"" );
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: Discarding \"" + labels[PCB.la] + "\"" );//DEBUG!!!
+
+						while(PCB.lex() != null)PCB.offset++;
+
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: New token \"" + labels[PCB.la] + "\"" );//DEBUG!!!
 					}
 				}
-			
-				if( PCB.act == 60 || PCB.la == 38 )
-				{
-					if( debug._dbg_withtrace )
-						debug.__dbg_print( "\tError recovery failed, terminating parse process..." );
+				if(PCB.act === error || PCB.la === eof){
+					if(debug._dbg_withtrace)//DEBUG!!!
+						debug.__dbg_print("\tError recovery failed, terminating parse process...");//DEBUG!!!
 					break;
 				}
-
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tError recovery succeeded, continuing" );
-			
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tError recovery succeeded, continuing");//DEBUG!!!
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
-
-			//Shift
-			if( PCB.act > 0 ){
+			if(PCB.act > 0){//Shift
 				//Parse tree generation
-				if( debug._dbg_withparsetree ){
-					tree.push( treenodes.length );
-					treenodes.push({
-						sym:labels[ PCB.la ],
-						att:PCB.att,
-						child:[]
-					});
-				}
+				if(debug._dbg_withparsetree){//DEBUG!!!
+					tree.push(treenodes.length);//DEBUG!!!
+					treenodes.push({//DEBUG!!!
+						sym:labels[ PCB.la ],//DEBUG!!!
+						att:PCB.att,//DEBUG!!!
+						child:[]//DEBUG!!!
+					});//DEBUG!!!
+				}//DEBUG!!!
 			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "Shifting symbol: " +
-						labels[PCB.la] + " (" + PCB.att + ")" );
-		
-				sstack.unshift( PCB.act );
-				vstack.unshift( PCB.att );
-			
-				PCB.la = lex( PCB );
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tNew lookahead symbol: " +
-						labels[PCB.la] + " (" + PCB.att + ")" );
-				
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
+				sstack.unshift(PCB.act);
+				vstack.unshift(PCB.att);
+				PCB.lex();
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tNew lookahead symbol: " +	labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				//Successfull shift and right beyond error recovery?
-				if( PCB.error_step > 0 )
-					PCB.error_step--;
-			}
-			//Reduce
-			else
-			{		
-				act = PCB.act * -1;
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "Reducing by production: " + act );
-			
-				rval = void( 0 );
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPerforming semantic action..." );
-			
-				rval=ACTIONS(act,vstack);
+				if(PCB.error_step > 0)PCB.error_step--;
+			}else{	//Reduce	
+				act = -PCB.act;	
+				if(debug._dbg_withtrace){//DEBUG!!!
+					debug.__dbg_print("Reducing by production: " + act);//DEBUG!!!
+					debug.__dbg_print("\tPerforming semantic action...");//DEBUG!!!
+				}//DEBUG!!!
+				rval = ACTIONS(act,vstack);
 	
-				if( debug._dbg_withparsetree )
-					tmptree = [];
+				if(debug._dbg_withparsetree)//DEBUG!!!
+					tmptree = [];//DEBUG!!!
 
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPopping " + 
-									pop_tab[act][1] +  " off the stack..." );
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tPopping " + pop_tab[act][1] +  " off the stack...");//DEBUG!!!
 				
-				for( var i = 0; i < pop_tab[act][1]; i++ ){
-					if( debug._dbg_withparsetree )
-						tmptree.push( tree.pop() );
-					
-					sstack.shift();
-					vstack.shift();
-				}
-
-				//Get goto-table entry
-				PCB.act = 60;
-				for( var i = 0; i < goto_tab[sstack[0]].length; i+=2 ){
-					if( goto_tab[sstack[0]][i] == pop_tab[act][0] ){
-						PCB.act = goto_tab[sstack[0]][i+1];
-						break;
-					}
-				}
-			
+				sstack.splice(0,pop_tab[act][1]);
+				vstack.splice(0,pop_tab[act][1]);
+				if(debug._dbg_withparsetree)//DEBUG!!!
+					tmptree.push.apply(tmptree, tree.splice(tree.length - pop_tab[act][1], tree.length));//DEBUG!!!
+				
+				PCB.act = get_goto(sstack[0],pop_tab[act][0]);
 				//Do some parse tree construction if desired
-				if( debug._dbg_withparsetree ){
-					tree.push( treenodes.length );
-					treenodes.push( {
-						sym:labels[ pop_tab[act][0] ],
-						att:rval,
-						child:tmptree.reverse()
-						} );
-				}
+				if(debug._dbg_withparsetree){//DEBUG!!!
+					tree.push(treenodes.length);//DEBUG!!!
+					treenodes.push({//DEBUG!!!
+						sym:labels[pop_tab[act][0]],//DEBUG!!!
+						att:rval,//DEBUG!!!
+						child:tmptree.reverse()//DEBUG!!!
+						});//DEBUG!!!
+				}//DEBUG!!!
 				//Goal symbol match?
-				if( act == 0 ) break; //Don't use PCB.act here!
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+				if(act === 0) break; //Don't use PCB.act here!
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tPushing non-terminal " + labels[pop_tab[act][0]]);//DEBUG!!!
 			
 				//...and push it!
-				sstack.unshift( PCB.act );
-				vstack.unshift( rval );
+				sstack.unshift(PCB.act);
+				vstack.unshift(rval);
 			}
 		}
+		if(debug._dbg_withtrace){//DEBUG!!!
+			debug.__dbg_print("\nParse complete.");//DEBUG!!!
+			//This function is used for parser drivers that will output//DEBUG!!!
+			//the entire debug messages in a row.//DEBUG!!!
+			debug.__dbg_flush();//DEBUG!!!
+		}//DEBUG!!!
 
-		if( debug._dbg_withtrace ){
-			debug.__dbg_print( "\nParse complete." );
-			//This function is used for parser drivers that will output
-			//the entire debug messages in a row.
-			debug.__dbg_flush();
-		}
-
-		if( debug._dbg_withparsetree ){
-			if( err_cnt == 0 ){
-				debug.__dbg_print( "\n\n--- Parse tree ---" );
-				debug.__dbg_parsetree( 0, treenodes, tree );
-			}
-			else debug.__dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
-		}
+		if(debug._dbg_withparsetree){//DEBUG!!!
+			if(err_cnt === 0){//DEBUG!!!
+				debug.__dbg_print("\n\n--- Parse tree ---");//DEBUG!!!
+				debug.__dbg_parsetree(0, treenodes, tree);//DEBUG!!!
+			}else//DEBUG!!!
+				debug.__dbg_print("\n\nParse tree cannot be viewed. There where parse errors.");//DEBUG!!!
+		}//DEBUG!!!
 		return err_cnt;
 	}
 	return parse;
-})(__jscc_debug);
+})(__jscc_debug,38,-1,1);
 
 
 function parse_grammar( str, filename ){
@@ -4299,7 +3952,7 @@ var __regex_debug=(function(){///@TODO: create this variable without function
 	Input-/Output and Feature-Functions are done by the particular drivers
 	created for the particular platform.
 */
-	
+
 var first_nfa;
 var last_nfa;
 var created_nfas; //Must always be initialized by compile_regex()...
@@ -4337,8 +3990,7 @@ function create_nfa( where )
 }
 
 
-var __regexparse=(function(debug){
-
+var __regexparse=(function(debug,eof,whitespace,error_token){
 
 var DFA_DATA=[{"line":[[[[1,
 	[[1,
@@ -4425,17 +4077,13 @@ var DFA_DATA=[{"line":[[[[1,
 	null]]]]]]]]],
 	"accept":13}];
 
-
 	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
 		var line = DFA_DATA[state].line;
 		var p,st;
 		for(p=1<<8,st=line;p;p>>=1){
 			st=st[!!(chr&p)+0];
-			if(st==null){
-				st=-1;
-				break;
-			}
-			if(st.constructor===Array)continue;
+			if(st==null)break;
+			if(st instanceof Array)continue;
 			break;
 		}
 		var ac=DFA_DATA[state].accept;
@@ -4445,32 +4093,13 @@ var DFA_DATA=[{"line":[[[[1,
 			set_match_pos(pos);
 		}
 	}
-
 	function TERMINAL_ACTIONS(PCB,match){
 (({
 
 })[match.toString()]||(function(){}))()
 	}
-	function lex_1(PCB){
-		var state=0, match=-1, match_pos=0, start=0, pos=0;
-			
-		///Functions for manipulation of variables
-		function set_match(v){match=v;}
-		function set_state(v){state=v;}
-		function set_match_pos(v){match_pos=v;}
-		return function(chr){
-			DFA_1(state,chr,match,pos,set_match,set_match_pos,set_state);
-			if( state > -1 ){
-				if( chr === 10 ){
-					PCB.line++;
-					PCB.column = 0;
-				}
-				PCB.column++;
-			}
-		}
-	}
-	function lex( PCB ){
-		var state=0, match, match_pos, start, pos, chr;
+	function lex(PCB){
+		var state, match, match_pos, start, pos, chr;
 		
 		///Functions for manipulation of variables
 		function set_match(v){match=v;}
@@ -4478,35 +4107,30 @@ var DFA_DATA=[{"line":[[[[1,
 		function set_match_pos(v){match_pos=v;}
 		
 		while(true){
-			state = 0;
-			match = -1;
 			match_pos = 0;
-			start = 0;
-			pos = PCB.offset + 1 + ( match_pos - start );
+			pos = PCB.offset + 1;
 			do{
 				pos--;
 				state = 0;
-				match = -2;
+				match = null;
 				start = pos;
-				if( PCB.src.length <= start )
-					return 22;
+				if(PCB.src.length <= start)
+					return eof;
 				do{
-					chr = PCB.src.charCodeAt( pos );
+					chr = PCB.src.charCodeAt(pos);
 					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
-					//Line- and column-counter
-					if( state > -1 ){
-						if( chr == 10 ){
+					if(state != null){
+						if( chr === 10 ){
 							PCB.line++;
 							PCB.column = 0;
 						}
 						PCB.column++;
 					}
 					pos++;
-				}while( state > -1 );
-			}while( -1 > -1 && match == -1 );
-	
-			if( match > -1 ){
-				PCB.att = PCB.src.substr( start, match_pos - start );
+				}while(state != null);
+			}while(whitespace > -1 && match == whitespace);
+			if(match != null){
+				PCB.att = PCB.src.slice(start, match_pos);
 				PCB.offset = match_pos;
 				if((function(){
 					try{
@@ -4516,15 +4140,11 @@ var DFA_DATA=[{"line":[[[[1,
 						else throw e;
 					}
 				})())continue;
-			}else{
+			}else
 				PCB.att = "";
-				match = -1;
-			}
-			break;
+			return match;
 		}
-		return match;
 	}
-
 
 var pop_tab =[[0,1],[15,1],[14,3],[14,1],[16,2],[16,1],[17,2],[17,2],[17,2],[17,1],[18,1],[18,1],[18,3],[20,3],[20,1],[21,2],[21,0],[19,1],[19,1],[19,1]];
 
@@ -4534,9 +4154,7 @@ var goto_tab =[[15,1,14,2,16,3,17,4,18,5,19,6,20,7],[],[],[17,15,18,5,19,6,20,7]
 
 var defact_tab =[-1,0,1,3,5,9,10,11,-1,17,18,19,16,14,-1,4,8,7,6,-1,-1,2,12,15,13];
 
-
 var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"*","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":"+","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"?","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"(","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":")","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":"[","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"]","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":1,"prods":[],"nullable":false,"id":12,"code":"","level":0,"special":0,"defined":false,"first":[12]},{"label":"ANY","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"Expression","kind":0,"prods":[2,3],"nullable":0,"id":14,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":0,"prods":[1],"nullable":0,"id":15,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":0,"prods":[4,5],"nullable":0,"id":16,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":0,"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":0,"prods":[10,11,12],"nullable":0,"id":18,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":0,"prods":[17,18,19],"nullable":0,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":0,"prods":[13,14],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[8,10]},{"label":"CharClass","kind":0,"prods":[15,16],"nullable":1,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":22,"code":"","level":0,"special":1,"defined":false,"first":[22]}];
-
 
 
 	function ACTIONS(act,vstack){
@@ -4695,296 +4313,198 @@ return rval;},
 
 		return rval;
 	}
-	function parse( src, err_off, err_la ){
-		var		sstack			= [];
-		var		vstack			= [];
+	function get_act(top, la){	
+		for(var i = 0; i < act_tab[top].length; i+=2)
+			if(act_tab[top][i] === la)
+				return act_tab[top][i+1];
+		return null;
+	}
+	function get_goto(top, pop){	
+		for(var i = 0; i < goto_tab[top].length; i+=2)
+			if(goto_tab[top][i] === pop)
+				return goto_tab[top][i+1];
+		return null;
+	}
+	function parse(src, err_off, err_la){
+		var		sstack			= [0];
+		var		vstack			= [0];
 		var 	err_cnt			= 0;
 		var		rval;
 		var		act;
-	
-		//Visual parse tree generation
+		var		treenodes		= [];//DEBUG!!!
+		var		tree			= [];//DEBUG!!!
+		var		tmptree			= null;//DEBUG!!!
+		var i;
 
-		var		treenodes		= [];
-		var		tree			= [];
-		var		tmptree			= null;
-		
-		/*
-			This is the parser control block (PCB);
-			It is used to hold the entire parser state
-			in one object, to be quickly accessed from
-			various functions.
-		*/ 
 		var PCB	= {
 			line:1,
 			column:1,
 			offset:0,
 			error_step:0,
 			src:src,
-			att:""
+			att:"",
+			lex:function(){return this.la = lex(this);}///@TODO: change `lex` function
 		};
-
-		if( !err_off )
-			err_off	= [];
-		if( !err_la )
-			err_la = [];
-	
-		sstack.unshift( 0 );
-		vstack.unshift( 0 );
-	
-		PCB.la = lex( PCB );
-			
+		err_off	= err_off || [];
+		err_la = err_la || [];
+		PCB.lex();
 		while(true){
-			PCB.act = 26;
-			for( var i = 0; i < act_tab[sstack[0]].length; i+=2 ){
-				if( act_tab[sstack[0]][i] == PCB.la ){
-					PCB.act = act_tab[sstack[0]][i+1];
-					break;
-				}
-			}
-		
-			if( PCB.act == 26 ){
-				if( ( PCB.act = defact_tab[ sstack[0] ] ) < 0 )
-					PCB.act = 26;
-				else
-					PCB.act *= -1;
-			}
-
-
-			if( debug._dbg_withtrace && sstack.length > 0 )
-			{
-				debug.__dbg_print( "\nState " + sstack[0] + "\n" +
-							"\tLookahead: " + labels[PCB.la] +
-								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
-									( ( PCB.offset + 30 < PCB.src.length ) ?
-										"..." : "" ) + "\"\n" +
-							"\tStack: " + sstack.join() + "\n" +
-							"\tValue stack: " + vstack.join() + "\n" );
-			
-				if( debug._dbg_withstepbystep )
-					debug.__dbg_wait();
-			}
-		
-			
-			//Parse error? Try to recover!
-			if( PCB.act == 26 )
-			{
-				if( debug._dbg_withtrace )
-				{
-					var expect = "";
-				
-					debug.__dbg_print( "Error detected: " +
-						"There is no reduce or shift on the symbol " +
-							labels[PCB.la] );
-				
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 )
-					{
-						if( expect != "" )
-							expect += ", ";
-						
-						expect += "\"" +
-								labels[ act_tab[sstack[0]][i] ]
-									+ "\"";
-					}
-					debug.__dbg_print( "Expecting: " + expect );
-				}
-			
+			PCB.act = get_act(sstack[0],PCB.la);
+			if(PCB.act == null && defact_tab[sstack[0]] >= 0)
+				PCB.act = -defact_tab[sstack[0]];
+			if(debug._dbg_withtrace && sstack.length > 0){//DEBUG!!!
+				debug.__dbg_print( "\nState " + sstack[0] + "\n" +//DEBUG!!!
+							"\tLookahead: " + labels[PCB.la] +//DEBUG!!!
+								" (\"" + PCB.att + "\")\n" +//DEBUG!!!
+							"\tAction: " + PCB.act + "\n" + //DEBUG!!!
+							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +//DEBUG!!!
+									( ( PCB.offset + 30 < PCB.src.length ) ?//DEBUG!!!
+										"..." : "" ) + "\"\n" +//DEBUG!!!
+							"\tStack: " + sstack.join() + "\n" +//DEBUG!!!
+							"\tValue stack: " + vstack.join() + "\n" );//DEBUG!!!
+				if(debug._dbg_withstepbystep)//DEBUG!!!
+					debug.__dbg_wait();//DEBUG!!!
+			}//DEBUG!!!
+			if(PCB.act == null){//Parse error? Try to recover!
+				if( debug._dbg_withtrace ){//DEBUG!!!
+					var expect = "";//DEBUG!!!
+					debug.__dbg_print("Error detected: There is no reduce or shift on the symbol " + labels[PCB.la]);//DEBUG!!!
+					for(i = 0; i < act_tab[sstack[0]].length; i+=2){//DEBUG!!!
+						if( expect != "" )//DEBUG!!!
+							expect += ", ";//DEBUG!!!
+						expect += "\"" + labels[act_tab[sstack[0]][i]] + "\"";//DEBUG!!!
+					}//DEBUG!!!
+					debug.__dbg_print( "Expecting: " + expect );//DEBUG!!!
+				}//DEBUG!!!
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
-				if( PCB.error_step == 0 ){
+				if(PCB.error_step === 0){
 					err_cnt++;
-					err_off.push( PCB.offset - PCB.att.length );
-					err_la.push([]);
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 )
-						err_la[err_la.length-1].push(
-							labels[act_tab[sstack[0]][i]] );
+					err_off.unshift(PCB.offset - PCB.att.length);
+					err_la.unshift([]);
+					for(i = 0; i < act_tab[sstack[0]].length; i+=2)
+						err_la[0].push(labels[act_tab[sstack[0]][i]]);
 				}
-			
 				//Perform error recovery			
-				while( sstack.length > 1 && PCB.act == 26 ){
+				while(sstack.length > 1 && PCB.act == null){
 					sstack.shift();
 					vstack.shift();
-				
 					//Try to shift on error token
-					for( var i = 0;
-						i < act_tab[sstack[0]].length;
-						i+=2 ){
-						if( act_tab[sstack[0]][i] == 1 ){
-							PCB.act = act_tab[sstack[0]][i+1];
-						
-							sstack.unshift( PCB.act );
-							vstack.unshift("");
-						
-							if( debug._dbg_withtrace ){
-								debug.__dbg_print("Error recovery: error token could be shifted!" );
-								debug.__dbg_print( "Error recovery: current stack is " + sstack.join() );
-							}
-							break;
-						}
+					PCB.act = get_act(sstack[0],PCB.la);
+					if(PCB.act === error_token){
+						sstack.unshift(PCB.act);
+						vstack.unshift("");
+						if( debug._dbg_withtrace ){//DEBUG!!!
+							debug.__dbg_print("Error recovery: error token could be shifted!" );//DEBUG!!!
+							debug.__dbg_print("Error recovery: current stack is " + sstack.join());//DEBUG!!!
+						}//DEBUG!!!
 					}
 				}
-			
 				//Is it better to leave the parser now?
-				if( sstack.length > 1 && PCB.act != 26 ){
+				if(sstack.length > 1 && PCB.act != null){
 					//Ok, now try to shift on the next tokens
-					while( PCB.la != 22 ){
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: " +
-								"Trying to shift on \""
-								+ labels[ PCB.la ] + "\"" );
+					while(PCB.la !== eof){
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: Trying to shift on \""	+ labels[ PCB.la ] + "\"" );//DEBUG!!!
+						PCB.act = act_tab[sstack[0]][i+1];
+						if(PCB.act != null)break;
 
-						PCB.act = 26;
-					
-						for( var i = 0;
-							i < act_tab[sstack[0]].length;
-							i+=2 ){
-							if( act_tab[sstack[0]][i] == PCB.la ){
-								PCB.act = act_tab[sstack[0]][i+1];
-								break;
-							}
-						}
-					
-						if( PCB.act != 26 )
-							break;
-						
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: Discarding \""
-								+ labels[ PCB.la ] + "\"" );
-					
-						while( ( PCB.la = lex( PCB ) ) < 0 )
-							PCB.offset++;
-				
-						if( debug._dbg_withtrace )
-							debug.__dbg_print( "Error recovery: New token \""
-								+ labels[ PCB.la ] + "\"" );
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: Discarding \"" + labels[PCB.la] + "\"" );//DEBUG!!!
+
+						while(PCB.lex() != null)PCB.offset++;
+
+						if(debug._dbg_withtrace)//DEBUG!!!
+							debug.__dbg_print( "Error recovery: New token \"" + labels[PCB.la] + "\"" );//DEBUG!!!
 					}
 				}
-			
-				if( PCB.act == 26 || PCB.la == 22 )
-				{
-					if( debug._dbg_withtrace )
-						debug.__dbg_print( "\tError recovery failed, terminating parse process..." );
+				if(PCB.act === error || PCB.la === eof){
+					if(debug._dbg_withtrace)//DEBUG!!!
+						debug.__dbg_print("\tError recovery failed, terminating parse process...");//DEBUG!!!
 					break;
 				}
-
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tError recovery succeeded, continuing" );
-			
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tError recovery succeeded, continuing");//DEBUG!!!
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
-
-			//Shift
-			if( PCB.act > 0 ){
+			if(PCB.act > 0){//Shift
 				//Parse tree generation
-				if( debug._dbg_withparsetree ){
-					tree.push( treenodes.length );
-					treenodes.push({
-						sym:labels[ PCB.la ],
-						att:PCB.att,
-						child:[]
-					});
-				}
+				if(debug._dbg_withparsetree){//DEBUG!!!
+					tree.push(treenodes.length);//DEBUG!!!
+					treenodes.push({//DEBUG!!!
+						sym:labels[ PCB.la ],//DEBUG!!!
+						att:PCB.att,//DEBUG!!!
+						child:[]//DEBUG!!!
+					});//DEBUG!!!
+				}//DEBUG!!!
 			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "Shifting symbol: " +
-						labels[PCB.la] + " (" + PCB.att + ")" );
-		
-				sstack.unshift( PCB.act );
-				vstack.unshift( PCB.att );
-			
-				PCB.la = lex( PCB );
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tNew lookahead symbol: " +
-						labels[PCB.la] + " (" + PCB.att + ")" );
-				
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
+				sstack.unshift(PCB.act);
+				vstack.unshift(PCB.att);
+				PCB.lex();
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tNew lookahead symbol: " +	labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				//Successfull shift and right beyond error recovery?
-				if( PCB.error_step > 0 )
-					PCB.error_step--;
-			}
-			//Reduce
-			else
-			{		
-				act = PCB.act * -1;
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "Reducing by production: " + act );
-			
-				rval = void( 0 );
-			
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPerforming semantic action..." );
-			
-				rval=ACTIONS(act,vstack);
+				if(PCB.error_step > 0)PCB.error_step--;
+			}else{	//Reduce	
+				act = -PCB.act;	
+				if(debug._dbg_withtrace){//DEBUG!!!
+					debug.__dbg_print("Reducing by production: " + act);//DEBUG!!!
+					debug.__dbg_print("\tPerforming semantic action...");//DEBUG!!!
+				}//DEBUG!!!
+				rval = ACTIONS(act,vstack);
 	
-				if( debug._dbg_withparsetree )
-					tmptree = [];
+				if(debug._dbg_withparsetree)//DEBUG!!!
+					tmptree = [];//DEBUG!!!
 
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPopping " + 
-									pop_tab[act][1] +  " off the stack..." );
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tPopping " + pop_tab[act][1] +  " off the stack...");//DEBUG!!!
 				
-				for( var i = 0; i < pop_tab[act][1]; i++ ){
-					if( debug._dbg_withparsetree )
-						tmptree.push( tree.pop() );
-					
-					sstack.shift();
-					vstack.shift();
-				}
-
-				//Get goto-table entry
-				PCB.act = 26;
-				for( var i = 0; i < goto_tab[sstack[0]].length; i+=2 ){
-					if( goto_tab[sstack[0]][i] == pop_tab[act][0] ){
-						PCB.act = goto_tab[sstack[0]][i+1];
-						break;
-					}
-				}
-			
+				sstack.splice(0,pop_tab[act][1]);
+				vstack.splice(0,pop_tab[act][1]);
+				if(debug._dbg_withparsetree)//DEBUG!!!
+					tmptree.push.apply(tmptree, tree.splice(tree.length - pop_tab[act][1], tree.length));//DEBUG!!!
+				
+				PCB.act = get_goto(sstack[0],pop_tab[act][0]);
 				//Do some parse tree construction if desired
-				if( debug._dbg_withparsetree ){
-					tree.push( treenodes.length );
-					treenodes.push( {
-						sym:labels[ pop_tab[act][0] ],
-						att:rval,
-						child:tmptree.reverse()
-						} );
-				}
+				if(debug._dbg_withparsetree){//DEBUG!!!
+					tree.push(treenodes.length);//DEBUG!!!
+					treenodes.push({//DEBUG!!!
+						sym:labels[pop_tab[act][0]],//DEBUG!!!
+						att:rval,//DEBUG!!!
+						child:tmptree.reverse()//DEBUG!!!
+						});//DEBUG!!!
+				}//DEBUG!!!
 				//Goal symbol match?
-				if( act == 0 ) break; //Don't use PCB.act here!
-				if( debug._dbg_withtrace )
-					debug.__dbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
+				if(act === 0) break; //Don't use PCB.act here!
+				if(debug._dbg_withtrace)//DEBUG!!!
+					debug.__dbg_print("\tPushing non-terminal " + labels[pop_tab[act][0]]);//DEBUG!!!
 			
 				//...and push it!
-				sstack.unshift( PCB.act );
-				vstack.unshift( rval );
+				sstack.unshift(PCB.act);
+				vstack.unshift(rval);
 			}
 		}
+		if(debug._dbg_withtrace){//DEBUG!!!
+			debug.__dbg_print("\nParse complete.");//DEBUG!!!
+			//This function is used for parser drivers that will output//DEBUG!!!
+			//the entire debug messages in a row.//DEBUG!!!
+			debug.__dbg_flush();//DEBUG!!!
+		}//DEBUG!!!
 
-		if( debug._dbg_withtrace ){
-			debug.__dbg_print( "\nParse complete." );
-			//This function is used for parser drivers that will output
-			//the entire debug messages in a row.
-			debug.__dbg_flush();
-		}
-
-		if( debug._dbg_withparsetree ){
-			if( err_cnt == 0 ){
-				debug.__dbg_print( "\n\n--- Parse tree ---" );
-				debug.__dbg_parsetree( 0, treenodes, tree );
-			}
-			else debug.__dbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
-		}
+		if(debug._dbg_withparsetree){//DEBUG!!!
+			if(err_cnt === 0){//DEBUG!!!
+				debug.__dbg_print("\n\n--- Parse tree ---");//DEBUG!!!
+				debug.__dbg_parsetree(0, treenodes, tree);//DEBUG!!!
+			}else//DEBUG!!!
+				debug.__dbg_print("\n\nParse tree cannot be viewed. There where parse errors.");//DEBUG!!!
+		}//DEBUG!!!
 		return err_cnt;
 	}
 	return parse;
-})(__regex_debug);
+})(__regex_debug,22,-1,1);
 
 
 
@@ -5093,23 +4613,17 @@ function version()
 	_print( info );
 }
 
-function help()
-{
-	var help = "";
-
-	help += "usage: jscc [options] filename\n\n";
-
-	help += "       -h   --help               Print this usage help\n";
-	help += "       -i   --version            Print version and copyright\n";
-	help += "       -o   --output <file>      Save output source to <file>\n";
-	help += "       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n";
-	help += "                                 fixing methods and variables\n";
-	help += "       -t   --template <file>    Use template file <file> as\n";
-	help += "                                 parser template\n";
-	help += "       -v   --verbose            Run in verbose mode\n";
-	help += "       -w   --warnings           Print warnings\n";
-		
-	_print( help );
+function help(){
+	_print([ "usage: jscc [options] filename\n\n",
+	"       -h   --help               Print this usage help\n",
+	"       -i   --version            Print version and copyright\n",
+	"       -o   --output <file>      Save output source to <file>\n",
+	"       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n",
+	"                                 fixing methods and variables\n",
+	"       -t   --template <file>    Use template file <file> as\n",
+	"                                 parser template\n",
+	"       -v   --verbose            Run in verbose mode\n",
+	"       -w   --warnings           Print warnings\n"].join(""));
 }
 
 // --- JS/CC entry ---
@@ -5221,7 +4735,7 @@ if( src_file != "" ){
 				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
 				driver = driver.replace( /##FOOTER##/gi, code_foot );
 				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				driver = driver.replace( /##ERROR##/gi, get_error_state() );
+				//driver = driver.replace( /##ERROR##/gi, get_error_state() );
 				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );

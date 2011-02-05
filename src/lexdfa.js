@@ -13,8 +13,7 @@ of the Artistic License. Please see ARTISTIC for more information.
 
 //Utility functions; I think there is no documentation required about them.
 
-function create_dfa( where )
-{
+function create_dfa(where){
 	var dfa = new DFA({
 		line:new Array( MAX_CHAR ),
 		accept:-1,
@@ -25,64 +24,25 @@ function create_dfa( where )
 	where.push( dfa );
 	return where.length - 1;
 }
-
-
-function same_nfa_items( dfa_states, items )
-{
+function same_nfa_items(dfa_states, items){
 	var i, j;
-	for( i = 0; i < dfa_states.length; i++ )
-		if( dfa_states[i].nfa_set.length == items.length )
-		{
-			for( j = 0; j < dfa_states[i].nfa_set.length; j++ )
-				if( dfa_states[i].nfa_set[j] != items[j] )
+	for(i = 0; i < dfa_states.length; i++)
+		if( dfa_states[i].nfa_set.length == items.length ){
+			for(j = 0; j < dfa_states[i].nfa_set.length; j++)
+				if(dfa_states[i].nfa_set[j] != items[j])
 					break;
-			
-			if( j == dfa_states[i].nfa_set.length )
+			if(j == dfa_states[i].nfa_set.length)
 				return i;
 		}	
 	return -1;
 }
 
-
-function get_undone_dfa( dfa_states )
-{
+function get_undone_dfa( dfa_states ){
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
 			return i;	
 	return -1;
 }
-
-
-//NFA test function; Has no use currently.
-function execute_nfa( machine, str )
-{
-	var	result		= [];
-	var	accept;
-	var	last_accept	= [];
-	var last_length = 0;
-	var	chr_cnt		= 0;
-
-	if( machine.length == 0 )
-		return -1;
-		
-	result.push( 0 );
-	while( result.length > 0
-		&& chr_cnt < str.length )
-	{
-		accept = epsilon_closure( result, machine );
-		
-		if( accept.length > 0 )
-		{
-			last_accept = accept;
-			last_length = chr_cnt;
-		}
-		
-		result = move( result, machine, str.charCodeAt( chr_cnt ) );
-		chr_cnt++;
-	}
-	return last_accept;
-}
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		move()
@@ -104,8 +64,7 @@ function execute_nfa( machine, str )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function move( state_set, machine, ch )
-{
+function move(state_set, machine, ch){
 	var hits	= [];
 	var tos		= -1;
 	try{
@@ -141,43 +100,31 @@ function move( state_set, machine, ch )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function epsilon_closure( state_set, machine )
-{
+function epsilon_closure( state_set, machine ){
 	var 	stack	= [];
 	var		accept	= [];
 	var		tos		= -1;
-	
-	for( var i = 0; i < state_set.length; i++ )
-		stack.push( state_set[i] );
-	
+	for(var i = 0; i < state_set.length; i++)
+		stack.push(state_set[i]);
 	do{
 		tos = stack.pop();
-		if( machine[ tos ].accept >= 0 )
-			accept.push( machine[ tos ].accept );
-			
-		if( machine[ tos ].edge == EDGE_EPSILON )
-		{
-			if( machine[ tos ].follow > -1 )
-			{
-				for( var i = 0; i < state_set.length; i++ )
-					if( state_set[i] == machine[ tos ].follow )
+		if(machine[ tos ].accept >= 0)
+			accept.push(machine[tos].accept);
+		if(machine[tos].edge == EDGE_EPSILON){
+			if(machine[ tos ].follow > -1){
+				for(var i = 0; i < state_set.length; i++)
+					if(state_set[i] == machine[ tos ].follow)
 						break;
-				
-				if( i == state_set.length )
-				{
+				if(i == state_set.length){
 					state_set.push( machine[ tos ].follow );
 					stack.push( machine[ tos ].follow );
 				}
-			}
-			
-			if( machine[ tos ].follow2 > -1 )
-			{
-				for( var i = 0; i < state_set.length; i++ )
-					if( state_set[i] == machine[ tos ].follow2 )
+			}	
+			if(machine[ tos ].follow2 > -1){
+				for(var i = 0; i < state_set.length; i++)
+					if(state_set[i] == machine[ tos ].follow2)
 						break;
-				
-				if( i == state_set.length )
-				{
+				if(i == state_set.length){
 					state_set.push( machine[ tos ].follow2 );
 					stack.push( machine[ tos ].follow2 );
 				}
@@ -186,7 +133,6 @@ function epsilon_closure( state_set, machine )
 	}while( stack.length > 0 );
 	return accept.sort();
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
@@ -206,70 +152,52 @@ function epsilon_closure( state_set, machine )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function create_subset( nfa_states )
-{
+function create_subset(nfa_states){
 	var dfa_states = [];
-	var stack = [];
-	var current = create_dfa( dfa_states );
+	var stack = [0];
+	var current = create_dfa(dfa_states);
 	var trans;
 	var next = -1;
 	var lowest_weight;
 	
-	if( nfa_states.length == 0 )
+	if(nfa_states.length == 0)
 		return dfa_states;
-		
-	stack.push( 0 );
 	epsilon_closure( stack, nfa_states );
-		
-	dfa_states[ current ].nfa_set = dfa_states[ current ].nfa_set.concat( stack );
-	
-	while( ( current = get_undone_dfa( dfa_states ) ) > -1 )
-	{
+	dfa_states[current].nfa_set = dfa_states[current].nfa_set.concat(stack);
+	while((current = get_undone_dfa( dfa_states)) > -1 ){
 		//_print( "Next DFA-state to process is " + current );
-		dfa_states[ current ].done = true;
-		
+		dfa_states[current].done = true;
 		lowest_weight = -1;
-		for( var i = 0; i < dfa_states[ current ].nfa_set.length; i++ )
-		{
-			if( nfa_states[ dfa_states[ current ].nfa_set[i] ].accept > -1
-					&& nfa_states[ dfa_states[ current ].nfa_set[i] ].weight < lowest_weight 
-						|| lowest_weight == -1 )
-			{
-				dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
-				lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
+		for(var i = 0; i < dfa_states[current].nfa_set.length; i++){
+			if(nfa_states[ dfa_states[current].nfa_set[i]].accept > -1
+				&& nfa_states[dfa_states[current].nfa_set[i]].weight < lowest_weight 
+				|| lowest_weight == -1){
+					dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
+					lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
 			}
-		}
+		}	
+		for(var i = MIN_CHAR; i < MAX_CHAR; i++){
+			trans = [].concat(dfa_states[current].nfa_set);
+			trans = move(trans, nfa_states, i);
 			
-		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-		{
-			trans = [];
-			trans = trans.concat( dfa_states[ current ].nfa_set );
-			
-			trans = move( trans, nfa_states, i );
-			
-			if( trans.length > 0 )
-			{
+			if(trans.length > 0){
 				//_print( "Character >" + String.fromCharCode( i ) + "< from " + dfa_states[ current ].nfa_set.join() + " to " + trans.join() );
 				epsilon_closure( trans, nfa_states );
 			}
 
-			if( trans.length == 0 )
+			if(trans.length == 0)
 				next = -1;
-			else if( ( next = same_nfa_items( dfa_states, trans ) ) == -1 )
-			{				
+			else if((next = same_nfa_items( dfa_states, trans)) == -1 ){				
 				next = create_dfa( dfa_states );
 				dfa_states[ next ].nfa_set = trans;
-				
 				//_print( "Creating new state " + next );
 			}
-			
 			dfa_states[ current ].line[ i ] = next;
 		}
 	}
 	//_print("\ndfa_states = "+dfa_states);
 	return dfa_states;
 }
-
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
@@ -288,9 +216,8 @@ function create_subset( nfa_states )
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
-function minimize_dfa( dfa_states )
-{
-	var		groups			= [];
+function minimize_dfa( dfa_states ){
+	var		groups			= [[]];
 	var		group			= [];
 	var		accept_groups	= [];
 	var		min_dfa_states	= [];
@@ -301,33 +228,25 @@ function minimize_dfa( dfa_states )
 	
 	if( dfa_states.length == 0 )
 		return min_dfa_states;
-
 	/*
 		Forming a general starting state:
 		Accepting and non-accepting states are pushed in
 		separate groups first
 	*/
-	groups.push( [] );
-	for( i = 0; i < dfa_states.length; i++ )
-	{
-		if( dfa_states[i].accept > -1 )
-		{
-			for( j = 0; j < accept_groups.length; j++ )
-				if( accept_groups[j] == dfa_states[i].accept )
+	for(i = 0; i < dfa_states.length; i++){
+		if(dfa_states[i].accept > -1){
+			for(j = 0; j < accept_groups.length; j++)
+				if(accept_groups[j] == dfa_states[i].accept)
 					break;
-			
-			if( j == accept_groups.length )
-			{
-				accept_groups.push( dfa_states[i].accept );
-				groups.push( [] );
+			if(j == accept_groups.length){
+				accept_groups.push(dfa_states[i].accept);
+				groups.push([]);
 			}
-			groups[ j+1 ].push( i );
-			dfa_states[ i ].group = j+1;
-		}
-		else
-		{
-			groups[ 0 ].push( i );
-			dfa_states[ i ].group = 0;
+			groups[j+1].push( i );
+			dfa_states[i].group = j+1;
+		}else{
+			groups[0].push(i);
+			dfa_states[i].group = 0;
 		}
 	}
 
@@ -337,16 +256,11 @@ function minimize_dfa( dfa_states )
 	*/
 	do{
 		old_cnt = cnt;
-		for( i = 0; i < groups.length; i++ )
-		{
+		for( i = 0; i < groups.length; i++ ){
 			new_group = [];
-			
-			if( groups[i].length > 0 )
-			{
-				for( j = 1; j < groups[i].length; j++ )
-				{
-					for( k = MIN_CHAR; k < MAX_CHAR; k++ )
-					{
+			if( groups[i].length > 0 ){
+				for(j = 1; j < groups[i].length; j++){
+					for(k = MIN_CHAR; k < MAX_CHAR; k++){
 						/*
 							This verifies the equality of the
 							first state in this group with its
@@ -361,43 +275,34 @@ function minimize_dfa( dfa_states )
 										dfa_states[ dfa_states[ groups[i][0] ].line[k] ].group
 											!= dfa_states[ dfa_states[ groups[i][j] ].line[k] ].group ) )
 						{
-							/*
-								If this item does not match, but it to a new group
-							*/
+							//	If this item does not match, but it to a new group
 							dfa_states[ groups[i][j] ].group = groups.length;
 							new_group = new_group.concat( groups[i].splice( j, 1 ) );
 							j--;
-							
 							break;
 						}
 					}
 				}
 			}
-
-			if( new_group.length > 0 )
-			{
-				groups[ groups.length ] = [];
-				groups[ groups.length-1 ] = groups[ groups.length-1 ].concat( new_group );
+			if(new_group.length > 0){
+				groups[groups.length] = [];
+				groups[groups.length-1] = groups[groups.length-1].concat(new_group);
 				cnt += new_group.length;
 			}
 		}
-		
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
-	}while( old_cnt != cnt );
-	
+	}while(old_cnt != cnt);
 	/*
 		Updating the dfa-state transitions;
 		Each group forms a new state.
 	*/
-	for( i = 0; i < dfa_states.length; i++ )
-		for( j = MIN_CHAR; j < MAX_CHAR; j++ )
-			if( dfa_states[i].line[j] > -1 )
+	for(i = 0; i < dfa_states.length; i++)
+		for(j = MIN_CHAR; j < MAX_CHAR; j++)
+			if(dfa_states[i].line[j] > -1)
 				dfa_states[i].line[j] = dfa_states[ dfa_states[i].line[j] ].group;
-
-	for( i = 0; i < groups.length; i++ )			
-		min_dfa_states.push( dfa_states[ groups[i][0] ] );
-
+	for(i = 0; i < groups.length; i++)			
+		min_dfa_states.push(dfa_states[groups[i][0]]);
 	return min_dfa_states;
 }
 
