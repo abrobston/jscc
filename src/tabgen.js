@@ -1,14 +1,14 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
+JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	tabgen.js
 Author:	Jan Max Meyer
 Usage:	LALR(1) closure and table construction
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 // --- Utility functions: I think there is no documentation necessary ;) ---
@@ -80,7 +80,7 @@ function get_undone_state()
 {
 	for( var i = 0; i < states.length; i++ )
 		if( states[i].done == false )
-			return i;		
+			return i;
 	return -1;
 }
 
@@ -92,19 +92,19 @@ function sort_partition( a, b )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		find_symbol()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Searches for a symbol using its label and kind.
-					
+
 	Parameters:		label				The label of the symbol.
 					kind				Type of the symbol. This can be
 										SYM_NONTERM or SYM_TERM
-					special				Specialized symbols 
+					special				Specialized symbols
 
 	Returns:		The index of the desired object in the symbol table,
 					-1 if the symbol was not found.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.11.2007	Jan Max Meyer	Allow to find eof_character
@@ -125,13 +125,13 @@ function find_symbol( label, kind, special )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_symbol()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Creates a new symbol (if necessary) and appends it to the
 					global symbol array. If the symbol does already exist, the
 					instance of that symbol is returned only.
-					
+
 	Parameters:		label				The label of the symbol. In case of
 										kind == SYM_NONTERM, the label is the
 										name of the right-hand side, else it
@@ -139,10 +139,10 @@ function find_symbol( label, kind, special )
 										terminal symbol.
 					kind				Type of the symbol. This can be
 										SYM_NONTERM or SYM_TERM
-					special				Specialized symbols 
-	
+					special				Specialized symbols
+
 	Returns:		The particular object of type SYMBOL.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.11.2007	Jan Max Meyer	Bugfix: EOF-character is a special case!
@@ -151,10 +151,10 @@ function find_symbol( label, kind, special )
 function create_symbol( label, kind, special )
 {
 	var exists;
-	
+
 	if( ( exists = find_symbol( label, kind, special ) ) > -1 )
 		return symbols[ exists ].id;
-	
+
 	var sym = new SYMBOL({
 		label:label,
 		kind:kind,
@@ -168,45 +168,45 @@ function create_symbol( label, kind, special )
 		defined:false,
 		first:[]
 		});
-	
+
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
 	symbols.push( sym );
-	
+
 	//_print( "Creating new symbol " + sym.id + " kind = " + kind + " >" + label + "<" );
-	
+
 	return sym.id;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		item_set_equal()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Checks if two item sets contain the same items. The items
 					may only differ in their lookahead.
-					
+
 	Parameters:		set1					Set to be compared with set2.
 					set2					Set to be compared with set1.
-	
+
 	Returns:		true					If equal,
 					false					else.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function item_set_equal( set1, set2 )
 {
 	var i, j, cnt = 0;
-	
+
 	if( set1.length != set2.length )
 		return false;
 
 	for( i = 0; i < set1.length; i++ )
 	{
 		for( j = 0; j < set2.length; j++ )
-		{			
+		{
 			if( set1[i].prod == set2[j].prod &&
 				set1[i].dot_offset == set2[j].dot_offset )
 			{
@@ -221,15 +221,15 @@ function item_set_equal( set1, set2 )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		close_items()
-	
+
 	Author:			Jan Max Meyer
-	
-	Usage:			
-					
-	Parameters:		
-	
+
+	Usage:
+
+	Parameters:
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -238,7 +238,7 @@ function close_items( seed, closure )
 	var i, j, k;
 	var cnt = 0, tmp_cnt = 0;
 	var item;
-	
+
 	for( i = 0; i < seed.length; i++ )
 	{
 		if( seed[i].dot_offset < productions[seed[i].prod].rhs.length )
@@ -252,36 +252,36 @@ function close_items( seed, closure )
 						if( closure[k].prod == symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] )
 							break;
 					}
-					
+
 					if( k == closure.length )
 					{
-						item = create_item( symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] );									
+						item = create_item( symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] );
 						closure.push( item );
-						
+
 						cnt++;
 					}
-					
+
 					tmp_cnt = closure[k].lookahead.length;
 					if( rhs_first( closure[k], productions[seed[i].prod], seed[i].dot_offset+1 ) )
 						closure[k].lookahead = union( closure[k].lookahead, seed[i].lookahead );
-						
+
 					cnt += closure[k].lookahead.length - tmp_cnt;
 				}
 			}
 		}
 	}
-	
+
 	return cnt;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		lalr1_closure()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Implements the LALR(1) closure algorithm. A short overview:
-	
+
 					1. Closing a closure_set of ITEM() objects from a given
 					   kernel seed (this includes the kernel seed itself!)
 					2. Moving all epsilon items to the current state's epsilon
@@ -297,11 +297,11 @@ function close_items( seed, closure )
 					   right of the dot, do a shift on the action table, else
 					   do a goto on the goto table. Reductions are performed
 					   later, when all states are closed.
-					
+
 	Parameters:		s				Id of the state that should be closed.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
@@ -312,7 +312,7 @@ function lalr1_closure( s )
 	var closure = [], nclosure, partition;
 	var item, partition_sym;
 	var i, j, k, l, cnt = 0, old_cnt = 0, tmp_cnt, ns;
-	
+
 	/*
 	for( i = 0; i < states[s].kernel.length; i++ )
 	{
@@ -320,12 +320,12 @@ function lalr1_closure( s )
 		closure[i].prod = states[s].kernel[i].prod;
 		closure[i].dot_offset = states[s].kernel[i].dot_offset;
 		closure[i].lookahead = new Array();
-	
+
 		for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 			closure[i].lookahead[j] = states[s].kernel[i].lookahead[j];
 	}
 	*/
-		
+
 	do
 	{
 		old_cnt = cnt;
@@ -333,7 +333,7 @@ function lalr1_closure( s )
 		//_print( "closure: cnt = " + cnt + " old_cnt = " + old_cnt + "<br />" );
 	}
 	while( cnt != old_cnt );
-	
+
 	for( i = 0; i < states[s].kernel.length; i++ )
 	{
 		if( states[s].kernel[i].dot_offset < productions[states[s].kernel[i].prod].rhs.length )
@@ -347,14 +347,14 @@ function lalr1_closure( s )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
 		}
 	}
-	
+
 	/*
 	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,
 		"closure in " + s, closure );
-	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML, 
+	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,
 		"states[" + s + "].epsilon", states[s].epsilon );
 	*/
-	
+
 	for( i = 0; i < closure.length; i++ )
 	{
 		if( productions[closure[i].prod].rhs.length == 0 )
@@ -363,23 +363,23 @@ function lalr1_closure( s )
 				if( states[s].epsilon[j].prod == closure[i].prod
 						&& states[s].epsilon[j].dot_offset == closure[i].dot_offset )
 							break;
-			if( j == states[s].epsilon.length )			
+			if( j == states[s].epsilon.length )
 				states[s].epsilon.push( closure[i] );
 			closure.splice( i, 1 );
 		}
 	}
-	
+
 	while( closure.length > 0 )
 	{
 		partition = [];
 		nclosure = [];
 		partition_sym = -1;
-		
+
 		for( i = 0; i < closure.length; i++ )
 		{
 			if( partition.length == 0 )
 				partition_sym = productions[closure[i].prod].rhs[closure[i].dot_offset];
-						
+
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
 				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
@@ -392,7 +392,7 @@ function lalr1_closure( s )
 					nclosure.push( closure[i] );
 			}
 		}
-		
+
 		if( partition.length > 0 )
 		{
 
@@ -405,22 +405,22 @@ function lalr1_closure( s )
 				or failing grammars come up.
 			*/
 			partition.sort( sort_partition );
-			
+
 			//Now one can check for equality!
-			for( i = 0; i < states.length; i++ )	
+			for( i = 0; i < states.length; i++ )
 				if( item_set_equal( states[i].kernel, partition ) )
 					break;
-			
+
 			if( i == states.length )
-			{				
+			{
 				ns = create_state();
 				//_print( "Generating state " + (states.length - 1) );
 				ns.kernel = partition;
 			}
-			
+
 			tmp_cnt = 0;
 			cnt = 0;
-			
+
 			for( j = 0; j < partition.length; j++ )
 			{
 				tmp_cnt += states[i].kernel[j].lookahead.length;
@@ -428,37 +428,37 @@ function lalr1_closure( s )
 													partition[j].lookahead );
 
 				cnt += states[i].kernel[j].lookahead.length;
-			}					
-			
+			}
+
 			if( tmp_cnt != cnt )
 				states[i].done = false;
-			
+
 			//_print( "<br />states[" + s + "].closed = " + states[s].closed );
 			if( !(states[s].closed) )
 			{
 				for( j = 0; j < partition.length; j++ )
 				{
-					//_print( "<br />partition[j].dot_offset-1 = " + 
-					//	(partition[j].dot_offset-1) + " productions[partition[j].prod].rhs.length = " 
+					//_print( "<br />partition[j].dot_offset-1 = " +
+					//	(partition[j].dot_offset-1) + " productions[partition[j].prod].rhs.length = "
 					//		+ productions[partition[j].prod].rhs.length );
-							
+
 					if( partition[j].dot_offset-1 < productions[partition[j].prod].rhs.length )
 					{
-						//_print( "<br />symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind = " + 
+						//_print( "<br />symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind = " +
 						//	symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind );
 						if( symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind
 								== SYM_TERM )
 						{
 							states[s].actionrow = add_table_entry( states[s].actionrow,
 								productions[partition[j].prod].rhs[partition[j].dot_offset-1], i );
-								
+
 							shifts++;
 						}
 						else
 						{
 							states[s].gotorow = add_table_entry( states[s].gotorow,
 								productions[partition[j].prod].rhs[partition[j].dot_offset-1], i );
-							
+
 							gotos++;
 						}
 					}
@@ -473,9 +473,9 @@ function lalr1_closure( s )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		do_reductions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Inserts reduce-cells into the action table. A reduction
 					does always occur for items with the dot to the far right
 					of the production and to items with no production (epsilon
@@ -483,16 +483,16 @@ function lalr1_closure( s )
 					The reductions are done on the corresponding lookahead
 					symbols. If a shift-reduce conflict appears, the function
 					will always behave in favor of the shift.
-					
+
 					Reduce-reduce conflicts are reported immediatelly, and need
 					to be solved.
-					
+
 	Parameters:		item_set				The item set to work on.
 					s						The index of the state where the
 											reductions take effect.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -501,14 +501,14 @@ function do_reductions( s )
 	var n, i, j, ex, act, output_warning, item_set;
 	var reds = [];
 	var max = 0, count;
-	
+
 	for( n = 0; n < 2; n++ )
 	{
 		if( !n )
 			item_set = states[ s ].kernel;
 		else
 			item_set = states[ s ].epsilon;
-			
+
 		// Do the reductions
 		for( i = 0; i < item_set.length; i++ )
 		{
@@ -517,10 +517,10 @@ function do_reductions( s )
 				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
 					output_warning = true;
-	
+
 					ex = get_table_entry( states[s].actionrow,
 							item_set[i].lookahead[j] );
-	
+
 					act = ex;
 					if( ex == void(0) )
 					{
@@ -528,7 +528,7 @@ function do_reductions( s )
 
 						states[s].actionrow = add_table_entry( states[s].actionrow,
 							item_set[i].lookahead[j], act );
-							
+
 						reduces++;
 					}
 					else
@@ -537,7 +537,7 @@ function do_reductions( s )
 						if( ex > 0 )
 						{
 							//Shift-reduce conflict
-	
+
 							//Is there any level specified?
 							if( symbols[item_set[i].lookahead[j]].level > 0
 								|| productions[ item_set[i].prod ].level > 0 )
@@ -561,12 +561,12 @@ function do_reductions( s )
 									{
 										remove_table_entry( states[s].actionrow,
 												item_set[i].lookahead[j] );
-	
+
 										_warning(
 											"Removing nonassociative symbol '" +
 											symbols[item_set[i].lookahead[j]].label +
 												"' in state " + s );
-	
+
 										output_warning = false;
 									}
 								}
@@ -580,7 +580,7 @@ function do_reductions( s )
 										act = -1 * item_set[i].prod;
 								}
 							}
-							
+
 							warning = "Shift";
 						}
 						else
@@ -588,10 +588,10 @@ function do_reductions( s )
 							//Reduce-reduce conflict
 							act = ( ( act * -1 < item_set[i].prod ) ?
 										act : -1 * item_set[i].prod );
-							
+
 							warning = "Reduce";
 						}
-	
+
 						warning += "-reduce conflict on symbol '" +
 							symbols[item_set[i].lookahead[j]].label +
 								"' in state " + s;
@@ -599,15 +599,15 @@ function do_reductions( s )
 							( ( act <= 0 ) ? "reducing with production" :
 								"shifting to state" ) + " " +
 							( ( act <= 0 ) ? act * -1 : act );
-	
+
 						if( output_warning )
 							_warning( warning );
-	
+
 						if( act != ex )
 							update_table_entry( states[s].actionrow,
 								item_set[i].lookahead[j], act );
 					}
-					
+
 					//Remember this reduction, if there is any
 					if( act <= 0 )
 						reds.push( act * -1 );
@@ -615,13 +615,13 @@ function do_reductions( s )
 			}
 		}
 	}
-	
+
 	/*
 		JMM 16.04.2009
 		Find most common reduction
 	*/
 	states[ s ].def_act = -1; //Define no default action
-	
+
 	//Are there any reductions? Then select the best of them!
 	for( i = 0; i < reds.length; i++ )
 	{
@@ -634,7 +634,7 @@ function do_reductions( s )
 			states[ s ].def_act = reds[ i ];
 		}
 	}
-	
+
 	//Remove all default reduce action reductions, if they exist.
 	if( states[s].def_act >= 0 )
 	{
@@ -653,26 +653,26 @@ function do_reductions( s )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		lalr1_parse_table()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Entry function to perform table generation. If all states
 					of the parsing state machine are constructed, all reduce
 					operations are inserted in the particular positions of the
 					action table.
-					
+
 					If there is a Shift-reduce conflict, the shift takes the
 					higher precedence. Reduce-reduce conflics are resolved by
 					choosing the first defined production.
-					
+
 	Parameters:		debug					Toggle debug trace output; This
 											should only be switched on when
 											JS/CC is executed in a web environ-
 											ment, because HTML-code will be
 											printed.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
@@ -683,27 +683,27 @@ function do_reductions( s )
 function lalr1_parse_table( debug )
 {
 	var i, j, k, item, s, p;
-	
+
 	//Create EOF symbol
 	item = create_item( 0 );
 	s = create_symbol( "$", SYM_TERM, SPECIAL_EOF );
 	item.lookahead.push( s );
-	
+
 	//Create first state
 	s = create_state();
 	s.kernel.push( item );
-	
+
 	while( ( i = get_undone_state() ) >= 0 )
 	{
 		states[i].done = true;
 		lalr1_closure( i );
 	}
-	
+
 	for( i = 0; i < states.length; i++ )
 		do_reductions( i );
 
 	if( debug )
-	{		
+	{
 		for( i = 0; i < states.length; i++ )
 		{
 			print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,

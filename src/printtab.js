@@ -1,14 +1,14 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
+JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	printtab.js
 Author:	Jan Max Meyer
 Usage:	Functions for printing the parse tables and related functions.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 
@@ -20,11 +20,11 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints the parse tables in a desired format.
-					
+
 	Parameters:		mode					The output mode. This can be either
 											MODE_GEN_JS to create JavaScript/
 											JScript code as output or MODE_GEN_HTML
@@ -32,10 +32,10 @@ of the Artistic License. Please see ARTISTIC for more information.
 											(the HTML-tables are formatted to
 											look nice with the JS/CC Web
 											Environment).
-	
+
 	Returns:		code					The code to be printed to a file or
 											web-site.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.04.2009	Jan Max Meyer	New table generator section to build default
@@ -64,26 +64,26 @@ function print_parse_tables( mode ){
 			for( i = 0; i < symbols.length; i++ )
 				if( symbols[i].kind == SYM_TERM )
 					deepest++;
-			
+
 			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
 			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
 			code += "</tr>";
-			
+
 			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
 			for( i = 0; i < symbols.length; i++ )
 			{
 				if( symbols[i].kind == SYM_TERM )
 					code += "<td><b>" + symbols[i].label + "</b></td>";
 			}
-			
+
 			code += "</tr>";
-			
+
 			for( i = 0; i < states.length; i++ )
 			{
 				code += "<tr>" ;
 				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-				
+
 				for( j = 0; j < symbols.length; j++ )
 				{
 					if( symbols[j].kind == SYM_TERM )
@@ -99,35 +99,35 @@ function print_parse_tables( mode ){
 						code += "</td>";
 					}
 				}
-				
+
 				code += "</tr>" ;
 			}
-			
+
 			code += "</table>";
 
 			for( i = 0; i < symbols.length; i++ )
 				if( symbols[i].kind == SYM_NONTERM )
 					deepest++;
-			
+
 			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 			code += "<tr>";
 			code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
 			code += "</tr>";
-			
+
 			code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
 			for( i = 0; i < symbols.length; i++ )
 			{
 				if( symbols[i].kind == SYM_NONTERM )
 					code += "<td>" + symbols[i].label + "</td>";
 			}
-			
+
 			code += "</tr>";
-			
+
 			for( i = 0; i < states.length; i++ )
 			{
 				code += "<tr>" ;
 				code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-				
+
 				for( j = 0; j < symbols.length; j++ )
 				{
 					if( symbols[j].kind == SYM_NONTERM )
@@ -140,10 +140,10 @@ function print_parse_tables( mode ){
 						code += "</td>";
 					}
 				}
-				
+
 				code += "</tr>" ;
 			}
-			
+
 			code += "</table>";
 
 			code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
@@ -167,7 +167,7 @@ function print_parse_tables( mode ){
 			for( i = 0; i < productions.length; i++ )
 				pop_tab_json.push([productions[i].lhs,productions[i].rhs.length]);
 			code +="\nvar pop_tab ="+JSON.stringify(pop_tab_json)+";\n";
-			
+
 			var act_tab_json =[];
 			for( i = 0; i < states.length; i++ ){
 				var act_tab_json_item=[];
@@ -175,38 +175,38 @@ function print_parse_tables( mode ){
 					act_tab_json_item.push(states[i].actionrow[j][0],states[i].actionrow[j][1]);
 				act_tab_json.push(act_tab_json_item);}
 			code +="\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
-			
+
 			var goto_tab_json = [];
 			for( i = 0; i < states.length; i++ ){
 				var goto_tab_json_item=[];
 				for( j = 0; j < states[i].gotorow.length; j++ )
 					goto_tab_json_item.push(states[i].gotorow[j][0],states[i].gotorow[j][1]);
 				goto_tab_json.push(goto_tab_json_item);}
-			code +="\nvar goto_tab ="+JSON.stringify(goto_tab_json)+";\n";	
-			
+			code +="\nvar goto_tab ="+JSON.stringify(goto_tab_json)+";\n";
+
 			var defact_tab_json=[];
 			for( i = 0; i < states.length; i++ )
 				defact_tab_json.push(states[i].def_act);
 			code +="\nvar defact_tab ="+JSON.stringify(defact_tab_json)+";\n";
-			
-		break;}		
-	}	
+
+		break;}
+	}
 	return code;
 }
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Generates a state-machine construction from the deterministic
 					finite automata.
-					
+
 	Parameters:		dfa_states				The dfa state machine for the lexing
 											function.
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -248,7 +248,7 @@ function print_dfa_table(dfa_states){
 			accept:dfa_states[i].accept,
 			});
 	})(i);
-	
+
 	var test=JSON.stringify(pack_dfa(dfa_states));
 	test=test.replace(/,/g,",\n\t");
 	code+="\nvar DFA_DATA="+test+";\n";
@@ -258,17 +258,17 @@ function print_dfa_table(dfa_states){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints all symbol labels into an array; This is used for
 					error reporting purposes only in the resulting parser.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -281,17 +281,17 @@ function print_symbol_labels(){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_term_actions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints the terminal symbol actions to be associated with a
 					terminal definition into a switch-case-construct.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	22.08.2008	Jan Max Meyer	Bugfix: %offset returned the offset BEHIND the
@@ -308,11 +308,11 @@ function print_symbol_labels(){
 function print_term_actions(){
 	var code = "(({\n";
 	var re = /%match|%offset|%source/;
-	var i, j, k;	
+	var i, j, k;
 	var semcode;
 	var strmatch;
 	for( i = 0; i < symbols.length; i++ ){
-		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){			
+		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){
 			code += "	\"" + i + "\":";
 			code += "function(){";
 			semcode = "";
@@ -326,7 +326,7 @@ function print_term_actions(){
 						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
 						semcode += "PCB.src";
-					
+
 					j += strmatch[0].length - 1;
 					k = semcode.length;
 				}
@@ -340,21 +340,21 @@ function print_term_actions(){
 	code+="\n})[match.toString()]||(function(){}))()";
 	return code;
 }
-	
+
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_actions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Generates a switch-case-construction that contains all
 					the semantic actions. This construction should then be
 					generated into the static parser driver template.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -391,21 +391,21 @@ function print_actions(){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_eof_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the value of the eof-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		eof_id					The id of the EOF-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_eof_symbol_id(){
 	var eof_id = -1;
-	//Find out which symbol is for EOF!	
+	//Find out which symbol is for EOF!
 	for(var i = 0; i < symbols.length; i++){
 		if( symbols[i].special == SPECIAL_EOF ){
 			eof_id = i;
@@ -419,21 +419,21 @@ function get_eof_symbol_id(){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the value of the error-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		eof_id					The id of the EOF-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id(){
 	var error_id = -1;
-	//Find out which symbol is for EOF!	
+	//Find out which symbol is for EOF!
 	for( var i = 0; i < symbols.length; i++ ){
 		if(symbols[i].special == SPECIAL_ERROR){
 			error_id = i;
@@ -447,15 +447,15 @@ function get_error_symbol_id(){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_whitespace_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the ID of the whitespace-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		whitespace				The id of the whitespace-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -465,15 +465,15 @@ function get_whitespace_symbol_id(){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_state()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the ID of a non-existing state.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		length					The length of the states array.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */

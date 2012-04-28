@@ -1,14 +1,14 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	bitset.js
 Author:	Jan Max Meyer
 Usage:	Bitset functionalities implemented in JavaScript.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 ///SV: it is no reason to optimize data size, so we may use array of bool directly in code
 function BitSetBool(size)
@@ -102,7 +102,7 @@ var BitSet=(function(){
 		  },
 		  count:function()
 		  {
-			//DBG("Count");  
+			//DBG("Count");
 			var i,l,c=0;
 		    for(i=0,l=this.data.length*8;i<l;i++)
 		      if(this.get(i))c++;

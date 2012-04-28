@@ -2,12 +2,12 @@
 /*
 	Default template driver for JS/CC generated parsers running as
 	browser-based JavaScript/ECMAScript applications.
-	
+
 	WARNING: 	This parser template will not run as console and has lesser
 				features for debugging than the console derivates for the
 				various JavaScript platforms.
-	
-	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
+
+	Written 2007-2010 by Jan Max Meyer, Phorward Software Technologies
 	This is in the public domain.
 */
 ##HEADER##

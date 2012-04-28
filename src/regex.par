@@ -1,7 +1,7 @@
 /~ -PARSER----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	regex.par
 Author:	Jan Max Meyer
@@ -10,9 +10,9 @@ Usage:	A parser for regular expressions, with NFA construction using the
 		has been implemented using a very early version of JS/CC itself,
 		which generated a pseudo-lexer using the JavaScript build-in RegExp-
 		object.
-		
+
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- ~/
 
 [*
@@ -25,7 +25,7 @@ function create_nfa( where )
 	var pos;
 	var nfa;
 	var i;
-	
+
 	/*
 		Use an empty item if available,
 		else create a new one...
@@ -33,22 +33,22 @@ function create_nfa( where )
 	for( i = 0; i < where.length; i++ )
 		if( where[i].edge == EDGE_FREE )
 			break;
-	
+
 	if( i == where.length ){
-		nfa = new NFA()			
+		nfa = new NFA()
 		where.push( nfa );
 	}else
 		nfa = where[i];
-	
+
 	nfa.edge = EDGE_EPSILON;
 	nfa.ccl=new BitSet(MAX_CHAR);
 	nfa.accept = -1;
 	nfa.follow = -1;
 	nfa.follow2 = -1;
 	nfa.weight = -1;
-	
+
 	created_nfas.push( i );
-	
+
 	return i;
 }
 
@@ -79,33 +79,33 @@ RegEx:			Expression						[*	%% = new PARAM();
 												*]
 				;
 
-Expression:		Expression '|' Catenation		[*	
+Expression:		Expression '|' Catenation		[*
 													%% = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
 														});
 													nfa_states[%%.start].follow = %1.start;
 													nfa_states[%%.start].follow2 = %3.start;
-													
+
 													nfa_states[%1.end].follow = %%.end;
 													nfa_states[%3.end].follow = %%.end;
 												*]
 				| Catenation
 				;
-				
-Catenation:		Catenation Factor				[*	
+
+Catenation:		Catenation Factor				[*
 													var weight=nfa_states[%1.end].weight;///SV: if weight unused - delete this
 													nfa_states[%1.end]=new NFA(nfa_states[%2.start]);
 													nfa_states[%1.end].weight=weight;///SV: if weight unused - delete this
 													nfa_states[%2.start].edge = EDGE_FREE;
-													
+
 													%1.end = %2.end;
-													
+
 													return %1;
 												*]
 				| Factor
 				;
-				
+
 Factor:			Term '*'						[*
 													%% = new PARAM({
 														start:create_nfa( nfa_states ),
@@ -117,7 +117,7 @@ Factor:			Term '*'						[*
 													nfa_states[%%.start].follow2 = %%.end;
 													nfa_states[%1.end].follow2 = %1.start;
 												*]
-				| Term '+'						[* 	
+				| Term '+'						[*
 													%% = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -127,7 +127,7 @@ Factor:			Term '*'						[*
 
 													nfa_states[%1.end].follow2 = %1.start;
 												*]
-				| Term '?'						[* 	
+				| Term '?'						[*
 													%% = new PARAM({
 														start:create_nfa( nfa_states ),
 														end:create_nfa( nfa_states )
@@ -144,7 +144,7 @@ Term:			Character						[*	%% = new PARAM();
 													%%.end = nfa_states[%%.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
-													
+
 													nfa_states[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
 												*]
 				| CharacterSet
@@ -152,13 +152,13 @@ Term:			Character						[*	%% = new PARAM();
 				;
 
 CharacterSet:	'[' CharClass ']'				[*	var negate = false;
-													var i = 0, j, start;													
+													var i = 0, j, start;
 													%% = new PARAM();
 													%%.start = create_nfa( nfa_states );
 													%%.end = nfa_states[%%.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[%%.start].edge = EDGE_CHAR;
-													
+
 													if( %2.charAt( i ) == '^' ){
 														negate = true;
 														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
@@ -170,7 +170,7 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 															i++;
 															for( j = %2.charCodeAt( i-1 );
 																	j < %2.charCodeAt( i+1 );
-																		j++ )		
+																		j++ )
 																nfa_states[%%.start].ccl.set(j, !negate);
 														}
 														else
@@ -178,7 +178,7 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 													}
 												*]
 				| ANY_CHAR						[*	%% = new PARAM();
-													
+
 													%%.start = create_nfa( nfa_states );
 													%%.end = nfa_states[%%.start].follow
 														= create_nfa( nfa_states );
@@ -187,7 +187,7 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 														nfa_states[%%.start].ccl.set(i, true);
 												*]
 				;
-												
+
 CharClass:		CharClass Character				[*	return %1 + %2; *]
 				|								[*	return ""; *]
 				;
@@ -207,14 +207,14 @@ function compile_regex( str, accept, case_insensitive ){
 	var error_offsets = [];
 	var error_expects = [];
 	var error_count = 0;
-	
+
 	if( str == "" )
 		return;
-	
+
 	//_print( "str = >" + str + "< " + case_insensitive );
-	
+
 	created_nfas = [];
-	
+
 	first_nfa = create_nfa( nfa_states );
 	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
@@ -232,14 +232,14 @@ function compile_regex( str, accept, case_insensitive ){
 			}
 		}
 
-		/* 
+		/*
 			2008-5-9	Radim Cebis:
-			
+
 			I think that computing weight of the nfa_states is weird,
 			IMHO nfa_state which accepts a symbol, should have
 			weight according to the order...
 		*/
-		nfa_states[ last_nfa ].accept = accept;   
+		nfa_states[ last_nfa ].accept = accept;
 		nfa_states[ last_nfa ].weight = regex_weight++;
 
 		if( first_nfa > 0 ){
@@ -254,7 +254,7 @@ function compile_regex( str, accept, case_insensitive ){
 			var spaces = '';
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
-			
+
 			line_error( cur_line, "Regular expression:\n\t" + str + "\n\t" +
 			 		spaces + "^ expecting " + error_expects[i].join() );
 		}

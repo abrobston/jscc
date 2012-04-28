@@ -1,9 +1,9 @@
 #-------------------------------------------------------------------------------
-# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+# Build system for JS/CC LALR(1) Parser Generator
+# Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 #
 # You may use, modify and distribute this software under the terms and
-# conditions of the Artistic License. Please see ARTISTIC for more information.
+# conditions of the BSD license. Please see LICENSE for more information.
 #
 # Platform:			Windows Script Host / JScript.NET
 #-------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ all: 			$(JSCC) clean
 driver:  ..\\driver_$(PLATFORM).js
 	@echo
 	@echo --- Parser template generated! ---
-	
+
 ..\\driver_$(PLATFORM).js: driver\\driver_$(PLATFORM).js driver\\parser.js
 	type driver\\driver_$(PLATFORM).js driver\\parser.js >..\\driver_$(PLATFORM).js_
 
@@ -79,7 +79,7 @@ $(JSCC_WSH):	$(SRC_FINAL)
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
 	$(CSCRIPT) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ..\\driver_$(PLATFORM).js_ $?
-	
+
 $(SRC_REGEX_JS):$(SRC_REGEX)
 	$(CSCRIPT) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ..\\driver_$(PLATFORM).js_ $?
 
@@ -87,7 +87,7 @@ clean:
 	-del $(SRC_PARSE_JS)
 	-del $(SRC_REGEX_JS)
 
-bootstrap:		all 
+bootstrap:		all
 	copy $(JSCC_WSH) $(JSCC_BOOTSTRAP)
 	@echo
 	@echo --- Bootstrap replaced! ---

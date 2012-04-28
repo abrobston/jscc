@@ -1,11 +1,25 @@
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-~~~ CHANGES AND NEW FEATURES IN THE LATEST VERSION ~~~
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
+--------------------------------------------------------------------------------
 
 [+] New feature
 [-] Bugfix
 
 -------------------------------------------------------
-JS/CC v0.35 (not released)
+JS/CC v0.36 (not officially released)
+-------------------------------------------------------
+Changes the licensing terms from Artistic License
+version 1.0 to 3-clause BSD-open source license, in
+order to become more interesting for other open source
+projects. The development on JS/CC has been deceased
+since the last few years by the core-developers.
+
+Any help on the project, also a new project maintenance
+would be highly appreciated!
+
+-------------------------------------------------------
+JS/CC v0.35 (not officially released)
 -------------------------------------------------------
 Inserted many changes and improvement contributions
 written by Sergiy Shatunov. This is a testing stage
@@ -76,7 +90,7 @@ JS/CC v0.31 (build Dec 16, 2008 - not released)
 	by simply using a "continue" to continune lexical
 	analysis on the next tokens, or optionally a
 	"break", to stop the lexer and return the currently
-	matched token. 
+	matched token.
 	The whitespace-symbol is now declared deprecated
 	with this new possibility.
 [+] Improved error reporting in JS/CC, now with

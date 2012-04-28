@@ -1,21 +1,21 @@
 /* -HEADER----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	global.js
 Author:	Jan Max Meyer
 Usage:	General variables, constants and defines
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 /*
 	Constants
 */
 
-//Program version info 
+//Program version info
 var JSCC_VERSION			= "0.33";
 
 //Symbol types
@@ -77,17 +77,17 @@ function SYMBOL()
 	var label;			//Symbol label/name
 	var prods;			//Array of associated productions (SYM_NONTERM only)
 	var first;			//Array of first symbols
-	
+
 	var associativity;	//Associativity mode (SYM_TERM only)
 	var level;			//Association level (SYM_TERM only)
-	
+
 	var code;			//Code to be executed at token recognition (SYM_TERM only)
 	var special;		//Special symbol
-	
+
 	/* --- Flags & Information --- */
 	var nullable;		//Nullable-flag
 	var defined;		//Defined flag
-	
+
 	var defined_at;		//Line of definition
 	var used_at;		//Line of use
 }
@@ -184,9 +184,9 @@ var assoc_level;
 
 var	regex_weight;
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	debug.js
 Author:	Jan Max Meyer
@@ -195,7 +195,7 @@ Usage:	Debug-Functions / Detail progress output
 		as HTML-formatted output.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 function print_symbols( mode )
@@ -213,38 +213,38 @@ function print_symbols( mode )
 	}
 	else if( mode == MODE_GEN_TEXT )
 		_print( "--- Symbol Dump ---" );
-	
+
 	for( var i = 0; i < symbols.length; i++ )
 	{
 		if( mode == MODE_GEN_HTML )
 		{
 			_print( "<tr>" );
-			
+
 			_print( "<td>" );
 			_print( symbols[i].label );
 			_print( "</td>" );
-		
+
 			_print( "<td>" );
 			_print( ( ( symbols[i].kind == SYM_NONTERM ) ? "Non-terminal" : "Terminal" ) );
 			_print( "</td>" );
 		}
 		else if( mode == MODE_GEN_TEXT )
 		{
-			var output = new String();			
-			
+			var output = new String();
+
 			output = symbols[i].label;
 			for( var j = output.length; j < 20; j++ )
 				output += " ";
-			
+
 			output += ( ( symbols[i].kind == SYM_NONTERM ) ? "Non-terminal" : "Terminal" );
-			
+
 			if( symbols[i].kind == SYM_TERM )
 			{
 				for( var j = output.length; j < 40; j++ )
 					output += " ";
-			
+
 				output += symbols[i].level + "/";
-				
+
 				switch( symbols[i].assoc )
 				{
 					case ASSOC_NONE:
@@ -256,15 +256,15 @@ function print_symbols( mode )
 					case ASSOC_RIGHT:
 						output += ">";
 						break;
-	
+
 				}
 			}
-			
+
 			_print( output );
 		}
-		
-	}	
-	
+
+	}
+
 	if( mode == MODE_GEN_HTML )
 		_print( "</table>" );
 	else if( mode == MODE_GEN_TEXT )
@@ -285,25 +285,25 @@ function print_grammar( mode )
 		_print( "<td class=\"coltitle\">FIRST-set</td>" );
 		_print( "<td class=\"coltitle\">Right-hand side</td>" );
 		_print( "</tr>" );
-		
+
 		for( var i = 0; i < symbols.length; i++ )
 		{
 			_print( "<tr>" );
-			
+
 			//alert( "symbols " + i +  " = " + symbols[i].label + "(" + symbols[i].kind + ")" );
 			if( symbols[i].kind == SYM_NONTERM )
 			{
 				_print( "<td>" );
 				_print( symbols[i].label );
 				_print( "</td>" );
-	
+
 				_print( "<td>" );
 				for( var j = 0; j < symbols[i].first.length; j++ )
 				{
 					_print( " <b>" + symbols[symbols[i].first[j]].label + "</b> " );
 				}
 				_print( "</td>" );
-	
+
 				_print( "<td>" );
 				for( var j = 0; j < symbols[i].prods.length; j++ )
 				{
@@ -312,33 +312,33 @@ function print_grammar( mode )
 						if( symbols[productions[symbols[i].prods[j]].rhs[k]].kind == SYM_TERM )
 							_print( " <b>" + symbols[productions[symbols[i].prods[j]].rhs[k]].label + "</b> " );
 						else
-							_print( " " + symbols[productions[symbols[i].prods[j]].rhs[k]].label + " " );					
+							_print( " " + symbols[productions[symbols[i].prods[j]].rhs[k]].label + " " );
 					}
 					_print( "<br />" );
 				}
 				_print( "</td>" );
 			}
-			
+
 			_print( "</tr>" );
 		}
-		
+
 		_print( "</table>" );
 	}
 	else if( mode == MODE_GEN_TEXT )
 	{
 		var output = new String();
-				
+
 		for( var i = 0; i < symbols.length; i++ )
 		{
 			if( symbols[i].kind == SYM_NONTERM )
 			{
 				output += symbols[i].label + " {";
-				
+
 				for( var j = 0; j < symbols[i].first.length; j++ )
 					output += " " + symbols[symbols[i].first[j]].label + " ";
-	
-				output += "}\n";			
-	
+
+				output += "}\n";
+
 				for( var j = 0; j < symbols[i].prods.length; j++ )
 				{
 					output += "\t";
@@ -353,7 +353,7 @@ function print_grammar( mode )
 				}
 			}
 		}
-		
+
 		_print( output );
 	}
 }
@@ -361,10 +361,10 @@ function print_grammar( mode )
 function print_item_set( mode, label, item_set )
 {
 	var i, j;
-	
+
 	if( item_set.length == 0 )
 		return;
-	
+
 	if( mode == MODE_GEN_HTML )
 	{
 		_print( "<table class=\"debug\" cellpadding=\"0\" cellspacing=\"0\">" );
@@ -378,13 +378,13 @@ function print_item_set( mode, label, item_set )
 	}
 	else if( mode == MODE_GEN_TEXT )
 		_print( "--- " + label + " ---" );
-			
+
 	for( i = 0; i < item_set.length; i++ )
 	{
 		if( mode == MODE_GEN_HTML )
 		{
 			_print( "<tr>" );
-			
+
 			//alert( "symbols " + i +  " = " + symbols[i].label + "(" + symbols[i].kind + ")" );
 			_print( "<td>" );
 			for( j = 0; j < item_set[i].lookahead.length; j++ )
@@ -392,107 +392,107 @@ function print_item_set( mode, label, item_set )
 				_print( " <b>" + symbols[item_set[i].lookahead[j]].label + "</b> " );
 			}
 			_print( "</td>" );
-	
+
 			_print( "<td>" );
-			
+
 			_print( symbols[productions[item_set[i].prod].lhs].label + " -&gt; " );
 			for( j = 0; j < productions[item_set[i].prod].rhs.length; j++ )
 			{
 				if( j == item_set[i].dot_offset )
 					_print( "." );
-				
+
 				if( symbols[productions[item_set[i].prod].rhs[j]].kind == SYM_TERM )
 					_print( " <b>" + symbols[productions[item_set[i].prod].rhs[j]].label + "</b> " );
 				else
-					_print( " " + symbols[productions[item_set[i].prod].rhs[j]].label + " " );					
+					_print( " " + symbols[productions[item_set[i].prod].rhs[j]].label + " " );
 			}
-			
+
 			if( j == item_set[i].dot_offset )
 					_print( "." );
 			_print( "</td>" );
-			
+
 			_print( "</tr>" );
 		}
 		else if( mode == MODE_GEN_TEXT )
 		{
 			var out = new String();
-			
+
 			out += symbols[productions[item_set[i].prod].lhs].label;
-						
+
 			for( j = out.length; j < 20; j++ )
 				out += " ";
-				
+
 			out += " -> ";
-			
+
 			for( j = 0; j < productions[item_set[i].prod].rhs.length; j++ )
 			{
 				if( j == item_set[i].dot_offset )
 					out += ".";
-				
+
 				if( symbols[productions[item_set[i].prod].rhs[j]].kind == SYM_TERM )
 					out += " #" + symbols[productions[item_set[i].prod].rhs[j]].label + " ";
 				else
-					out += " " + symbols[productions[item_set[i].prod].rhs[j]].label + " ";					
+					out += " " + symbols[productions[item_set[i].prod].rhs[j]].label + " ";
 			}
-			
+
 			if( j == item_set[i].dot_offset )
 				out += ".";
 
 			for( j = out.length; j < 60; j++ )
 				out += " ";
 			out += "{ ";
-			
+
 			for( j = 0; j < item_set[i].lookahead.length; j++ )
 				out += "#" + symbols[item_set[i].lookahead[j]].label + " ";
-				
+
 			out += "}";
-			
+
 			_print( out );
 		}
 	}
-	
+
 	if( mode == MODE_GEN_HTML )
 		_print( "</table>" );
 }
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	first.js
 Author:	Jan Max Meyer
 Usage:	FIRST-set calculation
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		first()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Computes the FIRST-sets for all non-terminals of the
 					grammar. Must be called right after the parse and before
 					the table generation methods are performed.
-					
+
 	Parameters:		void
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	25.08.2008	Jan Max Meyer	Here was a bad bug that sometimes came up when
 								nonterminals are nullable. An example is the
 								grammar
-								
+
 								"A" "B";
 								##
 								x: y "B";
 								y: y "A" | ;
-								
+
 								Now it works... embarrassing bug... ;(
 ----------------------------------------------------------------------------- */
 function first()
@@ -505,7 +505,7 @@ function first()
 	{
 		old_cnt = cnt;
 		cnt = 0;
-		
+
 		for( var i = 0; i < symbols.length; i++ )
 		{
 			if( symbols[i].kind == SYM_NONTERM )
@@ -522,7 +522,7 @@ function first()
 							break;
 					}
 					cnt += symbols[i].first.length;
-					
+
 					if( k == productions[symbols[i].prods[j]].rhs.length )
 						nullable = true;
 
@@ -530,7 +530,7 @@ function first()
 				}
 			}
 		}
-		
+
 		//_print( "first: cnt = " + cnt + " old_cnt = " + old_cnt + "<br />" );
 	}
 	while( cnt != old_cnt );
@@ -539,22 +539,22 @@ function first()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		rhs_first()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns all terminals that are possible from a given position
 					of a production's right-hand side.
-					
+
 	Parameters:		item			Item to which the lookaheads are added to.
 					p				The production where the computation should
 									be done on.
 					begin			The offset of the symbol where rhs_first()
 									begins its calculation from.
-	
+
 	Returns:		true			If the whole rest of the right-hand side can
 									be null (epsilon),
 					false			else.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -564,27 +564,27 @@ function rhs_first( item, p, begin )
 	for( i = begin; i < p.rhs.length; i++ )
 	{
 		item.lookahead = union( item.lookahead, symbols[p.rhs[i]].first );
-		
+
 		if( !symbols[p.rhs[i]].nullable )
 			nullable = false;
-		
+
 		if( !nullable )
 			break;
 	}
-	
+
 	return nullable;
 }
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
+JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	printtab.js
 Author:	Jan Max Meyer
 Usage:	Functions for printing the parse tables and related functions.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 
@@ -596,11 +596,11 @@ of the Artistic License. Please see ARTISTIC for more information.
 */
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_parse_tables()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints the parse tables in a desired format.
-					
+
 	Parameters:		mode					The output mode. This can be either
 											MODE_GEN_JS to create JavaScript/
 											JScript code as output or MODE_GEN_HTML
@@ -608,10 +608,10 @@ of the Artistic License. Please see ARTISTIC for more information.
 											(the HTML-tables are formatted to
 											look nice with the JS/CC Web
 											Environment).
-	
+
 	Returns:		code					The code to be printed to a file or
 											web-site.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.04.2009	Jan Max Meyer	New table generator section to build default
@@ -621,7 +621,7 @@ function print_parse_tables( mode )
 {
 	var code	= new String();
 	var i, j, deepest = 0, val;
-	
+
 	/* Printing the pop table */
 	if( mode == MODE_GEN_HTML )
 	{
@@ -638,7 +638,7 @@ function print_parse_tables( mode )
 		code += "/* Pop-Table */\n";
 		code += "var pop_tab = new Array(\n";
 	}
-	
+
 	for( i = 0; i < productions.length; i++ )
 	{
 		if( mode == MODE_GEN_HTML )
@@ -655,7 +655,7 @@ function print_parse_tables( mode )
 					(( i < productions.length-1 ) ? ",\n" : "\n");
 		}
 	}
-	
+
 	if( mode == MODE_GEN_HTML )
 	{
 		code += "</table>";
@@ -664,33 +664,33 @@ function print_parse_tables( mode )
 	{
 		code += ");\n\n";
 	}
-	
-	/* Printing the action table */			
+
+	/* Printing the action table */
 	if( mode == MODE_GEN_HTML )
 	{
 		for( i = 0; i < symbols.length; i++ )
 			if( symbols[i].kind == SYM_TERM )
 				deepest++;
-		
+
 		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 		code += "<tr>";
 		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Action-Table</td>";
 		code += "</tr>";
-		
+
 		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
 		for( i = 0; i < symbols.length; i++ )
 		{
 			if( symbols[i].kind == SYM_TERM )
 				code += "<td><b>" + symbols[i].label + "</b></td>";
 		}
-		
+
 		code += "</tr>";
-		
+
 		for( i = 0; i < states.length; i++ )
 		{
 			code += "<tr>" ;
 			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-			
+
 			for( j = 0; j < symbols.length; j++ )
 			{
 				if( symbols[j].kind == SYM_TERM )
@@ -706,58 +706,58 @@ function print_parse_tables( mode )
 					code += "</td>";
 				}
 			}
-			
+
 			code += "</tr>" ;
 		}
-		
+
 		code += "</table>";
-		
+
 	}
 	else if( mode == MODE_GEN_JS )
 	{
 		code += "/* Action-Table */\n";
 		code += "var act_tab = new Array(\n";
-		
+
 		for( i = 0; i < states.length; i++ )
 		{
 			code += "\t/* State " + i + " */ new Array( "
 			for( j = 0; j < states[i].actionrow.length; j++ )
-				code += states[i].actionrow[j][0] + "/* \"" + 
+				code += states[i].actionrow[j][0] + "/* \"" +
 					symbols[states[i].actionrow[j][0]].label + "\" */," + states[i].actionrow[j][1]
 						+ ( ( j < states[i].actionrow.length-1 ) ? " , " : "" );
-			
+
 			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
 		}
-		
+
 		code += ");\n\n";
 	}
-	
-	/* Printing the goto table */			
+
+	/* Printing the goto table */
 	if( mode == MODE_GEN_HTML )
 	{
 		for( i = 0; i < symbols.length; i++ )
 			if( symbols[i].kind == SYM_NONTERM )
 				deepest++;
-		
+
 		code += "<table class=\"print\" cellpadding=\"0\" cellspacing=\"0\">";
 		code += "<tr>";
 		code += "<td class=\"tabtitle\" colspan=\"" + (deepest + 1) + "\">Goto-Table</td>";
 		code += "</tr>";
-		
+
 		code += "<td class=\"coltitle\" width=\"1%\" style=\"border-right: 1px solid lightgray;\">State</td>";
 		for( i = 0; i < symbols.length; i++ )
 		{
 			if( symbols[i].kind == SYM_NONTERM )
 				code += "<td>" + symbols[i].label + "</td>";
 		}
-		
+
 		code += "</tr>";
-		
+
 		for( i = 0; i < states.length; i++ )
 		{
 			code += "<tr>" ;
 			code += "<td class=\"coltitle\" style=\"border-right: 1px solid lightgray;\">" + i + "</td>";
-			
+
 			for( j = 0; j < symbols.length; j++ )
 			{
 				if( symbols[j].kind == SYM_NONTERM )
@@ -770,33 +770,33 @@ function print_parse_tables( mode )
 					code += "</td>";
 				}
 			}
-			
+
 			code += "</tr>" ;
 		}
-		
+
 		code += "</table>";
-		
+
 	}
 	else if( mode == MODE_GEN_JS )
 	{
 		code += "/* Goto-Table */\n";
 		code += "var goto_tab = new Array(\n";
-		
+
 		for( i = 0; i < states.length; i++ )
 		{
 			code += "\t/* State " + i + " */";
 			code += " new Array( "
-							
+
 			for( j = 0; j < states[i].gotorow.length; j++ )
 				code += states[i].gotorow[j][0] + "/* " + symbols[ states[i].gotorow[j][0] ].label + " */,"
 					+ states[i].gotorow[j][1] + ( ( j < states[i].gotorow.length-1 ) ? " , " : "" );
-			
+
 			code += " )" + ( ( i < states.length-1 ) ? ",\n" : "\n" );
 		}
-		
+
 		code += ");\n\n";
 	}
-	
+
 	/*
 		JMM 16.04.2009:
 		Printing the default action table
@@ -816,7 +816,7 @@ function print_parse_tables( mode )
 		code += "/* Default-Actions-Table */\n";
 		code += "var defact_tab = new Array(\n";
 	}
-	
+
 	for( i = 0; i < states.length; i++ )
 	{
 		if( mode == MODE_GEN_HTML )
@@ -832,7 +832,7 @@ function print_parse_tables( mode )
 						(( i < states.length-1 ) ? ",\n" : "\n");
 		}
 	}
-	
+
 	if( mode == MODE_GEN_HTML )
 	{
 		code += "</table>";
@@ -841,24 +841,24 @@ function print_parse_tables( mode )
 	{
 		code += ");\n\n";
 	}
-	
+
 	return code;
 }
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_dfa_table()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Generates a state-machine construction from the deterministic
 					finite automata.
-					
+
 	Parameters:		dfa_states				The dfa state machine for the lexing
 											function.
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -867,13 +867,13 @@ function print_dfa_table( dfa_states )
 	var code = new String();
 	var i, j, k, eof_id = -1;
 	var grp_start, grp_first, first;
-	
+
 	code += "switch( state )\n"
 	code += "{\n";
 	for( i = 0; i < dfa_states.length; i++ )
 	{
 		code += "	case " + i + ":\n";
-		
+
 		first = true;
 		for( j = 0; j < dfa_states.length; j++ )
 		{
@@ -894,41 +894,41 @@ function print_dfa_table( dfa_states )
 						if( !first )
 							code += "else ";
 						code += "if( ";
-						
+
 						grp_first = false;
 						first = false;
 					}
 					else
 						code += " || ";
-					
+
 					if( grp_start == k - 1 )
 						code += "chr == " + grp_start;
-					else					
+					else
 						code += "( chr >= " + grp_start +
 									" && chr <= " + (k-1) + " )";
 					grp_start = -1;
 					k--;
 				}
 			}
-			
+
 			if( !grp_first )
 				code += " ) state = " + j + ";\n";
 		}
-				
+
 		code += "		";
 		if( !first )
 			code += "else ";
 		code += "state = -1;\n"
-		
+
 		if( dfa_states[i].accept > -1 )
 		{
 			code += "		match = " + dfa_states[i].accept + ";\n";
 			code += "		match_pos = pos;\n";
 		}
-		
+
 		code += "		break;\n\n";
 	}
-	
+
 	code += "}\n\n";
 
 	return code;
@@ -937,39 +937,39 @@ function print_dfa_table( dfa_states )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_symbol_labels()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints all symbol labels into an array; This is used for
 					error reporting purposes only in the resulting parser.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_symbol_labels()
 {
 	var code = new String();
-	var i;	
-	
+	var i;
+
 	code += "/* Symbol labels */\n";
 	code += "var labels = new Array(\n";
 	for( i = 0; i < symbols.length; i++ )
 	{
 		code += "\t\"" + symbols[i].label + "\" ";
-		
+
 		if( symbols[i].kind == SYM_TERM )
 			code += "/* Terminal symbol */";
 		else
 			code += "/* Non-terminal symbol */";
-			
+
 		if( i < symbols.length-1 )
 			code += ",";
-			
+
 		code += "\n";
 	}
 
@@ -981,17 +981,17 @@ function print_symbol_labels()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_term_actions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Prints the terminal symbol actions to be associated with a
 					terminal definition into a switch-case-construct.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	22.08.2008	Jan Max Meyer	Bugfix: %offset returned the offset BEHIND the
@@ -1009,19 +1009,19 @@ function print_term_actions()
 {
 	var code = new String();
 	var re = new RegExp( "%match|%offset|%source" );
-	var i, j, k;	
+	var i, j, k;
 	var semcode;
 	var strmatch;
-	
+
 	for( i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_TERM
 			&& symbols[i].code != "" )
-		{			
+		{
 			code += "	" + ( code != "" ? "else " : "" ) +
 						"if( match == " + i + " )\n";
 			code += "	{\n";
-			
+
 			semcode = new String();
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ )
 			{
@@ -1034,7 +1034,7 @@ function print_term_actions()
 						semcode += "( PCB.offset - PCB.att.length )";
 					else if( strmatch[0] == "%source" )
 						semcode += "PCB.src";
-					
+
 					j += strmatch[0].length - 1;
 					k = semcode.length;
 				}
@@ -1043,7 +1043,7 @@ function print_term_actions()
 			}
 
 			code += "		" + semcode + "\n";
-			
+
 			code += "		}\n";
 		}
 	}
@@ -1051,21 +1051,21 @@ function print_term_actions()
 	return code;
 }
 
-	
+
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		print_actions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Generates a switch-case-construction that contains all
 					the semantic actions. This construction should then be
 					generated into the static parser driver template.
-					
+
 	Parameters:		void
-	
+
 	Returns:		code					The code to be inserted into the
 											static parser driver framework.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -1075,15 +1075,15 @@ function print_actions()
 	var re = new RegExp( "%[0-9]+|%%" );
 	var semcode, strmatch;
 	var i, j, k, idx;
-	
+
 	code += "switch( act )\n";
 	code += "{\n";
-	
+
 	for( i = 0; i < productions.length; i++ )
 	{
 		code += "	case " + i + ":\n";
 		code += "	{\n";
-		
+
 		semcode = new String();
 		for( j = 0, k = 0; j < productions[i].code.length; j++, k++ )
 		{
@@ -1098,7 +1098,7 @@ function print_actions()
 					idx = productions[i].rhs.length - idx + 1;
 					semcode += "vstack[ vstack.length - " + idx + " ]";
 				}
-				
+
 				j += strmatch[0].length - 1;
 				k = semcode.length;
 			}
@@ -1112,7 +1112,7 @@ function print_actions()
 		code += "	}\n";
 		code += "	break;\n";
 	}
-	
+
 	code += "}\n\n";
 
 	return code;
@@ -1121,23 +1121,23 @@ function print_actions()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_eof_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the value of the eof-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		eof_id					The id of the EOF-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_eof_symbol_id()
 {
 	var eof_id = -1;
-	
-	//Find out which symbol is for EOF!	
+
+	//Find out which symbol is for EOF!
 	for( var i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].special == SPECIAL_EOF )
@@ -1149,29 +1149,29 @@ function get_eof_symbol_id()
 
 	if( eof_id == -1 )
 		_error( "No EOF-symbol defined - This might not be possible (bug!)" );
-	
+
 	return eof_id;
 }
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the value of the error-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		eof_id					The id of the EOF-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function get_error_symbol_id()
 {
 	var error_id = -1;
-	
-	//Find out which symbol is for EOF!	
+
+	//Find out which symbol is for EOF!
 	for( var i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].special == SPECIAL_ERROR )
@@ -1183,21 +1183,21 @@ function get_error_symbol_id()
 
 	if( error_id == -1 )
 		_error( "No ERROR-symbol defined - This might not be possible (bug!)" );
-	
+
 	return error_id;
 }
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_whitespace_symbol_id()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the ID of the whitespace-symbol.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		whitespace				The id of the whitespace-symbol.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -1208,15 +1208,15 @@ function get_whitespace_symbol_id()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		get_error_state()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Returns the ID of a non-existing state.
-					
-	Parameters:	
-		
+
+	Parameters:
+
 	Returns:		length					The length of the states array.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -1225,23 +1225,23 @@ function get_error_state()
 	return states.length + 1;
 }
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
+JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2009 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	tabgen.js
 Author:	Jan Max Meyer
 Usage:	LALR(1) closure and table construction
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 // --- Utility functions: I think there is no documentation necessary ;) ---
 function create_state()
 {
 	var state = new STATE();
-	
+
 	state.kernel = new Array();
 	state.epsilon = new Array();
 	state.actionrow = new Array();
@@ -1251,7 +1251,7 @@ function create_state()
 	state.def_act = 0;
 
 	states.push( state );
-	
+
 	return state;
 }
 
@@ -1259,11 +1259,11 @@ function create_state()
 function create_item( p )
 {
 	var item = new ITEM();
-	
+
 	item.prod = p;
 	item.dot_offset = 0;
 	item.lookahead = new Array();
-	
+
 	return item;
 }
 
@@ -1274,7 +1274,7 @@ function add_table_entry( row, sym, act )
 	for( i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row;
-	
+
 	row.push( new Array( sym, act ) );
 	return row;
 }
@@ -1314,7 +1314,7 @@ function get_table_entry( row, sym )
 	for( i = 0; i < row.length; i++ )
 		if( row[i][0] == sym )
 			return row[i][1];
-	
+
 	return void(0);
 }
 
@@ -1326,7 +1326,7 @@ function get_undone_state()
 		if( states[i].done == false )
 			return i;
 	}
-			
+
 	return -1;
 }
 
@@ -1339,19 +1339,19 @@ function sort_partition( a, b )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		find_symbol()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Searches for a symbol using its label and kind.
-					
+
 	Parameters:		label				The label of the symbol.
 					kind				Type of the symbol. This can be
 										SYM_NONTERM or SYM_TERM
-					special				Specialized symbols 
+					special				Specialized symbols
 
 	Returns:		The index of the desired object in the symbol table,
 					-1 if the symbol was not found.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.11.2007	Jan Max Meyer	Allow to find eof_character
@@ -1371,20 +1371,20 @@ function find_symbol( label, kind, special )
 			return i;
 		}
 	}
-	
+
 	return -1;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_symbol()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Creates a new symbol (if necessary) and appends it to the
 					global symbol array. If the symbol does already exist, the
 					instance of that symbol is returned only.
-					
+
 	Parameters:		label				The label of the symbol. In case of
 										kind == SYM_NONTERM, the label is the
 										name of the right-hand side, else it
@@ -1392,10 +1392,10 @@ function find_symbol( label, kind, special )
 										terminal symbol.
 					kind				Type of the symbol. This can be
 										SYM_NONTERM or SYM_TERM
-					special				Specialized symbols 
-	
+					special				Specialized symbols
+
 	Returns:		The particular object of type SYMBOL.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.11.2007	Jan Max Meyer	Bugfix: EOF-character is a special case!
@@ -1404,10 +1404,10 @@ function find_symbol( label, kind, special )
 function create_symbol( label, kind, special )
 {
 	var exists;
-	
+
 	if( ( exists = find_symbol( label, kind, special ) ) > -1 )
 		return symbols[ exists ].id;
-	
+
 	var sym = new SYMBOL();
 	sym.label = label;
 	sym.kind = kind;
@@ -1415,56 +1415,56 @@ function create_symbol( label, kind, special )
 	sym.nullable = false;
 	sym.id = symbols.length;
 	sym.code = new String();
-	
+
 	sym.assoc = ASSOC_NONE; //Could be changed by grammar parser
 	sym.level = 0; //Could be changed by grammar parser
 
 	sym.special = special;
-	
+
 	//Flags
 	sym.defined = false;
 
 	sym.first = new Array();
-	
+
 	if( kind == SYM_TERM )
 		sym.first.push( sym.id );
 
 	symbols.push( sym );
-	
+
 	//_print( "Creating new symbol " + sym.id + " kind = " + kind + " >" + label + "<" );
-	
+
 	return sym.id;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		item_set_equal()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Checks if two item sets contain the same items. The items
 					may only differ in their lookahead.
-					
+
 	Parameters:		set1					Set to be compared with set2.
 					set2					Set to be compared with set1.
-	
+
 	Returns:		true					If equal,
 					false					else.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function item_set_equal( set1, set2 )
 {
 	var i, j, cnt = 0;
-	
+
 	if( set1.length != set2.length )
 		return false;
 
 	for( i = 0; i < set1.length; i++ )
 	{
 		for( j = 0; j < set2.length; j++ )
-		{			
+		{
 			if( set1[i].prod == set2[j].prod &&
 				set1[i].dot_offset == set2[j].dot_offset )
 			{
@@ -1473,25 +1473,25 @@ function item_set_equal( set1, set2 )
 			}
 		}
 	}
-	
+
 	if( cnt == set1.length )
 		return true;
-		
+
 	return false;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		close_items()
-	
+
 	Author:			Jan Max Meyer
-	
-	Usage:			
-					
-	Parameters:		
-	
+
+	Usage:
+
+	Parameters:
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -1500,7 +1500,7 @@ function close_items( seed, closure )
 	var i, j, k;
 	var cnt = 0, tmp_cnt = 0;
 	var item;
-	
+
 	for( i = 0; i < seed.length; i++ )
 	{
 		if( seed[i].dot_offset < productions[seed[i].prod].rhs.length )
@@ -1514,36 +1514,36 @@ function close_items( seed, closure )
 						if( closure[k].prod == symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] )
 							break;
 					}
-					
+
 					if( k == closure.length )
 					{
-						item = create_item( symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] );									
+						item = create_item( symbols[productions[seed[i].prod].rhs[seed[i].dot_offset]].prods[j] );
 						closure.push( item );
-						
+
 						cnt++;
 					}
-					
+
 					tmp_cnt = closure[k].lookahead.length;
 					if( rhs_first( closure[k], productions[seed[i].prod], seed[i].dot_offset+1 ) )
 						closure[k].lookahead = union( closure[k].lookahead, seed[i].lookahead );
-						
+
 					cnt += closure[k].lookahead.length - tmp_cnt;
 				}
 			}
 		}
 	}
-	
+
 	return cnt;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		lalr1_closure()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Implements the LALR(1) closure algorithm. A short overview:
-	
+
 					1. Closing a closure_set of ITEM() objects from a given
 					   kernel seed (this includes the kernel seed itself!)
 					2. Moving all epsilon items to the current state's epsilon
@@ -1559,11 +1559,11 @@ function close_items( seed, closure )
 					   right of the dot, do a shift on the action table, else
 					   do a goto on the goto table. Reductions are performed
 					   later, when all states are closed.
-					
+
 	Parameters:		s				Id of the state that should be closed.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	29.02.2009	Jan Max Meyer	There was a bug that rose up with some grammars
@@ -1574,7 +1574,7 @@ function lalr1_closure( s )
 	var closure = new Array(), nclosure, partition;
 	var item, partition_sym;
 	var i, j, k, l, cnt = 0, old_cnt = 0, tmp_cnt, ns;
-	
+
 	/*
 	for( i = 0; i < states[s].kernel.length; i++ )
 	{
@@ -1582,12 +1582,12 @@ function lalr1_closure( s )
 		closure[i].prod = states[s].kernel[i].prod;
 		closure[i].dot_offset = states[s].kernel[i].dot_offset;
 		closure[i].lookahead = new Array();
-	
+
 		for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 			closure[i].lookahead[j] = states[s].kernel[i].lookahead[j];
 	}
 	*/
-		
+
 	do
 	{
 		old_cnt = cnt;
@@ -1595,7 +1595,7 @@ function lalr1_closure( s )
 		//_print( "closure: cnt = " + cnt + " old_cnt = " + old_cnt + "<br />" );
 	}
 	while( cnt != old_cnt );
-	
+
 	for( i = 0; i < states[s].kernel.length; i++ )
 	{
 		if( states[s].kernel[i].dot_offset < productions[states[s].kernel[i].prod].rhs.length )
@@ -1605,19 +1605,19 @@ function lalr1_closure( s )
 			closure[0].prod = states[s].kernel[i].prod;
 			closure[0].dot_offset = states[s].kernel[i].dot_offset;
 			closure[0].lookahead = new Array();
-		
+
 			for( j = 0; j < states[s].kernel[i].lookahead.length; j++ )
 				closure[0].lookahead[j] = states[s].kernel[i].lookahead[j];
 		}
 	}
-	
+
 	/*
 	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,
 		"closure in " + s, closure );
-	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML, 
+	print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,
 		"states[" + s + "].epsilon", states[s].epsilon );
 	*/
-	
+
 	for( i = 0; i < closure.length; i++ )
 	{
 		if( productions[closure[i].prod].rhs.length == 0 )
@@ -1626,25 +1626,25 @@ function lalr1_closure( s )
 				if( states[s].epsilon[j].prod == closure[i].prod
 						&& states[s].epsilon[j].dot_offset == closure[i].dot_offset )
 							break;
-			
-			if( j == states[s].epsilon.length )			
+
+			if( j == states[s].epsilon.length )
 				states[s].epsilon.push( closure[i] );
 
 			closure.splice( i, 1 );
 		}
 	}
-	
+
 	while( closure.length > 0 )
 	{
 		partition = new Array();
 		nclosure = new Array();
 		partition_sym = -1;
-		
+
 		for( i = 0; i < closure.length; i++ )
 		{
 			if( partition.length == 0 )
 				partition_sym = productions[closure[i].prod].rhs[closure[i].dot_offset];
-						
+
 			if( closure[i].dot_offset < productions[closure[i].prod].rhs.length )
 			{
 				if( productions[closure[i].prod].rhs[closure[i].dot_offset]
@@ -1657,7 +1657,7 @@ function lalr1_closure( s )
 					nclosure.push( closure[i] );
 			}
 		}
-		
+
 		if( partition.length > 0 )
 		{
 
@@ -1670,24 +1670,24 @@ function lalr1_closure( s )
 				or failing grammars come up.
 			*/
 			partition.sort( sort_partition );
-			
+
 			//Now one can check for equality!
 			for( i = 0; i < states.length; i++ )
-			{	
+			{
 				if( item_set_equal( states[i].kernel, partition ) )
 					break;
 			}
-			
+
 			if( i == states.length )
-			{				
+			{
 				ns = create_state();
 				//_print( "Generating state " + (states.length - 1) );
 				ns.kernel = partition;
 			}
-			
+
 			tmp_cnt = 0;
 			cnt = 0;
-			
+
 			for( j = 0; j < partition.length; j++ )
 			{
 				tmp_cnt += states[i].kernel[j].lookahead.length;
@@ -1695,56 +1695,56 @@ function lalr1_closure( s )
 													partition[j].lookahead );
 
 				cnt += states[i].kernel[j].lookahead.length;
-			}					
-			
+			}
+
 			if( tmp_cnt != cnt )
 				states[i].done = false;
-			
+
 			//_print( "<br />states[" + s + "].closed = " + states[s].closed );
 			if( !(states[s].closed) )
 			{
 				for( j = 0; j < partition.length; j++ )
 				{
-					//_print( "<br />partition[j].dot_offset-1 = " + 
-					//	(partition[j].dot_offset-1) + " productions[partition[j].prod].rhs.length = " 
+					//_print( "<br />partition[j].dot_offset-1 = " +
+					//	(partition[j].dot_offset-1) + " productions[partition[j].prod].rhs.length = "
 					//		+ productions[partition[j].prod].rhs.length );
-							
+
 					if( partition[j].dot_offset-1 < productions[partition[j].prod].rhs.length )
 					{
-						//_print( "<br />symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind = " + 
+						//_print( "<br />symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind = " +
 						//	symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind );
 						if( symbols[productions[partition[j].prod].rhs[partition[j].dot_offset-1]].kind
 								== SYM_TERM )
 						{
 							states[s].actionrow = add_table_entry( states[s].actionrow,
 								productions[partition[j].prod].rhs[partition[j].dot_offset-1], i );
-								
+
 							shifts++;
 						}
 						else
 						{
 							states[s].gotorow = add_table_entry( states[s].gotorow,
 								productions[partition[j].prod].rhs[partition[j].dot_offset-1], i );
-							
+
 							gotos++;
 						}
 					}
 				}
 			}
 		}
-		
+
 		closure = nclosure;
 	}
-	
+
 	states[s].closed = true;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		do_reductions()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Inserts reduce-cells into the action table. A reduction
 					does always occur for items with the dot to the far right
 					of the production and to items with no production (epsilon
@@ -1752,16 +1752,16 @@ function lalr1_closure( s )
 					The reductions are done on the corresponding lookahead
 					symbols. If a shift-reduce conflict appears, the function
 					will always behave in favor of the shift.
-					
+
 					Reduce-reduce conflicts are reported immediatelly, and need
 					to be solved.
-					
+
 	Parameters:		item_set				The item set to work on.
 					s						The index of the state where the
 											reductions take effect.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -1770,14 +1770,14 @@ function do_reductions( s )
 	var n, i, j, ex, act, output_warning, item_set;
 	var reds = new Array();
 	var max = 0, count;
-	
+
 	for( n = 0; n < 2; n++ )
 	{
 		if( !n )
 			item_set = states[ s ].kernel;
 		else
 			item_set = states[ s ].epsilon;
-			
+
 		// Do the reductions
 		for( i = 0; i < item_set.length; i++ )
 		{
@@ -1786,10 +1786,10 @@ function do_reductions( s )
 				for( j = 0; j < item_set[i].lookahead.length; j++ )
 				{
 					output_warning = true;
-	
+
 					ex = get_table_entry( states[s].actionrow,
 							item_set[i].lookahead[j] );
-	
+
 					act = ex;
 					if( ex == void(0) )
 					{
@@ -1797,7 +1797,7 @@ function do_reductions( s )
 
 						states[s].actionrow = add_table_entry( states[s].actionrow,
 							item_set[i].lookahead[j], act );
-							
+
 						reduces++;
 					}
 					else
@@ -1806,7 +1806,7 @@ function do_reductions( s )
 						if( ex > 0 )
 						{
 							//Shift-reduce conflict
-	
+
 							//Is there any level specified?
 							if( symbols[item_set[i].lookahead[j]].level > 0
 								|| productions[ item_set[i].prod ].level > 0 )
@@ -1830,12 +1830,12 @@ function do_reductions( s )
 									{
 										remove_table_entry( states[s].actionrow,
 												item_set[i].lookahead[j] );
-	
+
 										_warning(
 											"Removing nonassociative symbol '" +
 											symbols[item_set[i].lookahead[j]].label +
 												"' in state " + s );
-	
+
 										output_warning = false;
 									}
 								}
@@ -1849,7 +1849,7 @@ function do_reductions( s )
 										act = -1 * item_set[i].prod;
 								}
 							}
-							
+
 							warning = "Shift";
 						}
 						else
@@ -1857,10 +1857,10 @@ function do_reductions( s )
 							//Reduce-reduce conflict
 							act = ( ( act * -1 < item_set[i].prod ) ?
 										act : -1 * item_set[i].prod );
-							
+
 							warning = "Reduce";
 						}
-	
+
 						warning += "-reduce conflict on symbol '" +
 							symbols[item_set[i].lookahead[j]].label +
 								"' in state " + s;
@@ -1868,15 +1868,15 @@ function do_reductions( s )
 							( ( act <= 0 ) ? "reducing with production" :
 								"shifting to state" ) + " " +
 							( ( act <= 0 ) ? act * -1 : act );
-	
+
 						if( output_warning )
 							_warning( warning );
-	
+
 						if( act != ex )
 							update_table_entry( states[s].actionrow,
 								item_set[i].lookahead[j], act );
 					}
-					
+
 					//Remember this reduction, if there is any
 					if( act <= 0 )
 						reds.push( act * -1 );
@@ -1884,13 +1884,13 @@ function do_reductions( s )
 			}
 		}
 	}
-	
+
 	/*
 		JMM 16.04.2009
 		Find most common reduction
 	*/
 	states[ s ].def_act = -1; //Define no default action
-	
+
 	//Are there any reductions? Then select the best of them!
 	for( i = 0; i < reds.length; i++ )
 	{
@@ -1899,14 +1899,14 @@ function do_reductions( s )
 			if( reds[j] == reds[i] )
 				count++;
 		}
-		
+
 		if( max < count )
 		{
 			max = count;
 			states[ s ].def_act = reds[ i ];
 		}
 	}
-	
+
 	//Remove all default reduce action reductions, if they exist.
 	if( states[s].def_act >= 0 )
 	{
@@ -1925,26 +1925,26 @@ function do_reductions( s )
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		lalr1_parse_table()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Entry function to perform table generation. If all states
 					of the parsing state machine are constructed, all reduce
 					operations are inserted in the particular positions of the
 					action table.
-					
+
 					If there is a Shift-reduce conflict, the shift takes the
 					higher precedence. Reduce-reduce conflics are resolved by
 					choosing the first defined production.
-					
+
 	Parameters:		debug					Toggle debug trace output; This
 											should only be switched on when
 											JS/CC is executed in a web environ-
 											ment, because HTML-code will be
 											printed.
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.04.2009	Jan Max Meyer	Added the feature of default productions; The
@@ -1955,27 +1955,27 @@ function do_reductions( s )
 function lalr1_parse_table( debug )
 {
 	var i, j, k, item, s, p;
-	
+
 	//Create EOF symbol
 	item = create_item( 0 );
 	s = create_symbol( "$", SYM_TERM, SPECIAL_EOF );
 	item.lookahead.push( s );
-	
+
 	//Create first state
 	s = create_state();
 	s.kernel.push( item );
-	
+
 	while( ( i = get_undone_state() ) >= 0 )
 	{
 		states[i].done = true;
 		lalr1_closure( i );
 	}
-	
+
 	for( i = 0; i < states.length; i++ )
 		do_reductions( i );
 
 	if( debug )
-	{		
+	{
 		for( i = 0; i < states.length; i++ )
 		{
 			print_item_set( (exec_mode == EXEC_CONSOLE) ? MODE_GEN_TEXT : MODE_GEN_HTML,
@@ -1991,33 +1991,33 @@ function lalr1_parse_table( debug )
 
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	util.js
 Author:	Jan Max Meyer
 Usage:	Utility functions used by several modules
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		union()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Unions the content of two arrays.
-					
+
 	Parameters:		dest_array				The destination array.
 					src_array				The source array. Elements that are
 											not in dest_array but in src_array
 											are copied to dest_array.
-	
+
 	Returns:		The destination array, the union of both input arrays.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2031,35 +2031,35 @@ function union( dest_array, src_array )
 			if( src_array[i] == dest_array[j] )
 				break;
 		}
-		
+
 		if( j == dest_array.length )
 			dest_array.push( src_array[i] );
 	}
-	
+
 	return dest_array;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		reset_all()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Resets all global variables. reset_all() should be called
 					each time a new grammar is compiled.
-					
+
 	Parameters:		mode			Exec-mode; This can be either
 									JSCC_EXEC_CONSOLE or JSCC_EXEC_WEB
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function reset_all( mode )
 {
 	var p;
-	
+
 	assoc_level = 1;
 	exec_mode = mode;
 
@@ -2069,24 +2069,24 @@ function reset_all( mode )
 	nfa_states = new Array();
 	dfa_states = new Array();
 	lex = new Array();
-	
+
 	//Placeholder for the goal symbol
 	create_symbol( "", SYM_NONTERM, SPECIAL_NO_SPECIAL );
 	symbols[0].defined = true;
-	
+
 	//Error synchronization token
 	create_symbol( "ERROR_RESYNC", SYM_TERM, SPECIAL_ERROR );
 	symbols[1].defined = true;
-	
+
 	p = new PROD();
 	p.lhs = 0;
 	p.rhs = new Array();
 	p.code = new String( "%% = %1;" );
 	symbols[0].prods.push( productions.length );
 	productions.push( p );
-	
+
 	whitespace_token = -1;
-	
+
 	/*
 	src = new String();
 	src_off = 0;
@@ -2098,29 +2098,29 @@ function reset_all( mode )
 	show_errors = true;
 	warnings = 0;
 	show_warnings = false;
-	
+
 	shifts = 0;
 	reduces = 0;
 	gotos = 0;
-	
+
 	regex_weight = 0;
-	
+
 	code_head = new String();
 	code_foot = new String();
 }
 
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	bitset.js
 Author:	Jan Max Meyer
 Usage:	Bitset functionalities implemented in JavaScript.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 //I think there is no documentation required on these tiny functions...
@@ -2128,7 +2128,7 @@ function bitset_create( size )
 {
 	if( size <= 0 )
 		return new Array();
-	
+
 	return new Array( Math.ceil( size / 8 ) );
 }
 
@@ -2137,12 +2137,12 @@ function bitset_set( bitset, bit, state )
 {
 	if( !bitset && bit < 0 )
 		return false;
-		
+
 	if( state )
 		bitset[ Math.floor( bit / 8 ) ] |= ( 1 << (bit % 8) );
 	else
 		bitset[ Math.floor( bit / 8 ) ] &= ( 0xFF ^ ( 1 << (bit % 8) ) );
-		
+
 	return true;
 }
 
@@ -2163,36 +2163,36 @@ function bitset_count( bitset )
 	for( var i = 0; i < bitset.length * 8; i++ )
 		if( bitset_get( bitset, i ) )
 			cnt++;
-			
+
 	return cnt;
 }
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	integrity.js
 Author:	Jan Max Meyer
 Usage:	Checks the integrity of the grammar by performing several tests.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		undef()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Checks if there are undefined non-terminals.
 					Prints an error message for each undefined non-terminal
 					that appears on a right-hand side.
-					
+
 	Parameters:		void
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2213,15 +2213,15 @@ function undef()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		unreachable()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Checks if there are unreachable productions.
-					
+
 	Parameters:		void
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2230,17 +2230,17 @@ function unreachable()
 	var		stack		= new Array();
 	var		reachable	= new Array();
 	var		i, j, k, l;
-	
+
 	for( i = 0; i < symbols.length; i++ )
 		if( symbols[i].kind == SYM_NONTERM )
 			break;
-			
+
 	if( i == symbols.length )
 		return;
-		
+
 	stack.push( i );
 	reachable.push( i );
-	
+
 	while( stack.length > 0 )
 	{
 		i = stack.pop();
@@ -2254,7 +2254,7 @@ function unreachable()
 					for( l = 0; l < reachable.length; l++ )
 						if( reachable[l] == productions[symbols[i].prods[j]].rhs[k] )
 							break;
-							
+
 					if( l == reachable.length )
 					{
 						stack.push( productions[symbols[i].prods[j]].rhs[k] );
@@ -2264,7 +2264,7 @@ function unreachable()
 			}
 		}
 	}
-	
+
 	for( i = 0; i < symbols.length; i++ )
 	{
 		if( symbols[i].kind == SYM_NONTERM )
@@ -2272,7 +2272,7 @@ function unreachable()
 			for( j = 0; j < reachable.length; j++ )
 				if( reachable[j] == i )
 					break;
-			
+
 			if( j == reachable.length )
 				_warning( "Unreachable non-terminal \"" + symbols[i].label + "\"" );
 		}
@@ -2282,16 +2282,16 @@ function unreachable()
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		check_empty_states()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Checks if there are LALR(1) states that have no lookaheads
 					(no shifts or reduces) within their state row.
-					
+
 	Parameters:		void
-	
+
 	Returns:		void
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 	16.04.2009	Jan Max Meyer	Fixed bug with new default-production
@@ -2302,20 +2302,20 @@ function check_empty_states()
 	var i;
 	for( i = 0; i < states.length; i++ )
 		if( states[i].actionrow.length == 0 && states[i].def_act == -1 )
-			_error( "No lookaheads in state " + i + 
+			_error( "No lookaheads in state " + i +
 						", watch for endless list definitions" );
 }
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	lexdfa.js
 Author:	Jan Max Meyer
 Usage:	Deterministic finite automation construction and minimization.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 //Utility functions; I think there is no documentation required about them.
@@ -2323,13 +2323,13 @@ of the Artistic License. Please see ARTISTIC for more information.
 function create_dfa( where )
 {
 	var dfa = new DFA();
-	
+
 	dfa.line = new Array( MAX_CHAR );
 	dfa.accept = -1;
 	dfa.nfa_set = new Array();
 	dfa.done = false;
 	dfa.group = -1;
-	
+
 	where.push( dfa );
 	return where.length - 1;
 }
@@ -2344,11 +2344,11 @@ function same_nfa_items( dfa_states, items )
 			for( j = 0; j < dfa_states[i].nfa_set.length; j++ )
 				if( dfa_states[i].nfa_set[j] != items[j] )
 					break;
-			
+
 			if( j == dfa_states[i].nfa_set.length )
 				return i;
 		}
-			
+
 	return -1;
 }
 
@@ -2358,7 +2358,7 @@ function get_undone_dfa( dfa_states )
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
 			return i;
-			
+
 	return -1;
 }
 
@@ -2374,44 +2374,44 @@ function execute_nfa( machine, str )
 
 	if( machine.length == 0 )
 		return -1;
-		
+
 	result.push( 0 );
 	while( result.length > 0
 		&& chr_cnt < str.length )
 	{
 		accept = epsilon_closure( result, machine );
-		
+
 		if( accept.length > 0 )
 		{
 			last_accept = accept;
 			last_length = chr_cnt;
 		}
-		
+
 		result = move( result, machine, str.charCodeAt( chr_cnt ) );
 		chr_cnt++;
 	}
-	
+
 	return last_accept;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		move()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Performs a move operation on a given input character from a
 					set of NFA states.
-					
+
 	Parameters:		state_set				The set of epsilon-closure states
 											on which base the move should be
 											performed.
 					machine					The NFA state machine.
 					ch						A character code to be moved on.
-	
+
 	Returns:		If there is a possible move, a new set of NFA-states is
 					returned, else the returned array has a length of 0.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2419,36 +2419,36 @@ function move( state_set, machine, ch )
 {
 	var hits	= new Array();
 	var tos		= -1;
-	
+
 	do
 	{
 		tos = state_set.pop();
 		if( machine[ tos ].edge == EDGE_CHAR )
 			if( bitset_get( machine[ tos ].ccl, ch ) )
-				hits.push( machine[ tos ].follow );		
+				hits.push( machine[ tos ].follow );
 	}
 	while( state_set.length > 0 );
-	
+
 	return hits;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		epsilon_closure()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Performs an epsilon closure from a set of NFA states.
-					
+
 	Parameters:		state_set				The set of states on which base
 											the closure is started.
 											The whole epsilon closure will be
 											appended to this parameter, so this
 											parameter acts as input/output value.
 					machine					The NFA state machine.
-	
+
 	Returns:		An array of accepting states, if available.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2457,16 +2457,16 @@ function epsilon_closure( state_set, machine )
 	var 	stack	= new Array();
 	var		accept	= new Array();
 	var		tos		= -1;
-	
+
 	for( var i = 0; i < state_set.length; i++ )
 		stack.push( state_set[i] );
-	
+
 	do
 	{
 		tos = stack.pop();
 		if( machine[ tos ].accept >= 0 )
 			accept.push( machine[ tos ].accept );
-			
+
 		if( machine[ tos ].edge == EDGE_EPSILON )
 		{
 			if( machine[ tos ].follow > -1 )
@@ -2474,20 +2474,20 @@ function epsilon_closure( state_set, machine )
 				for( var i = 0; i < state_set.length; i++ )
 					if( state_set[i] == machine[ tos ].follow )
 						break;
-				
+
 				if( i == state_set.length )
 				{
 					state_set.push( machine[ tos ].follow );
 					stack.push( machine[ tos ].follow );
 				}
 			}
-			
+
 			if( machine[ tos ].follow2 > -1 )
 			{
 				for( var i = 0; i < state_set.length; i++ )
 					if( state_set[i] == machine[ tos ].follow2 )
 						break;
-				
+
 				if( i == state_set.length )
 				{
 					state_set.push( machine[ tos ].follow2 );
@@ -2497,26 +2497,26 @@ function epsilon_closure( state_set, machine )
 		}
 	}
 	while( stack.length > 0 );
-	
+
 	return accept.sort();
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Constructs a deterministic finite automata (DFA) from a non-
 					deterministic finite automata, by using the subset construc-
 					tion algorithm.
-					
+
 	Parameters:		nfa_states				The NFA-state machine on which base
 											the DFA will be constructed.
 
 	Returns:		An array of DFA-objects forming the new DFA-state machine.
 					This machine is not minimized here.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2528,39 +2528,39 @@ function create_subset( nfa_states )
 	var trans;
 	var next = -1;
 	var lowest_weight;
-	
+
 	if( nfa_states.length == 0 )
 		return dfa_states;
-		
+
 	stack.push( 0 );
 	epsilon_closure( stack, nfa_states );
-		
+
 	dfa_states[ current ].nfa_set = dfa_states[ current ].nfa_set.concat( stack );
-	
+
 	while( ( current = get_undone_dfa( dfa_states ) ) > -1 )
 	{
 		//_print( "Next DFA-state to process is " + current );
 		dfa_states[ current ].done = true;
-		
+
 		lowest_weight = -1;
 		for( var i = 0; i < dfa_states[ current ].nfa_set.length; i++ )
 		{
 			if( nfa_states[ dfa_states[ current ].nfa_set[i] ].accept > -1
-					&& nfa_states[ dfa_states[ current ].nfa_set[i] ].weight < lowest_weight 
+					&& nfa_states[ dfa_states[ current ].nfa_set[i] ].weight < lowest_weight
 						|| lowest_weight == -1 )
 			{
 				dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
 				lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
 			}
 		}
-			
+
 		for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 		{
 			trans = new Array();
 			trans = trans.concat( dfa_states[ current ].nfa_set );
-			
+
 			trans = move( trans, nfa_states, i );
-			
+
 			if( trans.length > 0 )
 			{
 				//_print( "Character >" + String.fromCharCode( i ) + "< from " + dfa_states[ current ].nfa_set.join() + " to " + trans.join() );
@@ -2570,35 +2570,35 @@ function create_subset( nfa_states )
 			if( trans.length == 0 )
 				next = -1;
 			else if( ( next = same_nfa_items( dfa_states, trans ) ) == -1 )
-			{				
+			{
 				next = create_dfa( dfa_states );
 				dfa_states[ next ].nfa_set = trans;
-				
+
 				//_print( "Creating new state " + next );
 			}
-			
+
 			dfa_states[ current ].line[ i ] = next;
 		}
 	}
-	
+
 	return dfa_states;
 }
 
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Minimizes a DFA, by grouping equivalent states together.
 					These groups form the new, minimized dfa-states.
-					
+
 	Parameters:		dfa_states				The DFA-state machine on which base
 											the minimized DFA is constructed.
 
 	Returns:		An array of DFA-objects forming the minimized DFA-state
 					machine.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -2612,7 +2612,7 @@ function minimize_dfa( dfa_states )
 	var		cnt 			= 0;
 	var		new_group;
 	var		i, j, k;
-	
+
 	if( dfa_states.length == 0 )
 		return min_dfa_states;
 
@@ -2629,7 +2629,7 @@ function minimize_dfa( dfa_states )
 			for( j = 0; j < accept_groups.length; j++ )
 				if( accept_groups[j] == dfa_states[i].accept )
 					break;
-			
+
 			if( j == accept_groups.length )
 			{
 				accept_groups.push( dfa_states[i].accept );
@@ -2656,7 +2656,7 @@ function minimize_dfa( dfa_states )
 		for( i = 0; i < groups.length; i++ )
 		{
 			new_group = new Array();
-			
+
 			if( groups[i].length > 0 )
 			{
 				for( j = 1; j < groups[i].length; j++ )
@@ -2672,7 +2672,7 @@ function minimize_dfa( dfa_states )
 								dfa_states[ groups[i][j] ].line[k] &&
 							( dfa_states[ groups[i][0] ].line[k] == -1 ||
 								dfa_states[ groups[i][j] ].line[k] == -1 ) ||
-									( dfa_states[ groups[i][0] ].line[k] > -1 && 
+									( dfa_states[ groups[i][0] ].line[k] > -1 &&
 											dfa_states[ groups[i][j] ].line[k] > -1 &&
 										dfa_states[ dfa_states[ groups[i][0] ].line[k] ].group
 											!= dfa_states[ dfa_states[ groups[i][j] ].line[k] ].group ) )
@@ -2683,7 +2683,7 @@ function minimize_dfa( dfa_states )
 							dfa_states[ groups[i][j] ].group = groups.length;
 							new_group = new_group.concat( groups[i].splice( j, 1 ) );
 							j--;
-							
+
 							break;
 						}
 					}
@@ -2697,12 +2697,12 @@ function minimize_dfa( dfa_states )
 				cnt += new_group.length;
 			}
 		}
-		
+
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 		//_print( "old_cnt = " + old_cnt + " cnt = " + cnt );
 	}
 	while( old_cnt != cnt );
-	
+
 	/*
 		Updating the dfa-state transitions;
 		Each group forms a new state.
@@ -2712,23 +2712,23 @@ function minimize_dfa( dfa_states )
 			if( dfa_states[i].line[j] > -1 )
 				dfa_states[i].line[j] = dfa_states[ dfa_states[i].line[j] ].group;
 
-	for( i = 0; i < groups.length; i++ )			
+	for( i = 0; i < groups.length; i++ )
 		min_dfa_states.push( dfa_states[ groups[i][0] ] );
 
 	return min_dfa_states;
 }
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	lexdbg.js
 Author:	Jan Max Meyer
 Usage:	NFA/DFA state machines debugging/dumping functions
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 function print_nfa( ta )
@@ -2742,7 +2742,7 @@ function print_nfa( ta )
 				( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].follow > -1 ) ? nfa_states[i].follow : "" ) + "\t\t" +
 					( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].follow2 > -1 ) ? nfa_states[i].follow2 : "" ) + "\t\t" +
 						( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].accept > -1 ) ? nfa_states[i].accept : "" ) );
-						
+
 		if( nfa_states[i].edge == EDGE_CHAR )
 		{
 			var chars = new String();
@@ -2758,7 +2758,7 @@ function print_nfa( ta )
 					}
 				}
 			}
-			
+
 			if( chars.length > 0 )
 				_print( "\t" + chars );
 		}
@@ -2774,7 +2774,7 @@ function print_dfa( dfa_states )
 	for( var i = 0; i < dfa_states.length; i++ )
 	{
 		str = i + " => (";
-		
+
 		chr_cnt = 0;
 		for( var j = 0; j < dfa_states[i].line.length; j++ )
 		{
@@ -2782,30 +2782,30 @@ function print_dfa( dfa_states )
 			{
 				str += " >" + String.fromCharCode( j ) + "<," + dfa_states[i].line[j] + " ";
 				chr_cnt++;
-				
+
 				if( ( chr_cnt % 5 ) == 0 )
 					str += "\n      ";
 			}
 		}
-		
+
 		str += ") " + dfa_states[i].accept;
 		_print( str );
 	}
 }
 /*
 	Default driver template for JS/CC generated parsers for V8
-	
+
 	Features:
 	- Parser trace messages
 	- Step-by-step parsing
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
 	- Line and column counter variables
-	
+
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
 			<lpsantil@gmail.com>
-	
+
 	This is in the public domain.
 */
 
@@ -2857,10 +2857,10 @@ function __jscclex( PCB )
 			state = 0;
 			match = -2;
 			start = pos;
-	
+
 			if( PCB.src.length <= start )
 				return 38;
-	
+
 			do
 			{
 				chr = PCB.src.charCodeAt( pos );
@@ -3132,35 +3132,35 @@ switch( state )
 				}
 
 				pos++;
-	
+
 			}
 			while( state > -1 );
-	
+
 		}
 		while( -1 > -1 && match == -1 );
-	
+
 		if( match > -1 )
 		{
 			PCB.att = PCB.src.substr( start, match_pos - start );
 			PCB.offset = match_pos;
-			
+
 	if( match == 12 )
 	{
 			PCB.att = PCB.att.substr(
 																	2, PCB.att.length - 4 );
-															
+
 		}
 	else if( match == 16 )
 	{
-		 	continue;	
+		 	continue;
 		}
 	else if( match == 17 )
 	{
-			continue;	
+			continue;
 		}
 	else if( match == 18 )
 	{
-			continue;	
+			continue;
 		}
 
 		}
@@ -3169,7 +3169,7 @@ switch( state )
 			PCB.att = new String();
 			match = -1;
 		}
-		
+
 		break;
 	}
 
@@ -3183,7 +3183,7 @@ function __jsccparse( src, err_off, err_la )
 	var 	err_cnt			= 0;
 	var		rval;
 	var		act;
-	
+
 	//PCB: Parser Control Block
 	var 	parsercontrol	= new Function( "",
 								"var la;" +
@@ -3195,7 +3195,7 @@ function __jsccparse( src, err_off, err_la )
 								"var column;" +
 								"var error_step;" );
 	var		PCB	= new parsercontrol();
-	
+
 	//Visual parse tree generation
 	var 	treenode		= new Function( "",
 								"var sym;"+
@@ -3420,7 +3420,7 @@ var labels = new Array(
 );
 
 
-	
+
 	PCB.line = 1;
 	PCB.column = 1;
 	PCB.offset = 0;
@@ -3432,12 +3432,12 @@ var labels = new Array(
 		err_off	= new Array();
 	if( !err_la )
 		err_la = new Array();
-	
+
 	sstack.push( 0 );
 	vstack.push( 0 );
-	
+
 	PCB.la = __jscclex( PCB );
-			
+
 	while( true )
 	{
 		PCB.act = 60;
@@ -3449,7 +3449,7 @@ var labels = new Array(
 				break;
 			}
 		}
-		
+
 		if( PCB.act == 60 )
 		{
 			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
@@ -3467,30 +3467,30 @@ var labels = new Array(
 				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
 				" sstack = " + sstack.join() );
 		*/
-		
+
 		if( jscc_dbg_withtrace && sstack.length > 0 )
 		{
 			__jsccdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
 							"\tLookahead: " + labels[PCB.la] +
 								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
+							"\tAction: " + PCB.act + "\n" +
 							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
 									( ( PCB.offset + 30 < PCB.src.length ) ?
 										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
-			
+
 			if( jscc_dbg_withstepbystep )
 				__jsccdbg_wait();
 		}
-		
-			
+
+
 		//Parse error? Try to recover!
 		if( PCB.act == 60 )
 		{
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
+
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
 			if( PCB.error_step == 0 )
@@ -3501,20 +3501,20 @@ var labels = new Array(
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
-			
-			//Perform error recovery			
+
+			//Perform error recovery
 			while( sstack.length > 1 && PCB.act == 60 )
 			{
 				sstack.pop();
 				vstack.pop();
-				
+
 				//Try to shift on error token
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
 						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
+
 						sstack.push( PCB.act );
 						vstack.push( new String() );
 
@@ -3522,7 +3522,7 @@ var labels = new Array(
 					}
 				}
 			}
-			
+
 			//Is it better to leave the parser now?
 			if( sstack.length > 1 && PCB.act != 60 )
 			{
@@ -3530,7 +3530,7 @@ var labels = new Array(
 				while( PCB.la != 38 )
 				{
 					PCB.act = 60;
-					
+
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
@@ -3539,17 +3539,17 @@ var labels = new Array(
 							break;
 						}
 					}
-					
+
 					if( PCB.act != 60 )
 						break;
-					
+
 					while( ( PCB.la = __jscclex( PCB ) )
 								< 0 )
 						PCB.offset++;
 				}
 				while( PCB.la != 38 && PCB.act == 60 );
 			}
-			
+
 			if( PCB.act == 60 || PCB.la == 38 )
 			{
 				if( jscc_dbg_withtrace )
@@ -3559,7 +3559,7 @@ var labels = new Array(
 
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tError recovery succeeded, continuing" );
-			
+
 			//Try to parse the next three tokens successfully...
 			PCB.error_step = 3;
 		}
@@ -3577,35 +3577,35 @@ var labels = new Array(
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
-			
+
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
+
 			sstack.push( PCB.act );
 			vstack.push( PCB.att );
-			
+
 			PCB.la = __jscclex( PCB );
-			
+
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
+
 			//Successfull shift and right beyond error recovery?
 			if( PCB.error_step > 0 )
 				PCB.error_step--;
 		}
 		//Reduce
 		else
-		{		
+		{
 			act = PCB.act * -1;
-			
+
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "Reducing by production: " + act );
-			
+
 			rval = void( 0 );
-			
+
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPerforming semantic action..." );
-			
+
 switch( act )
 {
 	case 0:
@@ -3620,12 +3620,12 @@ switch( act )
 	break;
 	case 2:
 	{
-		 code_head += vstack[ vstack.length - 1 ]; 
+		 code_head += vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 3:
 	{
-		 code_foot += vstack[ vstack.length - 1 ]; 
+		 code_foot += vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 4:
@@ -3646,7 +3646,7 @@ switch( act )
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_LEFT;
 														}
-													
+
 	}
 	break;
 	case 7:
@@ -3657,7 +3657,7 @@ switch( act )
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_RIGHT;
 														}
-													
+
 	}
 	break;
 	case 8:
@@ -3668,7 +3668,7 @@ switch( act )
 															symbols[ vstack[ vstack.length - 2 ][i] ].level = assoc_level;
 															symbols[ vstack[ vstack.length - 2 ][i] ].assoc = ASSOC_NOASSOC;
 														}
-													
+
 	}
 	break;
 	case 9:
@@ -3682,26 +3682,26 @@ switch( act )
 														{
 															var regex = vstack[ vstack.length - 1 ].substr( 1, vstack[ vstack.length - 1 ].length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, 
+															compile_regex( regex, whitespace_token,
 																( vstack[ vstack.length - 1 ].charAt( 0 ) == '\'' ) ? false : true );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
-													
+
 	}
 	break;
 	case 11:
 	{
 			vstack[ vstack.length - 2 ].push( vstack[ vstack.length - 1 ] );
 														rval = vstack[ vstack.length - 2 ];
-													
+
 	}
 	break;
 	case 12:
 	{
 			rval = new Array();
 														rval.push( vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 13:
@@ -3710,9 +3710,9 @@ switch( act )
 														var regex = vstack[ vstack.length - 3 ].substr( 1, vstack[ vstack.length - 3 ].length - 2 );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
-														compile_regex( regex, symbols[ rval ].id, 
+														compile_regex( regex, symbols[ rval ].id,
 															( vstack[ vstack.length - 3 ].charAt( 0 ) == '\'' ) ? false : true );
-													
+
 	}
 	break;
 	case 14:
@@ -3721,9 +3721,9 @@ switch( act )
 														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
 														symbols[rval].code = vstack[ vstack.length - 1 ];
 
-														compile_regex( regex, symbols[ rval ].id, 
+														compile_regex( regex, symbols[ rval ].id,
 															( vstack[ vstack.length - 2 ].charAt( 0 ) == '\'' ) ? false : true );
-													
+
 	}
 	break;
 	case 15:
@@ -3745,14 +3745,14 @@ switch( act )
 															productions[ vstack[ vstack.length - 2 ][i] ].lhs = nonterm;
 															symbols[nonterm].prods.push( vstack[ vstack.length - 2 ][i] );
 														}
-														
+
 														if( first_lhs )
 														{
 															first_lhs = false;
 															symbols[0].label = symbols[nonterm].label + "\'";
 															productions[0].rhs.push( nonterm );
 														}
-													
+
 	}
 	break;
 	case 18:
@@ -3765,14 +3765,14 @@ switch( act )
 			rval = new Array();
 														rval = rval.concat( vstack[ vstack.length - 3 ] );
 														rval.push( vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 20:
 	{
 			rval = new Array();
 														rval.push( vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 21:
@@ -3781,10 +3781,10 @@ switch( act )
 														prod.id = productions.length;
 														prod.rhs = vstack[ vstack.length - 3 ];
 														prod.level = vstack[ vstack.length - 2 ];
-														prod.code = vstack[ vstack.length - 1 ];														
+														prod.code = vstack[ vstack.length - 1 ];
 														if( prod.code == "" )
 															prod.code = new String( DEF_PROD_CODE );
-														
+
 														//Get level of the leftmost terminal
 														//as production level.
 														if( prod.level == 0 )
@@ -3801,7 +3801,7 @@ switch( act )
 
 														productions.push( prod );
 														rval = prod.id;
-													
+
 	}
 	break;
 	case 22:
@@ -3811,7 +3811,7 @@ switch( act )
 															rval = symbols[index].level;
 														else
 															line_error( PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
-													
+
 	}
 	break;
 	case 23:
@@ -3822,12 +3822,12 @@ switch( act )
 															rval = symbols[index].level;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + vstack[ vstack.length - 1 ] + "\"" );
-													
+
 	}
 	break;
 	case 24:
 	{
-			rval = 0; 
+			rval = 0;
 	}
 	break;
 	case 25:
@@ -3837,7 +3837,7 @@ switch( act )
 	break;
 	case 26:
 	{
-			rval = new Array(); 
+			rval = new Array();
 	}
 	break;
 	case 27:
@@ -3845,14 +3845,14 @@ switch( act )
 			rval = new Array();
 														rval = rval.concat( vstack[ vstack.length - 2 ] );
 														rval.push( vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 28:
 	{
 			rval = new Array();
 														rval.push( vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 29:
@@ -3862,7 +3862,7 @@ switch( act )
 															rval = index;
 														else
 															rval = create_symbol( vstack[ vstack.length - 1 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
-													
+
 	}
 	break;
 	case 30:
@@ -3873,14 +3873,14 @@ switch( act )
 															rval = index;
 														else
 															line_error(  PCB.line, "Call to undefined terminal " + vstack[ vstack.length - 1 ] );
-													
+
 	}
 	break;
 	case 31:
 	{
 			rval = find_symbol( "ERROR_RESYNC", SYM_TERM,
 																			SPECIAL_ERROR );
-													
+
 	}
 	break;
 	case 32:
@@ -3890,12 +3890,12 @@ switch( act )
 	break;
 	case 33:
 	{
-			rval = new String(); 
+			rval = new String();
 	}
 	break;
 	case 34:
 	{
-			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ]; 
+			rval = vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ];
 	}
 	break;
 	case 35:
@@ -3921,18 +3921,18 @@ switch( act )
 }
 
 
-			
+
 			if( jscc_dbg_withparsetree )
 				tmptree = new Array();
 
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
+
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
 				if( jscc_dbg_withparsetree )
 					tmptree.push( tree.pop() );
-					
+
 				sstack.pop();
 				vstack.pop();
 			}
@@ -3947,7 +3947,7 @@ switch( act )
 					break;
 				}
 			}
-			
+
 			//Do some parse tree construction if desired
 			if( jscc_dbg_withparsetree )
 			{
@@ -3958,15 +3958,15 @@ switch( act )
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
-			
+
 
 			//Goal symbol match?
 			if( act == 0 ) //Don't use PCB.act here!
 				break;
-				
+
 			if( jscc_dbg_withtrace )
 				__jsccdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-			
+
 			//...and push it!
 			sstack.push( PCB.act );
 			vstack.push( rval );
@@ -3988,7 +3988,7 @@ switch( act )
 			__jsccdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
 	}
-	
+
 	return err_cnt;
 }
 
@@ -4001,11 +4001,11 @@ function __jsccdbg_parsetree( indent, nodes, tree )
 		str = "";
 		for( var j = indent; j > 0; j-- )
 			str += "\t";
-		
+
 		str += nodes[ tree[i] ].sym;
 		if( nodes[ tree[i] ].att != "" )
 			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
+
 		__jsccdbg_print( str );
 		if( nodes[ tree[i] ].child.length > 0 )
 			__jsccdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
@@ -4019,10 +4019,10 @@ function parse_grammar( str, filename )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var parse_error = 0;
-	
+
 	first_lhs = true;
 	cur_line = 1;
-	
+
 	//jscc_dbg_withstepbystep = true;
 	//jscc_dbg_withtrace = true;
 
@@ -4032,27 +4032,27 @@ function parse_grammar( str, filename )
 			line_error( ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
 				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ),
 					"Parse error near\n\t"  + str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ?
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
 	return parse_error;
 }
-	
+
 
 /*
 	Default driver template for JS/CC generated parsers for V8
-	
+
 	Features:
 	- Parser trace messages
 	- Step-by-step parsing
 	- Integrated error recovery
 	- Pseudo-graphical parse tree generation
 	- Line and column counter variables
-	
+
 	Written 2007, 2008 by Jan Max Meyer, J.M.K S.F. Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
 			<lpsantil@gmail.com>
-	
+
 	This is in the public domain.
 */
 
@@ -4065,7 +4065,7 @@ function create_nfa( where )
 	var pos;
 	var nfa;
 	var i;
-	
+
 	/*
 		Use an empty item if available,
 		else create a new one...
@@ -4073,22 +4073,22 @@ function create_nfa( where )
 	for( i = 0; i < where.length; i++ )
 		if( where[i].edge == EDGE_FREE )
 			break;
-	
+
 	if( i == where.length )
 	{
-		nfa = new NFA()			
+		nfa = new NFA()
 		where.push( nfa );
 	}
-	
+
 	where[i].edge = EDGE_EPSILON;
 	where[i].ccl = bitset_create( MAX_CHAR );
 	where[i].accept = -1;
 	where[i].follow = -1;
 	where[i].follow2 = -1;
 	where[i].weight = -1;
-	
+
 	created_nfas.push( i );
-	
+
 	return i;
 }
 
@@ -4131,10 +4131,10 @@ function __regexlex( PCB )
 			state = 0;
 			match = -2;
 			start = pos;
-	
+
 			if( PCB.src.length <= start )
 				return 22;
-	
+
 			do
 			{
 				chr = PCB.src.charCodeAt( pos );
@@ -4253,18 +4253,18 @@ switch( state )
 				}
 
 				pos++;
-	
+
 			}
 			while( state > -1 );
-	
+
 		}
 		while( -1 > -1 && match == -1 );
-	
+
 		if( match > -1 )
 		{
 			PCB.att = PCB.src.substr( start, match_pos - start );
 			PCB.offset = match_pos;
-			
+
 
 		}
 		else
@@ -4272,7 +4272,7 @@ switch( state )
 			PCB.att = new String();
 			match = -1;
 		}
-		
+
 		break;
 	}
 
@@ -4286,7 +4286,7 @@ function __regexparse( src, err_off, err_la )
 	var 	err_cnt			= 0;
 	var		rval;
 	var		act;
-	
+
 	//PCB: Parser Control Block
 	var 	parsercontrol	= new Function( "",
 								"var la;" +
@@ -4298,7 +4298,7 @@ function __regexparse( src, err_off, err_la )
 								"var column;" +
 								"var error_step;" );
 	var		PCB	= new parsercontrol();
-	
+
 	//Visual parse tree generation
 	var 	treenode		= new Function( "",
 								"var sym;"+
@@ -4420,7 +4420,7 @@ var labels = new Array(
 );
 
 
-	
+
 	PCB.line = 1;
 	PCB.column = 1;
 	PCB.offset = 0;
@@ -4432,12 +4432,12 @@ var labels = new Array(
 		err_off	= new Array();
 	if( !err_la )
 		err_la = new Array();
-	
+
 	sstack.push( 0 );
 	vstack.push( 0 );
-	
+
 	PCB.la = __regexlex( PCB );
-			
+
 	while( true )
 	{
 		PCB.act = 26;
@@ -4449,7 +4449,7 @@ var labels = new Array(
 				break;
 			}
 		}
-		
+
 		if( PCB.act == 26 )
 		{
 			if( ( PCB.act = defact_tab[ sstack[sstack.length-1] ] ) < 0 )
@@ -4467,30 +4467,30 @@ var labels = new Array(
 				PCB.src.substr( PCB.offset, 30 ) + "..." + "<" +
 				" sstack = " + sstack.join() );
 		*/
-		
+
 		if( regex_dbg_withtrace && sstack.length > 0 )
 		{
 			__regexdbg_print( "\nState " + sstack[sstack.length-1] + "\n" +
 							"\tLookahead: " + labels[PCB.la] +
 								" (\"" + PCB.att + "\")\n" +
-							"\tAction: " + PCB.act + "\n" + 
+							"\tAction: " + PCB.act + "\n" +
 							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +
 									( ( PCB.offset + 30 < PCB.src.length ) ?
 										"..." : "" ) + "\"\n" +
 							"\tStack: " + sstack.join() + "\n" +
 							"\tValue stack: " + vstack.join() + "\n" );
-			
+
 			if( regex_dbg_withstepbystep )
 				__regexdbg_wait();
 		}
-		
-			
+
+
 		//Parse error? Try to recover!
 		if( PCB.act == 26 )
 		{
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "Error detected: There is no reduce or shift on the symbol " + labels[PCB.la] );
-			
+
 			//Report errors only when error_step is 0, and this is not a
 			//subsequent error from a previous parse
 			if( PCB.error_step == 0 )
@@ -4501,20 +4501,20 @@ var labels = new Array(
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					err_la[err_la.length-1].push( labels[act_tab[sstack[sstack.length-1]][i]] );
 			}
-			
-			//Perform error recovery			
+
+			//Perform error recovery
 			while( sstack.length > 1 && PCB.act == 26 )
 			{
 				sstack.pop();
 				vstack.pop();
-				
+
 				//Try to shift on error token
 				for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 				{
 					if( act_tab[sstack[sstack.length-1]][i] == 1 )
 					{
 						PCB.act = act_tab[sstack[sstack.length-1]][i+1];
-						
+
 						sstack.push( PCB.act );
 						vstack.push( new String() );
 
@@ -4522,7 +4522,7 @@ var labels = new Array(
 					}
 				}
 			}
-			
+
 			//Is it better to leave the parser now?
 			if( sstack.length > 1 && PCB.act != 26 )
 			{
@@ -4530,7 +4530,7 @@ var labels = new Array(
 				while( PCB.la != 22 )
 				{
 					PCB.act = 26;
-					
+
 					for( var i = 0; i < act_tab[sstack[sstack.length-1]].length; i+=2 )
 					{
 						if( act_tab[sstack[sstack.length-1]][i] == PCB.la )
@@ -4539,17 +4539,17 @@ var labels = new Array(
 							break;
 						}
 					}
-					
+
 					if( PCB.act != 26 )
 						break;
-					
+
 					while( ( PCB.la = __regexlex( PCB ) )
 								< 0 )
 						PCB.offset++;
 				}
 				while( PCB.la != 22 && PCB.act == 26 );
 			}
-			
+
 			if( PCB.act == 26 || PCB.la == 22 )
 			{
 				if( regex_dbg_withtrace )
@@ -4559,7 +4559,7 @@ var labels = new Array(
 
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tError recovery succeeded, continuing" );
-			
+
 			//Try to parse the next three tokens successfully...
 			PCB.error_step = 3;
 		}
@@ -4577,35 +4577,35 @@ var labels = new Array(
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
-			
+
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-		
+
 			sstack.push( PCB.act );
 			vstack.push( PCB.att );
-			
+
 			PCB.la = __regexlex( PCB );
-			
+
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tNew lookahead symbol: " + labels[PCB.la] + " (" + PCB.att + ")" );
-				
+
 			//Successfull shift and right beyond error recovery?
 			if( PCB.error_step > 0 )
 				PCB.error_step--;
 		}
 		//Reduce
 		else
-		{		
+		{
 			act = PCB.act * -1;
-			
+
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "Reducing by production: " + act );
-			
+
 			rval = void( 0 );
-			
+
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPerforming semantic action..." );
-			
+
 switch( act )
 {
 	case 0:
@@ -4618,7 +4618,7 @@ switch( act )
 			rval = new PARAM();
 													nfa_states[ first_nfa ].follow = vstack[ vstack.length - 1 ].start;
 													last_nfa = vstack[ vstack.length - 1 ].end;
-												
+
 	}
 	break;
 	case 2:
@@ -4628,10 +4628,10 @@ switch( act )
 													rval.end = create_nfa( nfa_states );
 													nfa_states[rval.start].follow = vstack[ vstack.length - 3 ].start;
 													nfa_states[rval.start].follow2 = vstack[ vstack.length - 1 ].start;
-													
+
 													nfa_states[vstack[ vstack.length - 3 ].end].follow = rval.end;
 													nfa_states[vstack[ vstack.length - 1 ].end].follow = rval.end;
-												
+
 	}
 	break;
 	case 3:
@@ -4649,13 +4649,13 @@ switch( act )
 													nfa_states[vstack[ vstack.length - 2 ].end].follow	= nfa_states[vstack[ vstack.length - 1 ].start].follow;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow2	= nfa_states[vstack[ vstack.length - 1 ].start].follow2;
 													nfa_states[vstack[ vstack.length - 2 ].end].accept	= nfa_states[vstack[ vstack.length - 1 ].start].accept;
-													
+
 													nfa_states[vstack[ vstack.length - 1 ].start].edge = EDGE_FREE;
-													
+
 													vstack[ vstack.length - 2 ].end = vstack[ vstack.length - 1 ].end;
-													
+
 													rval = vstack[ vstack.length - 2 ];
-												
+
 	}
 	break;
 	case 5:
@@ -4665,17 +4665,17 @@ switch( act )
 	break;
 	case 6:
 	{
-		
+
 													rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = create_nfa( nfa_states );
-													
+
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 
 													nfa_states[rval.start].follow2 = rval.end;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
-												
+
 	}
 	break;
 	case 7:
@@ -4683,12 +4683,12 @@ switch( act )
 		 	rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = create_nfa( nfa_states );
-													
+
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
 
 													nfa_states[vstack[ vstack.length - 2 ].end].follow2 = vstack[ vstack.length - 2 ].start;
-												
+
 	}
 	break;
 	case 8:
@@ -4699,7 +4699,7 @@ switch( act )
 													nfa_states[rval.start].follow = vstack[ vstack.length - 2 ].start;
 													nfa_states[rval.start].follow2 = rval.end;
 													nfa_states[vstack[ vstack.length - 2 ].end].follow = rval.end;
-												
+
 	}
 	break;
 	case 9:
@@ -4714,12 +4714,12 @@ switch( act )
 													rval.end = nfa_states[rval.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
-													
+
 													//_print( "SINGLE: >" + vstack[ vstack.length - 1 ] + "<" );
-													
+
 													bitset_set( nfa_states[rval.start].ccl,
 															vstack[ vstack.length - 1 ].charCodeAt( 0 ), 1 );
-												
+
 	}
 	break;
 	case 11:
@@ -4729,22 +4729,22 @@ switch( act )
 	break;
 	case 12:
 	{
-			rval = vstack[ vstack.length - 2 ]; 
+			rval = vstack[ vstack.length - 2 ];
 	}
 	break;
 	case 13:
 	{
 			var negate = false;
 													var i = 0, j, start;
-													
+
 													//_print( "CHARCLASS: >" + vstack[ vstack.length - 2 ] + "<" );
-													
+
 													rval = new PARAM();
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
-													
+
 													if( vstack[ vstack.length - 2 ].charAt( i ) == '^' )
 													{
 														negate = true;
@@ -4761,7 +4761,7 @@ switch( act )
 															i++;
 															for( j = vstack[ vstack.length - 2 ].charCodeAt( i-1 );
 																	j < vstack[ vstack.length - 2 ].charCodeAt( i+1 );
-																		j++ )		
+																		j++ )
 																bitset_set( nfa_states[rval.start].ccl,
 																	j, negate ? 0 : 1 );
 														}
@@ -4769,37 +4769,37 @@ switch( act )
 															bitset_set( nfa_states[rval.start].ccl,
 																vstack[ vstack.length - 2 ].charCodeAt( i ), negate ? 0 : 1 );
 													}
-												
+
 	}
 	break;
 	case 14:
 	{
 			rval = new PARAM();
-				
+
 													//_print( "ANYCHAR: >" + vstack[ vstack.length - 1 ] + "<" );
-													
+
 													rval.start = create_nfa( nfa_states );
 													rval.end = nfa_states[rval.start].follow
 														= create_nfa( nfa_states );
 													nfa_states[rval.start].edge = EDGE_CHAR;
 													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
 														bitset_set( nfa_states[rval.start].ccl, i, 1 );
-												
+
 	}
 	break;
 	case 15:
 	{
-			rval = new String( vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ] ); 
+			rval = new String( vstack[ vstack.length - 2 ] + vstack[ vstack.length - 1 ] );
 	}
 	break;
 	case 16:
 	{
-			rval = new String(); 
+			rval = new String();
 	}
 	break;
 	case 17:
 	{
-			rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) ); 
+			rval = String.fromCharCode( vstack[ vstack.length - 1 ].substr( 1 ) );
 	}
 	break;
 	case 18:
@@ -4822,29 +4822,29 @@ switch( act )
 															rval = vstack[ vstack.length - 1 ].substr( 1 );
 															break;
 													}
-												
+
 	}
 	break;
 	case 19:
 	{
-			rval = vstack[ vstack.length - 1 ]; 
+			rval = vstack[ vstack.length - 1 ];
 	}
 	break;
 }
 
 
-			
+
 			if( regex_dbg_withparsetree )
 				tmptree = new Array();
 
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPopping " + pop_tab[act][1] + " off the stack..." );
-				
+
 			for( var i = 0; i < pop_tab[act][1]; i++ )
 			{
 				if( regex_dbg_withparsetree )
 					tmptree.push( tree.pop() );
-					
+
 				sstack.pop();
 				vstack.pop();
 			}
@@ -4859,7 +4859,7 @@ switch( act )
 					break;
 				}
 			}
-			
+
 			//Do some parse tree construction if desired
 			if( regex_dbg_withparsetree )
 			{
@@ -4870,15 +4870,15 @@ switch( act )
 				tree.push( treenodes.length );
 				treenodes.push( node );
 			}
-			
+
 
 			//Goal symbol match?
 			if( act == 0 ) //Don't use PCB.act here!
 				break;
-				
+
 			if( regex_dbg_withtrace )
 				__regexdbg_print( "\tPushing non-terminal " + labels[ pop_tab[act][0] ] );
-			
+
 			//...and push it!
 			sstack.push( PCB.act );
 			vstack.push( rval );
@@ -4900,7 +4900,7 @@ switch( act )
 			__regexdbg_print( "\n\nParse tree cannot be viewed. There where parse errors." );
 		}
 	}
-	
+
 	return err_cnt;
 }
 
@@ -4913,11 +4913,11 @@ function __regexdbg_parsetree( indent, nodes, tree )
 		str = "";
 		for( var j = indent; j > 0; j-- )
 			str += "\t";
-		
+
 		str += nodes[ tree[i] ].sym;
 		if( nodes[ tree[i] ].att != "" )
 			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
+
 		__regexdbg_print( str );
 		if( nodes[ tree[i] ].child.length > 0 )
 			__regexdbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
@@ -4934,14 +4934,14 @@ function compile_regex( str, accept, case_insensitive )
 	var error_offsets = new Array();
 	var error_expects = new Array();
 	var error_count = 0;
-	
+
 	if( str == "" )
 		return;
-	
+
 	//_print( "str = >" + str + "< " + case_insensitive );
-	
+
 	created_nfas = new Array();
-	
+
 	first_nfa = create_nfa( nfa_states );
 	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 )
 	{
@@ -4967,14 +4967,14 @@ function compile_regex( str, accept, case_insensitive )
 			}
 		}
 
-		/* 
+		/*
 			2008-5-9	Radim Cebis:
-			
+
 			I think that computing weight of the nfa_states is weird,
 			IMHO nfa_state which accepts a symbol, should have
 			weight according to the order...
 		*/
-		nfa_states[ last_nfa ].accept = accept;   
+		nfa_states[ last_nfa ].accept = accept;
 		nfa_states[ last_nfa ].weight = regex_weight++;
 
 		if( first_nfa > 0 )
@@ -4993,7 +4993,7 @@ function compile_regex( str, accept, case_insensitive )
 			var spaces = new String();
 			for( j = 0; j < error_offsets[i]; j++ )
 				spaces += " ";
-			
+
 			line_error( cur_line, "Regular expression:\n\t" + str + "\n\t" +
 			 		spaces + "^ expecting " + error_expects[i].join() );
 		}
@@ -5013,10 +5013,10 @@ function compile_regex( str, accept, case_insensitive )
 
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 Contibutions by Louis P. Santillan <lpsantil@gmail.com>
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	io_v8.js
 Author:	Louis P. Santillan
@@ -5025,7 +5025,7 @@ Usage:	Console-based wrapper function set for JS/CC to be executed
 		via Google's V8 engine
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 var DEFAULT_DRIVER = "driver_v8.js_";
@@ -5034,7 +5034,7 @@ function _error( msg )
 {
 	if( show_errors )
 		print( "error: " + file + ": " + msg );
-	
+
 	errors++;
 }
 
@@ -5042,7 +5042,7 @@ function _warning( msg )
 {
 	if( show_warnings )
 		print( "warning: " + file + ": "  + msg );
-	
+
 	warnings++;
 }
 
@@ -5059,7 +5059,7 @@ function _quit( exitcode )
 function read_file( file )
 {
 	var src = new String();
-	
+
 	if( file_exists( file ) )
 		src = file_read( file );
 	else
@@ -5067,14 +5067,14 @@ function read_file( file )
 		_error( "unable to open file '" + file + "'" );
 		quit();
 	}
-	
+
 	return src;
 }
 
 function write_file( file, content )
 {
 	var f = file_write( file, content );
-		
+
 	if( !f )
 	{
 		_error( "unable to write '" + file + "'" );
@@ -5091,16 +5091,16 @@ function get_arguments()
 }
 
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	main.js
 Author:	Jan Max Meyer
 Usage:	Console-based program entry for the JS/CC parser generator.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 function version()
@@ -5112,12 +5112,12 @@ function version()
 	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
 				"Jan Max Meyer\n";
 	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
-	
+
 	info += "You may use, modify and distribute this software under the " +
 				"terms and conditions\n";
 	info += "of the Artistic License. Please see ARTISTIC for more " +
 				"information.\n";
-	
+
 	_print( info );
 }
 
@@ -5136,7 +5136,7 @@ function help()
 	help += "                                 parser template\n";
 	help += "       -v   --verbose            Run in verbose mode\n";
 	help += "       -w   --warnings           Print warnings\n";
-		
+
 	_print( help );
 }
 
@@ -5186,7 +5186,7 @@ for( var i = 0; i < argv.length; i++ )
 					dump_dfa = true;
 					break;
 			}
-		
+
 		i++;
 	}
 	else if( argv[i].toLowerCase() == "-i"
@@ -5212,18 +5212,18 @@ if( src_file != "" )
 {
 	var src = read_file( src_file );
 	parse_grammar( src, src_file );
-	
+
 	if( errors == 0 )
 	{
 		//Check grammar integrity
 		undef();
 		unreachable();
-		
+
 		if( errors == 0 )
 		{
 			//LALR(1) parse table generation
 			first();
-			
+
 			//print_symbols( MODE_GEN_TEXT );
 			//print_grammar( MODE_GEN_TEXT );
 			lalr1_parse_table( false );
@@ -5231,19 +5231,19 @@ if( src_file != "" )
 			check_empty_states();
 
 			if( errors == 0 )
-			{		
+			{
 				//DFA state table generation
 				if( dump_nfa )
 					print_nfa( nfa_states );
-					
+
 				dfa_table = create_subset( nfa_states );
 				dfa_table = minimize_dfa( dfa_table );
-				
+
 				if( dump_dfa )
-					print_dfa( dfa_table );	
+					print_dfa( dfa_table );
 
 				var driver = read_file( tpl_file );
-									
+
 				driver = driver.replace( /##HEADER##/gi, code_head );
 				driver = driver.replace( /##TABLES##/gi, print_parse_tables( MODE_GEN_JS ) );
 				driver = driver.replace( /##DFA##/gi, print_dfa_table( dfa_table ) );
@@ -5261,14 +5261,14 @@ if( src_file != "" )
 					write_file( out_file, driver );
 				else
 					_print( driver );
-				
+
 				if( verbose )
 					_print( "\"" + src_file + "\" produced " + states.length + " states (" + shifts + " shifts, " +
 							reduces + " reductions, " + gotos + " gotos)" );
 			}
 		}
 	}
-	
+
 	if( verbose )
 		_print( warnings + " warning" + ( warnings > 1 ? "s" : "" ) + ", "
 			+ errors + " error" + ( errors > 1 ? "s" : "" ) );
