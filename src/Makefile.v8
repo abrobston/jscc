@@ -1,9 +1,9 @@
 #-------------------------------------------------------------------------------
-# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+# Build system for JS/CC LALR(1) Parser Generator
+# Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 #
 # You may use, modify and distribute this software under the terms and
-# conditions of the Artistic License. Please see ARTISTIC for more information.
+# conditions of the BSD license. Please see LICENSE for more information.
 #
 # Platform:			Google V8
 #-------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ include tools.inc
 all: 			$(JSCC) clean
 	@echo
 	@echo --- Compilation succeeded! ---
-	
+
 driver: ../driver_$(PLATFORM).js_
 	@echo
 	@echo --- Parser template generated! ---
@@ -65,7 +65,7 @@ $(V8):		v8/v8sh.cc
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
 	$(V8) $(JSCC_BOOTSTRAP) -v -o $@ -p jscc -t ../driver_$(PLATFORM).js_ $?
-	
+
 $(SRC_REGEX_JS):$(SRC_REGEX)
 	$(V8) $(JSCC_BOOTSTRAP) -v -o $@ -p regex -t ../driver_$(PLATFORM).js_ $?
 
@@ -77,7 +77,7 @@ clean_all:
 	-rm v8/v8sh
 	-rm -rf v8/v8
 
-bootstrap:			all 
+bootstrap:			all
 	cp $(JSCC) $(JSCC_BOOTSTRAP)
 	@echo
 	@echo --- Bootstrap replaced ---

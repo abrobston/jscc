@@ -1,14 +1,14 @@
 /* -HEADER----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	global.js
 Author:	Jan Max Meyer
 Usage:	General variables, constants and defines
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 /// constructors generator:
@@ -29,7 +29,7 @@ var Continue ={};
 	Constants
 */
 
-//Program version info 
+//Program version info
 var JSCC_VERSION			= "0.35";
 
 //Symbol types

@@ -1,10 +1,10 @@
 /*
 	Default driver template for JS/CC generated parsers for V8
-	
-	Written 2007-2010 by Jan Max Meyer, J.M.K S.F. Software Technologies
+
+	Written 2007-2010 by Jan Max Meyer, Phorward Software Technologies
         Modified 2008 from driver.js_ to support V8 by Louis P.Santillan
 			<lpsantil@gmail.com>
-	
+
 	This is in the public domain.
 */
 ##HEADER##
@@ -36,11 +36,11 @@ function __##PREFIX##dbg_parsetree( indent, nodes, tree )
 		str = "";
 		for( var j = indent; j > 0; j-- )
 			str += "\t";
-		
+
 		str += nodes[ tree[i] ].sym;
 		if( nodes[ tree[i] ].att != "" )
 			str += " >" + nodes[ tree[i] ].att + "<" ;
-			
+
 		__##PREFIX##dbg_print( str );
 		if( nodes[ tree[i] ].child.length > 0 )
 			__##PREFIX##dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );

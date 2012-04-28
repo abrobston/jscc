@@ -1,14 +1,14 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	lexdfa.js
 Author:	Jan Max Meyer
 Usage:	Deterministic finite automation construction and minimization.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 //Utility functions; I think there is no documentation required about them.
@@ -33,34 +33,34 @@ function same_nfa_items(dfa_states, items){
 					break;
 			if(j == dfa_states[i].nfa_set.length)
 				return i;
-		}	
+		}
 	return -1;
 }
 
 function get_undone_dfa( dfa_states ){
 	for( var i = 0; i < dfa_states.length; i++ )
 		if( !dfa_states[i].done )
-			return i;	
+			return i;
 	return -1;
 }
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		move()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Performs a move operation on a given input character from a
 					set of NFA states.
-					
+
 	Parameters:		state_set				The set of epsilon-closure states
 											on which base the move should be
 											performed.
 					machine					The NFA state machine.
 					ch						A character code to be moved on.
-	
+
 	Returns:		If there is a possible move, a new set of NFA-states is
 					returned, else the returned array has a length of 0.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -72,7 +72,7 @@ function move(state_set, machine, ch){
 			tos = state_set.pop();
 			if( machine[ tos ].edge == EDGE_CHAR )
 				if( machine[ tos ].ccl.get( ch ) )
-					hits.push( machine[ tos ].follow );		
+					hits.push( machine[ tos ].follow );
 		}while( state_set.length > 0 );
 	}catch(e){
 		_print("\n state_set= " + state_set + " machine= " + machine + " ch= "+ch);
@@ -83,20 +83,20 @@ function move(state_set, machine, ch){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		epsilon_closure()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Performs an epsilon closure from a set of NFA states.
-					
+
 	Parameters:		state_set				The set of states on which base
 											the closure is started.
 											The whole epsilon closure will be
 											appended to this parameter, so this
 											parameter acts as input/output value.
 					machine					The NFA state machine.
-	
+
 	Returns:		An array of accepting states, if available.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -119,7 +119,7 @@ function epsilon_closure( state_set, machine ){
 					state_set.push( machine[ tos ].follow );
 					stack.push( machine[ tos ].follow );
 				}
-			}	
+			}
 			if(machine[ tos ].follow2 > -1){
 				for(var i = 0; i < state_set.length; i++)
 					if(state_set[i] == machine[ tos ].follow2)
@@ -136,19 +136,19 @@ function epsilon_closure( state_set, machine ){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Constructs a deterministic finite automata (DFA) from a non-
 					deterministic finite automata, by using the subset construc-
 					tion algorithm.
-					
+
 	Parameters:		nfa_states				The NFA-state machine on which base
 											the DFA will be constructed.
 
 	Returns:		An array of DFA-objects forming the new DFA-state machine.
 					This machine is not minimized here.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -159,7 +159,7 @@ function create_subset(nfa_states){
 	var trans;
 	var next = -1;
 	var lowest_weight;
-	
+
 	if(nfa_states.length == 0)
 		return dfa_states;
 	epsilon_closure( stack, nfa_states );
@@ -170,16 +170,16 @@ function create_subset(nfa_states){
 		lowest_weight = -1;
 		for(var i = 0; i < dfa_states[current].nfa_set.length; i++){
 			if(nfa_states[ dfa_states[current].nfa_set[i]].accept > -1
-				&& nfa_states[dfa_states[current].nfa_set[i]].weight < lowest_weight 
+				&& nfa_states[dfa_states[current].nfa_set[i]].weight < lowest_weight
 				|| lowest_weight == -1){
 					dfa_states[ current ].accept = nfa_states[ dfa_states[ current ].nfa_set[i] ].accept;
 					lowest_weight = nfa_states[ dfa_states[ current ].nfa_set[i] ].weight;
 			}
-		}	
+		}
 		for(var i = MIN_CHAR; i < MAX_CHAR; i++){
 			trans = [].concat(dfa_states[current].nfa_set);
 			trans = move(trans, nfa_states, i);
-			
+
 			if(trans.length > 0){
 				//_print( "Character >" + String.fromCharCode( i ) + "< from " + dfa_states[ current ].nfa_set.join() + " to " + trans.join() );
 				epsilon_closure( trans, nfa_states );
@@ -187,7 +187,7 @@ function create_subset(nfa_states){
 
 			if(trans.length == 0)
 				next = -1;
-			else if((next = same_nfa_items( dfa_states, trans)) == -1 ){				
+			else if((next = same_nfa_items( dfa_states, trans)) == -1 ){
 				next = create_dfa( dfa_states );
 				dfa_states[ next ].nfa_set = trans;
 				//_print( "Creating new state " + next );
@@ -201,18 +201,18 @@ function create_subset(nfa_states){
 
 /* -FUNCTION--------------------------------------------------------------------
 	Function:		create_subset()
-	
+
 	Author:			Jan Max Meyer
-	
+
 	Usage:			Minimizes a DFA, by grouping equivalent states together.
 					These groups form the new, minimized dfa-states.
-					
+
 	Parameters:		dfa_states				The DFA-state machine on which base
 											the minimized DFA is constructed.
 
 	Returns:		An array of DFA-objects forming the minimized DFA-state
 					machine.
-  
+
 	~~~ CHANGES & NOTES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
@@ -225,7 +225,7 @@ function minimize_dfa( dfa_states ){
 	var		cnt 			= 0;
 	var		new_group;
 	var		i, j, k;
-	
+
 	if( dfa_states.length == 0 )
 		return min_dfa_states;
 	/*
@@ -270,7 +270,7 @@ function minimize_dfa( dfa_states ){
 								dfa_states[ groups[i][j] ].line[k] &&
 							( dfa_states[ groups[i][0] ].line[k] == -1 ||
 								dfa_states[ groups[i][j] ].line[k] == -1 ) ||
-									( dfa_states[ groups[i][0] ].line[k] > -1 && 
+									( dfa_states[ groups[i][0] ].line[k] > -1 &&
 											dfa_states[ groups[i][j] ].line[k] > -1 &&
 										dfa_states[ dfa_states[ groups[i][0] ].line[k] ].group
 											!= dfa_states[ dfa_states[ groups[i][j] ].line[k] ].group ) )
@@ -301,7 +301,7 @@ function minimize_dfa( dfa_states ){
 		for(j = MIN_CHAR; j < MAX_CHAR; j++)
 			if(dfa_states[i].line[j] > -1)
 				dfa_states[i].line[j] = dfa_states[ dfa_states[i].line[j] ].group;
-	for(i = 0; i < groups.length; i++)			
+	for(i = 0; i < groups.length; i++)
 		min_dfa_states.push(dfa_states[groups[i][0]]);
 	return min_dfa_states;
 }

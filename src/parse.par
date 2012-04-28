@@ -1,16 +1,16 @@
 /~ -PARSER----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	parse.par
 Author:	Jan Max Meyer
 Usage:	A parser for parsing JS/CC parser definitions; The first verions of
 		JS/CC until v0.14 (had never been released!) worked with a hand-written
 		recursive descent parser.
-		
+
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- ~/
 
 
@@ -39,19 +39,19 @@ function line_error( line, txt ){
 	'\|'
 	'&'
 	'~'
-	
+
 	/~ Lexeme: ~/
 	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(2, %match.length - 4 ); *]
 	'\'([^\']|\\\')*\''						STRING_SINGLE
 	'"([^"]|\\")*"'							STRING_DOUBLE
 	'[A-Za-z0-9_-]+'						IDENT
-	
+
 	/~ Whitespace: ~/
 	'\n'									[* throw Continue;*]
 	'/~([^~]/|~[^/]|[^~/])*~/'				[* throw Continue;*]
 	'[\t\r ]+'								[* throw Continue;*]
 	;
-	
+
 ##
 
 
@@ -61,7 +61,7 @@ def: 			header_code token_assocs '##' grammar_defs footer_code
 /~ Token definition part ~/
 header_code:	code_opt							[* code_head += %1; *]
 				;
-				
+
 footer_code:	code_opt							[* code_foot += %1; *]
 				;
 
@@ -124,14 +124,14 @@ grammar_defs:	grammar_defs grammar_def
 				| grammar_def
 				;
 
-grammar_def:	identifier ':' productions ';'		[*	
+grammar_def:	identifier ':' productions ';'		[*
 														var nonterm = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
 														for( var i = 0; i < %3.length; i++ ){
 															productions[ %3[i] ].lhs = nonterm;
 															symbols[nonterm].prods.push( %3[i] );
 														}
-														
+
 														if( first_lhs ){
 															first_lhs = false;
 															symbols[0].label = symbols[nonterm].label + "\'";
@@ -145,7 +145,7 @@ productions:	productions '|' rhs					[*	%1.push(%3); return %1; *]
 				| rhs								[*	return [%1]; *]
 				;
 
-rhs:			sequence_opt rhs_prec code_opt		[*	
+rhs:			sequence_opt rhs_prec code_opt		[*
 														var prod = new PROD({
 															id:productions.length,
 															rhs:%1,
@@ -195,11 +195,11 @@ sequence:		sequence symbol						[* %1.push(%2); return %1 *]
 				| symbol							[* return [%1]; *]
 				;
 
-symbol:			identifier							[*	
+symbol:			identifier							[*
 														if( ( %% = find_symbol( %1, SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															%% = create_symbol( %1, SYM_NONTERM, SPECIAL_NO_SPECIAL );
 													*]
-				| string							[*	
+				| string							[*
 														if( ( %% = find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
 															line_error(  PCB.line, "Call to undefined terminal " + %1 );
 													*]
@@ -218,19 +218,19 @@ code:			code CODE							[* return %1 + %2; *]
 string:			STRING_SINGLE
 				| STRING_DOUBLE
 				;
-				
+
 identifier:		IDENT
 				;
-				
+
 [*
 function parse_grammar( str, filename ){
 	var error_offsets = [];
 	var error_expects = [];
 	var parse_error = 0;
-	
+
 	first_lhs = true;
 	cur_line = 1;
-	
+
 	//##PREFIX##_dbg_withstepbystep = true;
 	//##PREFIX##_dbg_withtrace = true;
 
@@ -240,7 +240,7 @@ function parse_grammar( str, filename ){
 			line_error( ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
 				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ),
 					"Parse error near\n\t"  + str.substr( error_offsets[i], 30 ) +
-						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ? 
+						( ( error_offsets[i] + 30 < str.substr( error_offsets[i] ).length ) ?
 							"..." : "" ) + "\n\t" + error_expects[i].join() + " expected" );
 	}
 	return parse_error;

@@ -1,14 +1,14 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	lexdbg.js
 Author:	Jan Max Meyer
 Usage:	NFA/DFA state machines debugging/dumping functions
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 function print_nfa( ta )
@@ -22,7 +22,7 @@ function print_nfa( ta )
 				( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].follow > -1 ) ? nfa_states[i].follow : "" ) + "\t\t" +
 					( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].follow2 > -1 ) ? nfa_states[i].follow2 : "" ) + "\t\t" +
 						( ( nfa_states[i].edge != EDGE_FREE && nfa_states[i].accept > -1 ) ? nfa_states[i].accept : "" ) );
-						
+
 		if( nfa_states[i].edge == EDGE_CHAR )
 		{
 			var chars = "";
@@ -38,7 +38,7 @@ function print_nfa( ta )
 					}
 				}
 			}
-			
+
 			if( chars.length > 0 )
 				_print( "\t" + chars );
 		}
@@ -54,7 +54,7 @@ function print_dfa( dfa_states )
 	for( var i = 0; i < dfa_states.length; i++ )
 	{
 		str = i + " => (";
-		
+
 		chr_cnt = 0;
 		for( var j = 0; j < dfa_states[i].line.length; j++ )
 		{
@@ -62,12 +62,12 @@ function print_dfa( dfa_states )
 			{
 				str += " >" + String.fromCharCode( j ) + "<," + dfa_states[i].line[j] + " ";
 				chr_cnt++;
-				
+
 				if( ( chr_cnt % 5 ) == 0 )
 					str += "\n      ";
 			}
 		}
-		
+
 		str += ") " + dfa_states[i].accept;
 		_print( str );
 	}

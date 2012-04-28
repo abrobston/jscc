@@ -1,7 +1,7 @@
 /* -MODULE----------------------------------------------------------------------
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
-http://www.jmksf.com ++ jscc<-AT->jmksf.com
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	main_sm.js [Modified]
 Author:	Jan Max Meyer
@@ -9,7 +9,7 @@ Usage:	Console-based program entry for the JS/CC parser generator being
 		executed using Mozilla/Spidermonkey's smjs script shell.
 
 You may use, modify and distribute this software under the terms and conditions
-of the Artistic License. Please see ARTISTIC for more information.
+of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
 function _print( txt )
@@ -26,12 +26,12 @@ function version()
 	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
 				"Jan Max Meyer\n";
 	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
-	
+
 	info += "You may use, modify and distribute this software under the " +
 				"terms and conditions\n";
 	info += "of the Artistic License. Please see ARTISTIC for more " +
 				"information.\n";
-	
+
 	_print( info );
 }
 
@@ -46,7 +46,7 @@ function help()
 	help += "       -p   --prefix <prefix>    Use <prefix> as sequence pre-\n";
 	help += "                                 fixing methods and variables\n";
 	help += "       -w   --warnings           Print warnings\n";
-		
+
 	_print( help );
 }
 
@@ -90,18 +90,18 @@ for( var i = 0; i < arguments.length; i++ )
 if( src != "" )
 {
 	parse_grammar( src, "" );
-	
+
 	if( errors == 0 )
 	{
 		//Check grammar integrity
 		undef();
 		unreachable();
-		
+
 		if( errors == 0 )
 		{
 			//LALR(1) parse table generation
 			first();
-			
+
 			//print_symbols( MODE_GEN_TEXT );
 			//print_grammar( MODE_GEN_TEXT );
 			lalr1_parse_table( false );
@@ -109,10 +109,10 @@ if( src != "" )
 			check_empty_states();
 
 			if( errors == 0 )
-			{		
+			{
 				dfa_table = create_subset( nfa_states );
 				dfa_table = minimize_dfa( dfa_table );
-				
+
 				driver = driver.replace( /##HEADER##/gi, code_head );
 				driver = driver.replace( /##TABLES##/gi, print_parse_tables( MODE_GEN_JS ) );
 				driver = driver.replace( /##DFA##/gi, print_dfa_table( dfa_table ) );

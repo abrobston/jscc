@@ -1,9 +1,9 @@
 #-------------------------------------------------------------------------------
-# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+# Build system for JS/CC LALR(1) Parser Generator
+# Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 #
 # You may use, modify and distribute this software under the terms and
-# conditions of the Artistic License. Please see ARTISTIC for more information.
+# conditions of the BSD license. Please see LICENSE for more information.
 #
 # Platform:			Uses Mozilla/Rhino and Mozilla/Spidermonkey to build the
 # 					platform-independent Web-Environment of JS/CC
@@ -47,7 +47,7 @@ SRC_FINAL		=	$(SRC_GLOBAL) \
 all: 			$(JSCC) $(BUILDIN_DRIVER) $(BUILDIN_VDRIVER) clean
 	@echo
 	@echo --- Compilation succeeded! ---
-	
+
 driver: ../driver_$(PLATFORM).js_
 	@echo
 	@echo --- Parser template generated! ---
@@ -60,7 +60,7 @@ $(JSCC):		$(SRC_FINAL)
 
 $(SRC_PARSE_JS):$(SRC_PARSE)
 	$(RHINO) $(BOOTSTRAP)$(RHINO).js -v -o $@ -p jscc -t ../driver_web.js_ $?
-	
+
 $(SRC_REGEX_JS):$(SRC_REGEX)
 	$(RHINO) $(BOOTSTRAP)$(RHINO).js -v -o $@ -p regex -t ../driver_web.js_ $?
 
@@ -79,5 +79,5 @@ clean_all:
 	-rm $(BUILDIN_DRIVER)
 	-rm $(BUILDIN_VDRIVER)
 
-bootstrap:			all 
+bootstrap:			all
 	@echo Sorry, there is no bootstrapper for Webenv!

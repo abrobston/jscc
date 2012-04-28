@@ -1,9 +1,9 @@
 #-------------------------------------------------------------------------------
-# Build system for JS/CC: A LALR(1) Parser Generator written in JavaScript
-# Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies, Jan Max Meyer
+# Build system for JS/CC LALR(1) Parser Generator
+# Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 #
 # You may use, modify and distribute this software under the terms and
-# conditions of the Artistic License. Please see ARTISTIC for more information.
+# conditions of the BSD license. Please see LICENSE for more information.
 #
 # Platform independet tools.inc
 #-------------------------------------------------------------------------------

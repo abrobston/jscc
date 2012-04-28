@@ -1,5 +1,7 @@
-JS/CC: A LALR(1) Parser Generator written in JavaScript
-~~~ README AND INFORMATION ~~~
+JS/CC LALR(1) Parser Generator
+Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
+http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
+--------------------------------------------------------------------------------
 
 INTRODUCION:
 
@@ -14,11 +16,11 @@ JS/CC brings a lex/yacc-like toolchain into the world of ECMAScript.
 
 LICENSE:
 
-JS/CC is written by Jan Max Meyer (J.M.K S.F. Software Technologies) with
-contributions by Louis P. Santillan <lpsantil@gmail.com>.  JS/CC is
-released under the terms and conditions of the Artistic License.  The file
-src/v8/v8sh.cc is based on Google's V8 shell.cc and is released under the
-terms and conditions of the New BSD License (see file header for details).
+JS/CC is initially written by Jan Max Meyer (Phorward Software Technologies)
+with contributions by Louis P. Santillan and Sergiy Shatunov.  JS/CC is
+released under the terms and conditions of the 3-clause BSD license.
+The file src/v8/v8sh.cc is based on Google's V8 shell.cc and is released under
+the terms and conditions of the New BSD License (see file header for details).
 
 REQUIREMENTS:
 

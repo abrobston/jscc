@@ -7,7 +7,7 @@ AppSupportURL=http://jscc.jmksf.com
 AppUpdatesURL=http://jscc.jmksf.com
 DefaultDirName={pf}\jscc
 DefaultGroupName=JavaScript Parser Generator
-LicenseFile=jscc\ARTISTIC
+LicenseFile=jscc\LICENSE
 InfoBeforeFile=jscc\CHANGES
 OutputBaseFilename=jscc-0.30
 Compression=lzma
@@ -25,7 +25,7 @@ Source: "jscc\jscc.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\jscc.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\CHANGES"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\TODO"; DestDir: "{app}"; Flags: ignoreversion
-Source: "jscc\ARTISTIC"; DestDir: "{app}"; Flags: ignoreversion
+Source: "jscc\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\README"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\driver_jscript.js_"; DestDir: "{app}"; Flags: ignoreversion
 Source: "jscc\driver_webenv.js_"; DestDir: "{app}"; Flags: ignoreversion
@@ -62,7 +62,7 @@ Name: "{group}\Web Environment"; Filename: "{app}\webenv\jscc.html"
 Name: "{group}\README"; Filename: "{cmd}"; Parameters: "/C more ""{app}\README"""
 Name: "{group}\CHANGES"; Filename: "{cmd}"; Parameters: "/C more ""{app}\CHANGES"""
 Name: "{group}\TODO"; Filename: "{cmd}"; Parameters: "/C more ""{app}\TODO"""
-Name: "{group}\LICENSE"; Filename: "{cmd}"; Parameters: "/C more ""{app}\ARTISTIC"""
+Name: "{group}\LICENSE"; Filename: "{cmd}"; Parameters: "/C more ""{app}\LICENSE"""
 Name: "{group}\Command-line"; Filename: "{cmd}"; Parameters: "/K title JS/CC Command-Line"; WorkingDir: "{app}"
 Name: "{group}\User's Manual"; Filename: "{app}\doc\jscc_manual.pdf"; WorkingDir: "{app}"
 Name: "{group}\Official Web-Site"; Filename: "http://jscc.jmksf.com"
