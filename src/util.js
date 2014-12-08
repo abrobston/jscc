@@ -74,7 +74,8 @@ function reset_all( mode )
 	symbols = [];
 	productions = [];
 	states = [];
-	nfa_states = [];
+	NFA_states = new NFAStates();
+	nfa_states = NFA_states.value;
 	dfa_states = [];
 	lex = [];
 

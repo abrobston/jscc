@@ -47,9 +47,9 @@ function line_error( line, txt ){
 	'[A-Za-z0-9_-]+'						IDENT
 
 	/~ Whitespace: ~/
-	'\n'									[* throw Continue;*]
-	'/~([^~]/|~[^/]|[^~/])*~/'				[* throw Continue;*]
-	'[\t\r ]+'								[* throw Continue;*]
+	'\n'									[* Continue(); *]
+	'/~([^~]/|~[^/]|[^~/])*~/'				[* Continue(); *]
+	'[\t\r ]+'								[* Continue(); *]
 	;
 
 ##

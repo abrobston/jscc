@@ -11,22 +11,16 @@ You may use, modify and distribute this software under the terms and conditions
 of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
-function version()
-{
-	var info = "";
-
-	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
-				"Generator written in JavaScript\n";
-	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
-				"Jan Max Meyer\n";
-	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
-
-	info += "You may use, modify and distribute this software under the " +
-				"terms and conditions\n";
-	info += "of the Artistic License. Please see ARTISTIC for more " +
-				"information.\n";
-
-	_print( info );
+function version(){
+	_print( ["JS/CC v", JSCC_VERSION, ": A LALR(1) Parser and Lexer ",
+		"Generator written in JavaScript\n",
+	"Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies,",
+		"Jan Max Meyer\n",
+	"http://jscc.jmksf.com ++ jscc@jmksf.com\n\n",
+	"You may use, modify and distribute this software under the ",
+		"terms and conditions\n",
+	"of the Artistic License. Please see ARTISTIC for more ",
+				"information.\n"].join(""));
 }
 
 function help(){
@@ -151,7 +145,6 @@ if( src_file != "" ){
 				driver = driver.replace( /##ACTIONS##/gi, print_actions() );
 				driver = driver.replace( /##FOOTER##/gi, code_foot );
 				driver = driver.replace( /##PREFIX##/gi, code_prefix );
-				//driver = driver.replace( /##ERROR##/gi, get_error_state() );
 				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
