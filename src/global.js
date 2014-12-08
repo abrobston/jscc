@@ -24,13 +24,13 @@ function createConstructor(a){
     }
 }
 /// there was "continue" in code, we must to replace it
-var Continue ={};
+var Continue = function(){throw Continue;};
 /*
 	Constants
 */
 
 //Program version info
-var JSCC_VERSION			= "0.35";
+var JSCC_VERSION			= "0.37";
 
 //Symbol types
 var SYM_NONTERM				= 0;
@@ -95,6 +95,41 @@ var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
 var PARAM=createConstructor(['start','end']);
 var TOKEN=createConstructor(['token','lexeme']);
 
+function NFAStates(){
+	this.value = [];
+}
+NFAStates.prototype.create = function(){
+	
+	var pos;
+	var nfa;
+	var i;
+
+	/*
+		Use an empty item if available,
+		else create a new one...
+	*/
+	for( i = 0; i < this.value.length; i++ )
+		if( this.value[i].edge == EDGE_FREE )
+			break;
+
+	if( i == this.value.length ){
+		nfa = new NFA()
+		this.value.push( nfa );
+	}else
+		nfa = this.value[i];
+
+	nfa.edge = EDGE_EPSILON;
+	nfa.ccl=new BitSet(MAX_CHAR);
+	nfa.accept = -1;
+	nfa.follow = -1;
+	nfa.follow2 = -1;
+	nfa.weight = -1;
+
+	created_nfas.push( i );
+
+	return i;
+}
+
 /*
 	Globals (will be initialized via reset_all()!)
 */
@@ -103,7 +138,7 @@ var productions;
 var states;
 var lex;
 
-var nfa_states;
+var nfa_states, NFA_states;
 var dfa_states;
 
 var whitespace_token;

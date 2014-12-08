@@ -49,5 +49,5 @@ function write_file( file, content )
 }
 function get_arguments()
 {
-	return process.ARGV.splice(2);
+	return process.argv.slice(2);
 }
