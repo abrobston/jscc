@@ -25,6 +25,11 @@ function createConstructor(a){
 }
 /// there was "continue" in code, we must to replace it
 var Continue = function(){throw Continue;};
+var Return = function(value){throw new Return.Value(value);}
+/// you can return result from any place of code
+Return.Value = function(value){
+	this.valueOf = function(){return value;}
+}
 /*
 	Constants
 */

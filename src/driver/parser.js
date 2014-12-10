@@ -26,7 +26,7 @@ var __##PREFIX##parse=(function(debug,eof,whitespace,error_token){
 ##TERMINAL_ACTIONS##
 	}
 	function lex(PCB){
-		var state, match, match_pos, start, pos, chr;
+		var state, match, match_pos, start, pos, chr, actionResult;
 		
 		///Functions for manipulation of variables
 		function set_match(v){match=v;}
@@ -59,14 +59,17 @@ var __##PREFIX##parse=(function(debug,eof,whitespace,error_token){
 			if(match != null){
 				PCB.att = PCB.src.slice(start, match_pos);
 				PCB.offset = match_pos;
-				if((function(){
+				actionResult = (function(){
 					try{
-						TERMINAL_ACTIONS(PCB,match);
+						return TERMINAL_ACTIONS(PCB,match);
 					}catch(e){
-						if(e===Continue)return true;
-						else throw e;
+						if(e === Continue)return e;
+						if(e instanceof Return)return e.valueOf();
+						throw e;
 					}
-				})())continue;
+				})();
+				if(actionResult === Continue)continue;
+				PCB.att = actionResult;
 			}else
 				PCB.att = "";
 			return match;
@@ -75,9 +78,14 @@ var __##PREFIX##parse=(function(debug,eof,whitespace,error_token){
 ##TABLES##
 ##LABELS##
 	function ACTIONS(act,vstack){
-		var rval;
-##ACTIONS##
-		return rval;
+		try{
+			return ##ACTIONS##
+		}catch(e){
+		if(e instanceof Return.Value)
+			return e.valueOf();
+		else
+			throw e;
+		}
 	}
 	function get_act(top, la){	
 		for(var i = 0; i < act_tab[top].length; i+=2)
