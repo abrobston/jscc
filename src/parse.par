@@ -39,17 +39,18 @@ function line_error( line, txt ){
 	'\|'
 	'&'
 	'~'
+	'=>'
 
 	/~ Lexeme: ~/
-	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(2, %match.length - 4 ); *]
+	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	return %match.substr(2, %match.length - 4 ); *]
 	'\'([^\']|\\\')*\''						STRING_SINGLE
 	'"([^"]|\\")*"'							STRING_DOUBLE
 	'[A-Za-z0-9_-]+'						IDENT
 
 	/~ Whitespace: ~/
-	'\n'									[* Continue(); *]
-	'/~([^~]/|~[^/]|[^~/])*~/'				[* Continue(); *]
-	'[\t\r ]+'								[* Continue(); *]
+	'\n' => Continue
+	'/~([^~]/|~[^/]|[^~/])*~/' => Continue
+	'[\t\r ]+' => Continue
 	;
 
 ##
@@ -184,15 +185,15 @@ rhs_prec:		'&' identifier						[* 	var index;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
-				|									[*	return 0; *]
+				|									[*	Return(0); *]
 				;
 
 sequence_opt:	sequence
-				|									[*	return []; *]
+				|									[*	Return([]); *]
 				;
 
 sequence:		sequence symbol						[* %1.push(%2); return %1 *]
-				| symbol							[* return [%1]; *]
+				| symbol							[* Return([%1]); *]
 				;
 
 symbol:			identifier							[*
@@ -207,9 +208,12 @@ symbol:			identifier							[*
 				;
 
 /~ Universal elements ~/
-code_opt:		code
-				|									[* return ""; *]
-				;
+/~ TODO: apply this feature by another way ~/
+code_opt:
+	code
+	|'=>' identifier [* return "return "+ %2 + ".apply(null, arguments);" *]
+	| [* return ""; *]
+;
 
 code:			code CODE							[* return %1 + %2; *]
 				| CODE

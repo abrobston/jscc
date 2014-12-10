@@ -306,7 +306,7 @@ function print_symbol_labels(){
 								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions(){
-	var code = "(({\n";
+	var code = "return (({\n";
 	var re = /%match|%offset|%source/;
 	var i, j, k;
 	var semcode;
@@ -334,10 +334,10 @@ function print_term_actions(){
 					semcode += symbols[i].code.charAt( j );
 			}
 			code += "		" + semcode + "\n";
-			code += "		},\n";
+			code += "\t\treturn PCB.att;},\n";
 		}
 	}
-	code+="\n})[match.toString()]||(function(){}))()";
+	code+="\n})[match.toString()]||(function(){return PCB.att;}))(PCB.att)";
 	return code;
 }
 
@@ -359,11 +359,10 @@ function print_term_actions(){
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_actions(){
-	var code = "";
+	var code = ["["];
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
-	code += "rval=[";
 	for( i = 0; i < productions.length; i++ ){
 		semcode = "function(){\n";
 		semcode+="var rval;"
@@ -375,7 +374,7 @@ function print_actions(){
 				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
-					semcode += "arguments[ " + idx + " ]";
+					semcode += "arguments[" + idx + "]";
 				}
 				j += strmatch[0].length - 1;
 				k = semcode.length;
@@ -383,10 +382,10 @@ function print_actions(){
 			else
 				semcode += productions[i].code.charAt(j);
 		}
-		code += "		" + semcode + "\nreturn rval;},\n";
+		code.push("\t\t" + semcode + "\n\treturn rval;},\n")
 	}
-	code += "][act].apply(null,vstack);\n\n";
-	return code;
+	code.push("][act].apply(null,vstack);\n");
+	return code.join('');
 }
 
 /* -FUNCTION--------------------------------------------------------------------
