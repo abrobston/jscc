@@ -23,13 +23,6 @@ function createConstructor(a){
                 this[f]=o[f];
     }
 }
-/// there was "continue" in code, we must to replace it
-var Continue = function(){throw Continue;};
-var Return = function(value){throw new Return.Value(value);}
-/// you can return result from any place of code
-Return.Value = function(value){
-	this.valueOf = function(){return value;}
-}
 /*
 	Constants
 */
@@ -104,11 +97,9 @@ function NFAStates(){
 	this.value = [];
 }
 NFAStates.prototype.create = function(){
-	
 	var pos;
 	var nfa;
 	var i;
-
 	/*
 		Use an empty item if available,
 		else create a new one...

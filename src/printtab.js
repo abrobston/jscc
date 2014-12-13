@@ -251,7 +251,7 @@ function print_dfa_table(dfa_states){
 
 	var test=JSON.stringify(pack_dfa(dfa_states));
 	test=test.replace(/,/g,",\n\t");
-	code+="\nvar DFA_DATA="+test+";\n";
+	code+=test;
 
 	return code;
 }
@@ -306,7 +306,7 @@ function print_symbol_labels(){
 								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions(){
-	var code = "return (({\n";
+	var code = "({\n";
 	var re = /%match|%offset|%source/;
 	var i, j, k;
 	var semcode;
@@ -314,7 +314,7 @@ function print_term_actions(){
 	for( i = 0; i < symbols.length; i++ ){
 		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){
 			code += "	\"" + i + "\":";
-			code += "function(){";
+			code += "function(PCB){";
 			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ ){
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
@@ -334,10 +334,10 @@ function print_term_actions(){
 					semcode += symbols[i].code.charAt( j );
 			}
 			code += "		" + semcode + "\n";
-			code += "\t\treturn PCB.att;},\n";
+			code += "		return PCB.att;},\n";
 		}
 	}
-	code+="\n})[match.toString()]||(function(){return PCB.att;}))(PCB.att)";
+	code+="\n})";
 	return code;
 }
 
@@ -359,10 +359,11 @@ function print_term_actions(){
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_actions(){
-	var code = ["["];
+	var code = "";
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
 	var i, j, k, idx;
+	code += "[";
 	for( i = 0; i < productions.length; i++ ){
 		semcode = "function(){\n";
 		semcode+="var rval;"
@@ -374,7 +375,7 @@ function print_actions(){
 				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
-					semcode += "arguments[" + idx + "]";
+					semcode += "arguments[ " + idx + " ]";
 				}
 				j += strmatch[0].length - 1;
 				k = semcode.length;
@@ -382,10 +383,10 @@ function print_actions(){
 			else
 				semcode += productions[i].code.charAt(j);
 		}
-		code.push("\t\t" + semcode + "\n\treturn rval;},\n")
+		code += "		" + semcode + "\nreturn rval;},\n";
 	}
-	code.push("][act].apply(null,vstack);\n");
-	return code.join('');
+	code += "]";
+	return code;
 }
 
 /* -FUNCTION--------------------------------------------------------------------
