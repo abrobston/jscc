@@ -17,11 +17,10 @@ Return.Value = function(value){
 		return value;
 	};
 }
-
 	var DFA = (function(){
 		var DFA_DATA = ##DFA##;
-		return function(state,chr,match,pos,set_match,set_match_pos,set_state){
-			var line = DFA_DATA[state].line;
+		return function(chr,pos){
+			var line = DFA_DATA[this.state].line;
 			var p, st;
 			for(p = 1<<8, st = line; p; p>>=1){
 				st = st[!!(chr&p)+0];
@@ -29,11 +28,11 @@ Return.Value = function(value){
 				if(st instanceof Array)continue;
 				break;
 			}
-			var ac = DFA_DATA[state].accept;
-			set_state(st)
+			var ac = DFA_DATA[this.state].accept;
+			this.state = st;
 			if(ac!=-1){
-				set_match(ac);
-				set_match_pos(pos);
+				this.match = ac;
+				this.match_pos = pos;
 			}
 		}
 	})();
@@ -50,46 +49,41 @@ Return.Value = function(value){
 			}
 		}
 	})();
-	function lex(PCB){
-		var state, match, match_pos, start, pos, chr, actionResult;
-		
-		///Functions for manipulation of variables
-		function set_match(v){match=v;}
-		function set_state(v){state=v;}
-		function set_match_pos(v){match_pos=v;}
-		
+	function lex(){
+		var start, pos, chr, actionResult;
+		var dfa = {
+			exec:DFA
+		}
 		while(true){
-			match_pos = 0;
-			pos = PCB.offset + 1;
+			dfa.match_pos = 0;
+			pos = this.offset + 1;
 			do{
 				pos--;
-				state = 0;
-				match = null;
+				dfa.state = 0;
+				dfa.match = null;
 				start = pos;
-				if(PCB.src.length <= start)
+				if(this.src.length <= start)
 					return eof;
 				do{
-					chr = PCB.src.charCodeAt(pos);
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
-					if(state != null){
-						if( chr === 10 ){
-							PCB.line++;
-							PCB.column = 0;
-						}
-						PCB.column++;
-					}
+					chr = this.src.charCodeAt(pos);
+					dfa.exec(chr,pos);
+					if(dfa.state != null)
+						this.accountChar(chr);
 					pos++;
-				}while(state != null);
-			}while(whitespace > -1 && match == whitespace);
-			if(match != null){
-				PCB.att = PCB.src.slice(start, match_pos);
-				PCB.offset = match_pos;
-				actionResult = TERMINAL_ACTIONS(PCB,match);
-				if(actionResult === Continue)continue;
-				PCB.att = actionResult;
+				}while(dfa.state != null);
+			}while(whitespace > -1 && dfa.match == whitespace);
+			if(dfa.match != null){
+				this.att = this.src.slice(start, dfa.match_pos);
+				this.offset = dfa.match_pos;
+				actionResult = TERMINAL_ACTIONS(this,dfa.match);
+				if(dfa.state != null)
+					this.accountChar(chr);
+				if(actionResult === Continue)
+					continue;
+				this.att = actionResult;
 			}else
-				PCB.att = "";
-			return match;
+				this.att = "";
+			return this.la = dfa.match;
 		}
 	}
 ##TABLES##
@@ -132,7 +126,14 @@ Return.Value = function(value){
 			error_step:0,
 			src:src,
 			att:"",
-			lex:function(){return this.la = lex(this);}///@TODO: change `lex` function
+			lex:function(){return this.la = lex.call(this);},///@TODO: change `lex` function
+			accountChar:function(chr){
+				if( chr === 10 ){
+					this.line++;
+					this.column = 0;
+				}
+				this.column++;
+			}
 		};
 		err_off	= err_off || [];
 		err_la = err_la || [];
@@ -183,10 +184,13 @@ Return.Value = function(value){
 				vstack.unshift(PCB.att);
 				PCB.lex();
 				//Successfull shift and right beyond error recovery?
-				if(PCB.error_step > 0)PCB.error_step--;
+				if(PCB.error_step > 0)
+					PCB.error_step--;
 			}else{	//Reduce	
 				act = -PCB.act;
+				//vstack.unshift(vstack);
 				rval = ACTIONS(act,vstack);
+				//vstack.shift();
 				sstack.splice(0,pop_tab[act][1]);
 				vstack.splice(0,pop_tab[act][1]);
 				
