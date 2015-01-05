@@ -23,64 +23,62 @@ function createConstructor(a){
                 this[f]=o[f];
     }
 }
-/// there was "continue" in code, we must to replace it
-var Continue ={};
 /*
 	Constants
 */
 
 //Program version info
-var JSCC_VERSION			= "0.35";
+var JSCC_VERSION = "0.37";
 
 //Symbol types
-var SYM_NONTERM				= 0;
-var SYM_TERM				= 1;
+var SYM_NONTERM = {};
+var SYM_TERM = {};
 
 //Symbol special cases
-var SPECIAL_NO_SPECIAL		= 0;
-var SPECIAL_EOF				= 1;
-var SPECIAL_WHITESPACE		= 2;
-var SPECIAL_ERROR			= 3;
+var SPECIAL_NO_SPECIAL = {};
+var SPECIAL_EOF = {};
+var SPECIAL_WHITESPACE = {};
+var SPECIAL_ERROR = {};
 
 //Symbol associativity
-var ASSOC_NONE				= 0;
-var ASSOC_LEFT				= 1;
-var ASSOC_RIGHT				= 2;
-var ASSOC_NOASSOC			= 3;
+var ASSOC_NONE = {};
+var ASSOC_LEFT = {};
+var ASSOC_RIGHT = {};
+var ASSOC_NOASSOC = {};
 
 //Token-Definitions
 
-var TOK_ERROR				= 0;
-var TOK_EOF					= 1;
-var TOK_ID					= 2;
-var TOK_TERM				= 3;
-var TOK_TERM_S				= 4;
-var TOK_COLON				= 5;
-var TOK_SEMICOLON			= 6;
-var TOK_DELIMITER			= 7;
-var TOK_SEMANTIC			= 8;
-var	TOK_IGNORE				= 9;
-var TOK_PREFIX				= 10;
+var TOK_ERROR = {};
+var TOK_EOF = {};
+var TOK_ID = {};
+var TOK_TERM = {};
+var TOK_TERM_S = {};
+var TOK_COLON = {};
+var TOK_SEMICOLON = {};
+var TOK_DELIMITER = {};
+var TOK_SEMANTIC = {};
+var	TOK_IGNORE = {};
+var TOK_PREFIX = {};
 
 //Miscelleanous constants
-var DEF_PROD_CODE			= "%% = %1;";
+var DEF_PROD_CODE = "%% = %1;";
 
 //Code generation/output modes
-var MODE_GEN_TEXT			= 0;
-var MODE_GEN_JS				= 1;
-var MODE_GEN_HTML			= 2;
+var MODE_GEN_TEXT = {};
+var MODE_GEN_JS = {};
+var MODE_GEN_HTML = {};
 
 //Executable environment
-var EXEC_CONSOLE			= 0;
-var EXEC_WEB				= 1;
+var EXEC_CONSOLE = {};
+var EXEC_WEB = {};
 
 //Lexer state construction
-var MIN_CHAR				= 0;
-var MAX_CHAR				= 255;
+var MIN_CHAR = 0;
+var MAX_CHAR = 255;
 
-var EDGE_FREE				= 0;
-var EDGE_EPSILON			= 1;
-var EDGE_CHAR				= 2;
+var EDGE_FREE = {};
+var EDGE_EPSILON = {};
+var EDGE_CHAR = {};
 
 /*
 	Structs
@@ -95,6 +93,38 @@ var DFA=createConstructor(['line','object','nfa_set','accept','done','group']);
 var PARAM=createConstructor(['start','end']);
 var TOKEN=createConstructor(['token','lexeme']);
 
+function NFAStates(){
+	this.value = [];
+}
+NFAStates.prototype.create = function(){
+	var nfa;
+	var i;
+	/*
+		Use an empty item if available,
+		else create a new one...
+	*/
+	for( i = 0; i < this.value.length; i++ )
+		if( this.value[i].edge === EDGE_FREE )
+			break;
+
+	if( i == this.value.length ){
+		nfa = new NFA()
+		this.value.push( nfa );
+	}else
+		nfa = this.value[i];
+
+	nfa.edge = EDGE_EPSILON;
+	nfa.ccl=new BitSet(MAX_CHAR);
+	nfa.accept = -1;
+	nfa.follow = -1;
+	nfa.follow2 = -1;
+	nfa.weight = -1;
+
+	//created_nfas.push( i );
+
+	return i;
+}
+
 /*
 	Globals (will be initialized via reset_all()!)
 */
@@ -103,7 +133,7 @@ var productions;
 var states;
 var lex;
 
-var nfa_states;
+var nfa_states, NFA_states;
 var dfa_states;
 
 var whitespace_token;
@@ -155,11 +185,8 @@ function _error( msg )
 	errors++;
 }
 
-function _warning( msg )
-{
-	if( show_warnings )
-		sys.print( file + ": warning: " + msg );
-
+function _warning( msg ){
+	sys.print( file + ": warning: " + msg );
 	warnings++;
 }
 
@@ -177,7 +204,7 @@ function write_file( file, content )
 }
 function get_arguments()
 {
-	return process.ARGV.splice(2);
+	return process.argv.slice(2);
 }
 /* -MODULE----------------------------------------------------------------------
 JS/CC LALR(1) Parser Generator
@@ -804,8 +831,7 @@ function pack_dfa(dfa_states){
 	return json;
 }
 function print_dfa_table(dfa_states){
-	var code="";
-	var json=[];
+	var json=[], code;
 	for(var i=0;i<dfa_states.length;i++)(function(i){
 		var line={};
 		for(var j=0;j<dfa_states[i].line.length;j++)
@@ -816,12 +842,8 @@ function print_dfa_table(dfa_states){
 			accept:dfa_states[i].accept,
 			});
 	})(i);
-
-	var test=JSON.stringify(pack_dfa(dfa_states));
-	test=test.replace(/,/g,",\n\t");
-	code+="\nvar DFA_DATA="+test+";\n";
-
-	return code;
+	code = JSON.stringify(pack_dfa(dfa_states));
+	return code.replace(/,/g,",\n\t");
 }
 
 /* -FUNCTION--------------------------------------------------------------------
@@ -841,7 +863,6 @@ function print_dfa_table(dfa_states){
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_symbol_labels(){
-	//var i,arr
 	for(var i=0,arr=[];i<symbols.length;i++)
 		arr.push(symbols[i].label);
 	return "var labels = "+JSON.stringify(symbols)+";\n\n";
@@ -874,7 +895,7 @@ function print_symbol_labels(){
 								in each parser template.
 ----------------------------------------------------------------------------- */
 function print_term_actions(){
-	var code = "(({\n";
+	var code = "({\n";
 	var re = /%match|%offset|%source/;
 	var i, j, k;
 	var semcode;
@@ -882,7 +903,7 @@ function print_term_actions(){
 	for( i = 0; i < symbols.length; i++ ){
 		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){
 			code += "	\"" + i + "\":";
-			code += "function(){";
+			code += "function(PCB){";
 			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ ){
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );
@@ -902,10 +923,10 @@ function print_term_actions(){
 					semcode += symbols[i].code.charAt( j );
 			}
 			code += "		" + semcode + "\n";
-			code += "		},\n";
+			code += "		return PCB.att;},\n";
 		}
 	}
-	code+="\n})[match.toString()]||(function(){}))()";
+	code+="\n})";
 	return code;
 }
 
@@ -930,30 +951,31 @@ function print_actions(){
 	var code = "";
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
-	var i, j, k, idx;
-	code += "rval=[";
+	var i, j, k, idx, src;
+	code += "[";
 	for( i = 0; i < productions.length; i++ ){
+		src = productions[i].code;
 		semcode = "function(){\n";
 		semcode+="var rval;"
-		for(j = 0, k = 0; j < productions[i].code.length; j++, k++){
-			strmatch = re.exec(productions[i].code.substr(j, productions[i].code.length));
+		for(j = 0, k = 0; j < src.length; j++, k++){
+			strmatch = re.exec(src.substr(j, src.length));
 			if(strmatch && strmatch.index == 0){
 				if(strmatch[0] == "%%")
 					semcode += "rval";
 				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
-					semcode += "arguments[ " + idx + " ]";
+					semcode += " arguments[" + idx + "] ";
 				}
 				j += strmatch[0].length - 1;
 				k = semcode.length;
 			}
 			else
-				semcode += productions[i].code.charAt(j);
+				semcode += src.charAt(j);
 		}
 		code += "		" + semcode + "\nreturn rval;},\n";
 	}
-	code += "][act].apply(null,vstack);\n\n";
+	code += "]";
 	return code;
 }
 
@@ -1844,7 +1866,8 @@ function reset_all( mode )
 	symbols = [];
 	productions = [];
 	states = [];
-	nfa_states = [];
+	NFA_states = new NFAStates();
+	nfa_states = NFA_states.value;
 	dfa_states = [];
 	lex = [];
 
@@ -1901,44 +1924,35 @@ You may use, modify and distribute this software under the terms and conditions
 of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 ///SV: it is no reason to optimize data size, so we may use array of bool directly in code
-function BitSetBool(size)
-{
+function BitSetBool(size){
 	this.data=[];
 }
-BitSetBool.prototype={
-	set:function(bit,state)
-	{
+BitSetBool.prototype = {
+	set:function(bit,state){
 		return this.data[bit]=(state&&true)||false;
 	},
-	get:function(bit)
-	{
+	get:function(bit){
 		return this.data[bit];
 	},
-	count:function()
-	{
+	count:function(){
 		var i, c = 0;
-
 		for( i = 0; i < this.data.length; i++ )
 			if( this.data[i] )
 				c++;
 		return c;
 	}
 }
-function BitSet32()
-{
+function BitSet32(){
   this.data=[];
 }
 BitSet32.prototype={
-  set:function(bit,state)
-  {///@TODO simplify this if possible
+  set:function(bit,state){///@TODO simplify this if possible
     this.data[bit >> 5] = (state ? (this.data[bit >> 5] | (1 << (bit & 31))) : (this.data[bit >> 5] & ~(1 << (bit & 31))));
   },
-  get:function(bit)
-  {
+  get:function(bit){
     return ((this.data[bit >> 5] & (1 << (bit & 31)))==0) ? false : true;
   },
-  count:function()
-  {
+  count:function(){
     var i,l,c=0;
     for(i=0,l=this.data.length*32;i<l;i++)
       if(this.get(i))c++;
@@ -1972,27 +1986,19 @@ BitSetTest.prototype={
 var BitSet=(function(){
 	if((DEFAULT_DRIVER === "driver_node.js_") && false){
 		var Buffer = require('buffer').Buffer;
-		var DBG=require('sys').debug;
 		function BitSetBuffer(size){
-			//DBG("\nBuffer "+size);
 			this.data=new Buffer((size+7)>>3);
 		}
 		BitSetBuffer.prototype={
-		  set:function(bit,state)
-		  {///@TODO simplify this if possible
+		  set:function(bit,state){///@TODO simplify this if possible
 		    this.data[bit >> 3] = (state ? (this.data[bit >> 3] | (1 << (bit & 7))) : (this.data[bit >> 3] & ~(1 << (bit & 7))));
-		    //DBG("\nSet "+ bit +" to "+state);
 		  },
-		  get:function(bit)
-		  {
-			//DBG("\nGet bit "+bit);
+		  get:function(bit){
 			if(this.gets>10000)throw new Error("LIMIT");
 			else this.gets++;
 		    return ((this.data[bit >> 3] & (1 << (bit & 7)))==0) ? false : true;
 		  },
-		  count:function()
-		  {
-			//DBG("Count");
+		  count:function(){
 			var i,l,c=0;
 		    for(i=0,l=this.data.length*8;i<l;i++)
 		      if(this.get(i))c++;
@@ -2157,7 +2163,7 @@ of the BSD license. Please see LICENSE for more information.
 
 function create_dfa(where){
 	var dfa = new DFA({
-		line:new Array( MAX_CHAR ),
+		line:[],
 		accept:-1,
 		nfa_set:[],
 		done:false,
@@ -2528,23 +2534,23 @@ function print_dfa( dfa_states )
 */
 
 var __jscc_debug=(function(){///@TODO: create this variable without function
-
+	
 	var _dbg_withparsetree	= false;
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
-
+	
 	var __dbg_print=require('sys').print;
-
+	
 	function __dbg_flush()
 	{
 		///Not required here.
 	}
-
+	
 	function __dbg_wait()
 	{
 		///Not required here.
 	}
-
+	
 	function __dbg_parsetree( indent, nodes, tree )
 	{
 		var str = "";
@@ -2553,11 +2559,11 @@ var __jscc_debug=(function(){///@TODO: create this variable without function
 			str = "";
 			for( var j = indent; j > 0; j-- )
 				str += "\t";
-
+			
 			str += nodes[ tree[i] ].sym;
 			if( nodes[ tree[i] ].att != "" )
 				str += " >" + nodes[ tree[i] ].att + "<" ;
-
+				
 			__dbg_print( str );
 			if( nodes[ tree[i] ].child.length > 0 )
 				__dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
@@ -2591,8 +2597,20 @@ function line_error( line, txt ){
 }
 
 var __jsccparse=(function(debug,eof,whitespace,error_token){
-
-var DFA_DATA=[{"line":[[[[[[null,
+	
+/// there was "continue" in code, we must to replace it
+var Continue = function(){throw Continue;};
+///can return value from any place of callback
+function Return(value){
+	throw new Return.Value(value);
+}
+Return.Value = function(value){
+	this.valueOf = function(){
+		return value;
+	};
+}
+	var DFA = (function(){
+		var DFA_DATA = [{"line":[[[[[[null,
 	[[[null,
 	1],
 	[2,
@@ -2603,22 +2621,22 @@ var DFA_DATA=[{"line":[[[[[[null,
 	null],
 	[[[[[1,
 	3],
-	[18,
-	21]],
+	[19,
+	22]],
 	[null,
 	[4,
-	22]]],
+	23]]],
 	[null,
 	[[null,
 	5],
 	[null,
-	23]]]],
+	24]]]],
 	[5,
 	[[5,
 	[6,
 	7]],
 	[[8,
-	null],
+	25],
 	[9,
 	null]]]]]],
 	[[[[[[null,
@@ -2629,7 +2647,7 @@ var DFA_DATA=[{"line":[[[[[[null,
 	[5,
 	[[5,
 	[5,
-	24]],
+	26]],
 	[null,
 	[10,
 	5]]]]],
@@ -2664,9 +2682,9 @@ var DFA_DATA=[{"line":[[[[[[null,
 	null]],
 	null],
 	null]],
-	"accept":18},
+	"accept":19},
 	{"line":[],
-	"accept":16},
+	"accept":17},
 	{"line":[],
 	"accept":6},
 	{"line":[],
@@ -2704,7 +2722,7 @@ var DFA_DATA=[{"line":[[[[[[null,
 	null]],
 	null]]]]],
 	null]],
-	"accept":15},
+	"accept":16},
 	{"line":[],
 	"accept":8},
 	{"line":[],
@@ -2720,84 +2738,86 @@ var DFA_DATA=[{"line":[[[[[[null,
 	{"line":[],
 	"accept":11},
 	{"line":[],
-	"accept":14},
+	"accept":15},
 	{"line":[],
 	"accept":2},
 	{"line":[],
-	"accept":13},
-	{"line":[],
-	"accept":17},
+	"accept":14},
 	{"line":[],
 	"accept":12},
-	{"line":[[[[18,
-	[[[[18,
+	{"line":[],
+	"accept":18},
+	{"line":[],
+	"accept":13},
+	{"line":[[[[19,
+	[[[[19,
 	[13,
-	18]],
-	18],
-	18],
-	18]],
-	[[18,
-	[18,
-	[18,
-	[[25,
-	18],
-	18]]]],
-	18]],
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
+	19]],
+	19],
+	19],
+	19]],
+	[[19,
+	[19,
+	[19,
+	[[27,
+	19],
+	19]]]],
+	19]],
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[[18,
-	[[[[18,
+	{"line":[[[[19,
+	[[[[19,
 	[13,
-	18]],
-	18],
-	18],
-	18]],
-	[[18,
-	[18,
-	[18,
-	[[25,
-	18],
-	18]]]],
-	18]],
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
+	19]],
+	19],
+	19],
+	19]],
+	[[19,
+	[19,
+	[19,
+	[[27,
+	19],
+	19]]]],
+	19]],
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	null]]]]]]]]],
+	"accept":15},
+	{"line":[[[[23,
+	[[[23,
+	[23,
+	[23,
+	15]]],
+	23],
+	23]],
+	[[23,
+	[23,
+	[23,
+	[[28,
+	23],
+	23]]]],
+	23]],
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
 	null]]]]]]]]],
 	"accept":14},
-	{"line":[[[[22,
-	[[[22,
-	[22,
-	[22,
-	15]]],
-	22],
-	22]],
-	[[22,
-	[22,
-	[22,
-	[[26,
-	22],
-	22]]]],
-	22]],
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	null]]]]]]]]],
-	"accept":13},
 	{"line":[[[[null,
 	[[[[null,
 	[null,
@@ -2808,27 +2828,27 @@ var DFA_DATA=[{"line":[[[[[[null,
 	null],
 	null]],
 	"accept":-1},
-	{"line":[[[[22,
-	[[[22,
-	[22,
-	[22,
+	{"line":[[[[23,
+	[[[23,
+	[23,
+	[23,
 	15]]],
-	22],
-	22]],
-	[[22,
-	[22,
-	[22,
-	[[26,
-	22],
-	22]]]],
-	22]],
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
+	23],
+	23]],
+	[[23,
+	[23,
+	[23,
+	[[28,
+	23],
+	23]]]],
+	23]],
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
 	null]]]]]]]]],
 	"accept":-1},
 	{"line":[[[null,
@@ -2837,87 +2857,97 @@ var DFA_DATA=[{"line":[[[[[[null,
 	[null,
 	[null,
 	[null,
-	[27,
+	[29,
 	null]]]]]]],
 	null]],
 	"accept":-1},
 	{"line":[[[[null,
+	[null,
+	[null,
+	[null,
+	[null,
+	[16,
+	null]]]]]],
+	null],
+	null]],
+	"accept":-1},
+	{"line":[[[[null,
 	[[null,
 	[[null,
-	[35,
+	[37,
 	null]],
 	null]],
 	null]],
 	null],
 	null]],
 	"accept":-1},
-	{"line":[[[[18,
-	[[[[18,
+	{"line":[[[[19,
+	[[[[19,
+	[20,
+	19]],
+	19],
+	19],
+	19]],
+	[[19,
 	[19,
-	18]],
-	18],
-	18],
-	18]],
-	[[18,
-	[18,
-	[18,
-	[[25,
-	18],
-	18]]]],
-	18]],
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
-	[18,
+	[19,
+	[[27,
+	19],
+	19]]]],
+	19]],
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
+	[19,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[[22,
-	[[[22,
-	[22,
-	[22,
-	20]]],
-	22],
-	22]],
-	[[22,
-	[22,
-	[22,
-	[[26,
-	22],
-	22]]]],
-	22]],
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
-	[22,
+	{"line":[[[[23,
+	[[[23,
+	[23,
+	[23,
+	21]]],
+	23],
+	23]],
+	[[23,
+	[23,
+	[23,
+	[[28,
+	23],
+	23]]]],
+	23]],
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
+	[23,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[[36,
-	[[36,
-	[36,
-	[36,
-	[36,
-	28]]]],
-	36]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[29,
-	36]]]]]]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
+	{"line":[[[[38,
+	[[38,
+	[38,
+	[38,
+	[38,
+	30]]]],
+	38]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[31,
+	38]]]]]]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
 	null]]]]]]]]],
 	"accept":-1},
 	{"line":[[[[null,
@@ -2925,60 +2955,60 @@ var DFA_DATA=[{"line":[[[[[[null,
 	[null,
 	[null,
 	[null,
-	27]]]],
+	29]]]],
 	null]],
 	null],
 	null]],
 	"accept":-1},
-	{"line":[[[[27,
-	[[27,
-	[27,
-	[27,
-	[27,
-	16]]]],
-	27]],
-	27],
-	[27,
-	[27,
-	[27,
-	[27,
-	[27,
-	[27,
-	[27,
+	{"line":[[[[29,
+	[[29,
+	[29,
+	[29,
+	[29,
+	17]]]],
+	29]],
+	29],
+	[29,
+	[29,
+	[29,
+	[29,
+	[29,
+	[29,
+	[29,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[[30,
-	[[30,
-	[[30,
-	[31,
-	30]],
-	30]],
-	30]],
-	30],
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
+	{"line":[[[[32,
+	[[32,
+	[[32,
+	[33,
+	32]],
+	32]],
+	32]],
+	32],
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[34,
-	[[34,
-	[34,
-	[34,
-	[[34,
-	17],
-	34]]]],
-	34]],
-	[34,
-	[34,
-	[34,
-	[34,
-	[34,
-	[34,
-	[34,
+	{"line":[[[36,
+	[[36,
+	[36,
+	[36,
+	[[36,
+	18],
+	36]]]],
+	36]],
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
+	[36,
 	null]]]]]]]]],
 	"accept":-1},
 	{"line":[[[null,
@@ -2986,284 +3016,283 @@ var DFA_DATA=[{"line":[[[[[[null,
 	[null,
 	[null,
 	[[null,
-	34],
+	36],
 	null]]]],
 	null]],
 	null]],
 	"accept":-1},
-	{"line":[[[[36,
-	[[36,
-	[36,
-	[36,
-	[36,
-	33]]]],
-	36]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[29,
-	36]]]]]]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	null]]]]]]]]],
-	"accept":-1},
-	{"line":[[[[30,
-	[[30,
-	[[30,
+	{"line":[[[[38,
+	[[38,
+	[38,
+	[38,
+	[38,
+	35]]]],
+	38]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
 	[31,
-	30]],
-	30]],
-	30]],
-	[[30,
-	[30,
-	[30,
-	[[30,
-	32],
-	30]]]],
-	30]],
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
+	38]]]]]]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
 	null]]]]]]]]],
 	"accept":-1},
-	{"line":[[[[30,
-	[[30,
-	[[30,
+	{"line":[[[[32,
+	[[32,
+	[[32,
+	[33,
+	32]],
+	32]],
+	32]],
+	[[32,
+	[32,
+	[32,
+	[[32,
+	34],
+	32]]]],
+	32]],
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[32,
+	[[32,
+	[[32,
+	[33,
+	32]],
+	32]],
+	32]],
+	[[32,
+	[32,
+	[32,
+	[[32,
+	34],
+	32]]]],
+	32]],
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	[32,
+	null]]]]]]]]],
+	"accept":-1},
+	{"line":[[[[38,
+	[[38,
+	[38,
+	[38,
+	[38,
+	35]]]],
+	38]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
 	[31,
-	30]],
-	30]],
-	30]],
-	[[30,
-	[30,
-	[30,
-	[[30,
-	32],
-	30]]]],
-	30]],
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	[30,
-	null]]]]]]]]],
-	"accept":-1},
-	{"line":[[[[36,
-	[[36,
-	[36,
-	[36,
-	[36,
-	33]]]],
-	36]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[29,
-	36]]]]]]],
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
-	[36,
+	38]]]]]]],
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
+	[38,
 	null]]]]]]]]],
 	"accept":-1}];
-
-	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var line = DFA_DATA[state].line;
-		var p,st;
-		for(p=1<<8,st=line;p;p>>=1){
-			st=st[!!(chr&p)+0];
-			if(st==null)break;
-			if(st instanceof Array)continue;
-			break;
+		return function(chr,pos){
+			var line = DFA_DATA[this.state].line;
+			var p, st;
+			for(p = 1<<8, st = line; p; p>>=1){
+				st = st[!!(chr&p)+0];
+				if(st==null)break;
+				if(st instanceof Array)continue;
+				break;
+			}
+			var ac = DFA_DATA[this.state].accept;
+			this.state = st;
+			if(ac!=-1){
+				this.match = ac;
+				this.match_pos = pos;
+			}
 		}
-		var ac=DFA_DATA[state].accept;
-		set_state(st)
-		if(ac!=-1){
-			set_match(ac);
-			set_match_pos(pos);
+	})();
+	var TERMINAL_ACTIONS = (function(){
+		function emptyFn(PCB){return PCB.att;}
+		var actions = ({
+	"13":function(PCB){			return PCB.att.substr(2, PCB.att.length - 4 ); 
+		return PCB.att;},
+	"17":function(PCB){		return Continue.apply(null, arguments);
+		return PCB.att;},
+	"18":function(PCB){		return Continue.apply(null, arguments);
+		return PCB.att;},
+	"19":function(PCB){		return Continue.apply(null, arguments);
+		return PCB.att;},
+
+})
+		return function(PCB, match){
+			try{
+				return (actions[match] || emptyFn)(PCB);
+			}catch(e){
+				if(e instanceof Return.Value)return e.valueOf();
+				if(e == Continue)return Continue;
+				throw e;
+			}
 		}
-	}
-	function TERMINAL_ACTIONS(PCB,match){
-(({
-	"12":function(){			PCB.att = PCB.att.substr(2, PCB.att.length - 4 );
-		},
-	"16":function(){		 throw Continue;
-		},
-	"17":function(){		 throw Continue;
-		},
-	"18":function(){		 throw Continue;
-		},
-
-})[match.toString()]||(function(){}))()
-	}
-	function lex(PCB){
-		var state, match, match_pos, start, pos, chr;
-
-		///Functions for manipulation of variables
-		function set_match(v){match=v;}
-		function set_state(v){state=v;}
-		function set_match_pos(v){match_pos=v;}
-
+	})();
+	function lex(){
+		var start, pos, chr, actionResult;
+		var dfa = {
+			exec:DFA
+		}
 		while(true){
-			match_pos = 0;
-			pos = PCB.offset + 1;
+			dfa.match_pos = 0;
+			pos = this.offset + 1;
 			do{
 				pos--;
-				state = 0;
-				match = null;
+				dfa.state = 0;
+				dfa.match = null;
 				start = pos;
-				if(PCB.src.length <= start)
+				if(this.src.length <= start)
 					return eof;
 				do{
-					chr = PCB.src.charCodeAt(pos);
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
-					if(state != null){
-						if( chr === 10 ){
-							PCB.line++;
-							PCB.column = 0;
-						}
-						PCB.column++;
-					}
+					chr = this.src.charCodeAt(pos);
+					dfa.exec(chr,pos);
+					if(dfa.state != null)
+						this.accountChar(chr);
 					pos++;
-				}while(state != null);
-			}while(whitespace > -1 && match == whitespace);
-			if(match != null){
-				PCB.att = PCB.src.slice(start, match_pos);
-				PCB.offset = match_pos;
-				if((function(){
-					try{
-						TERMINAL_ACTIONS(PCB,match);
-					}catch(e){
-						if(e===Continue)return true;
-						else throw e;
-					}
-				})())continue;
+				}while(dfa.state != null);
+			}while(whitespace > -1 && dfa.match == whitespace);
+			if(dfa.match != null){
+				this.att = this.src.slice(start, dfa.match_pos);
+				this.offset = dfa.match_pos;
+				actionResult = TERMINAL_ACTIONS(this,dfa.match);
+				if(dfa.state != null)
+					this.accountChar(chr);
+				if(actionResult === Continue)
+					continue;
+				this.att = actionResult;
 			}else
-				PCB.att = "";
-			return match;
+				this.att = "";
+			return this.la = dfa.match;
 		}
 	}
 
-var pop_tab =[[0,1],[23,5],[19,1],[22,1],[20,2],[20,1],[25,3],[25,3],[25,3],[25,2],[25,2],[26,2],[26,1],[28,3],[28,2],[21,2],[21,1],[30,4],[30,2],[31,3],[31,1],[32,3],[34,2],[34,2],[34,0],[33,1],[33,0],[35,2],[35,1],[36,1],[36,1],[36,1],[24,1],[24,0],[37,2],[37,1],[27,1],[27,1],[29,1]];
+var pop_tab =[[0,1],[24,5],[20,1],[23,1],[21,2],[21,1],[26,3],[26,3],[26,3],[26,2],[26,2],[27,2],[27,1],[29,3],[29,2],[22,2],[22,1],[31,4],[31,2],[32,3],[32,1],[33,3],[35,2],[35,2],[35,0],[34,1],[34,0],[36,2],[36,1],[37,1],[37,1],[37,1],[25,1],[25,2],[25,2],[25,0],[38,2],[38,1],[28,1],[28,1],[30,1]];
 
-var act_tab =[[12,5],[],[3,8,4,9,5,10,6,12,13,15,14,16],[],[12,17],[],[2,19,3,8,4,9,5,10,6,12,13,15,14,16],[],[13,15,14,16],[13,15,14,16],[13,15,14,16],[7,24,13,15,14,16],[13,15,14,16],[],[15,28,12,5],[],[],[],[],[1,32,15,28],[7,33,13,15,14,16],[7,34,13,15,14,16],[7,35,13,15,14,16],[],[],[],[],[12,5],[],[1,32,15,28,12,5],[],[8,40],[7,41],[],[],[],[],[],[],[],[11,49,15,28,13,15,14,16],[],[9,50,7,51],[],[10,53],[11,49,15,28,13,15,14,16],[],[],[],[],[11,49,15,28,13,15,14,16],[],[12,5],[15,28,13,15,14,16],[],[],[],[],[]];
+var act_tab =[[12,5,13,6],[],[3,9,4,10,5,11,6,13,14,16,15,17],[],[13,18],[13,19,16,21],[],[2,23,3,9,4,10,5,11,6,13,14,16,15,17],[],[14,16,15,17],[14,16,15,17],[14,16,15,17],[7,28,14,16,15,17],[14,16,15,17],[],[16,21,12,5,13,6],[],[],[],[],[],[],[],[1,35,16,21],[7,36,14,16,15,17],[7,37,14,16,15,17],[7,38,14,16,15,17],[],[],[],[],[12,5,13,6],[1,35,12,5,16,21,13,6],[],[8,43],[7,44],[],[],[],[],[],[],[],[11,52,16,21,14,16,15,17],[],[9,53,7,54],[],[10,56],[11,52,16,21,14,16,15,17],[],[],[],[],[11,52,16,21,14,16,15,17],[],[12,5,13,6],[16,21,14,16,15,17],[],[],[],[],[]];
 
-var goto_tab =[[23,1,19,2,24,3,37,4],[],[20,6,25,7,26,11,28,13,27,14],[],[],[],[25,18,26,11,28,13,27,14],[],[26,20,28,13,27,14],[26,21,28,13,27,14],[26,22,28,13,27,14],[28,23,27,14],[27,25],[],[24,26,29,27,37,4],[],[],[],[],[21,29,30,30,29,31],[28,23,27,14],[28,23,27,14],[28,23,27,14],[],[],[],[],[24,36,37,4],[],[30,37,22,38,24,39,29,31,37,4],[],[],[],[],[],[],[],[],[],[],[31,42,32,43,33,44,35,45,36,46,29,47,27,48],[],[],[],[34,52],[36,54,29,47,27,48],[],[],[],[],[32,55,33,44,35,45,36,46,29,47,27,48],[],[24,56,37,4],[27,57,29,58],[],[],[],[],[]];
+var goto_tab =[[24,1,20,2,25,3,38,4],[],[21,7,26,8,27,12,29,14,28,15],[],[],[30,20],[],[26,22,27,12,29,14,28,15],[],[27,24,29,14,28,15],[27,25,29,14,28,15],[27,26,29,14,28,15],[29,27,28,15],[28,29],[],[25,30,30,31,38,4],[],[],[],[],[],[],[],[22,32,31,33,30,34],[29,27,28,15],[29,27,28,15],[29,27,28,15],[],[],[],[],[25,39,38,4],[31,40,23,41,25,42,30,34,38,4],[],[],[],[],[],[],[],[],[],[],[32,45,33,46,34,47,36,48,37,49,30,50,28,51],[],[],[],[35,55],[37,57,30,50,28,51],[],[],[],[],[33,58,34,47,36,48,37,49,30,50,28,51],[],[25,59,38,4],[28,60,30,61],[],[],[],[],[]];
 
-var defact_tab =[33,0,-1,2,32,35,-1,5,-1,-1,-1,-1,-1,12,33,36,37,34,4,-1,-1,-1,-1,11,9,10,14,33,38,33,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,33,-1,27,19,21,23,22];
+var defact_tab =[35,0,-1,2,32,-1,37,-1,5,-1,-1,-1,-1,-1,12,35,38,39,36,34,33,40,4,-1,-1,-1,-1,11,9,10,14,35,35,16,-1,-1,6,7,8,13,15,1,3,26,18,-1,20,24,25,28,29,30,31,26,17,35,-1,27,19,21,23,22];
 
-var labels = [{"label":"def'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"##","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"<","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":">","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"^","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"!","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":";","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":":","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"&","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"~","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"CODE","kind":1,"prods":[],"nullable":false,"id":12,"code":"\t%match = %match.substr(2, %match.length - 4 ); ","level":0,"special":0,"defined":false,"first":[12]},{"label":"STRING_SINGLE","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"STRING_DOUBLE","kind":1,"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":0,"defined":false,"first":[14]},{"label":"IDENT","kind":1,"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":0,"defined":false,"first":[15]},{"label":"n","kind":1,"prods":[],"nullable":false,"id":16,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[16]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":1,"prods":[],"nullable":false,"id":17,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[17]},{"label":"[tr ]+","kind":1,"prods":[],"nullable":false,"id":18,"code":" throw Continue;","level":0,"special":0,"defined":false,"first":[18]},{"label":"header_code","kind":0,"prods":[2],"nullable":1,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assocs","kind":0,"prods":[4,5],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"grammar_defs","kind":0,"prods":[15,16],"nullable":0,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"footer_code","kind":0,"prods":[3],"nullable":1,"id":22,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"def","kind":0,"prods":[1],"nullable":0,"id":23,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,12,13,14]},{"label":"code_opt","kind":0,"prods":[32,33],"nullable":1,"id":24,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"token_assoc","kind":0,"prods":[6,7,8,9,10],"nullable":0,"id":25,"code":"","level":0,"special":0,"defined":true,"first":[3,4,5,6,13,14]},{"label":"token_defs","kind":0,"prods":[11,12],"nullable":0,"id":26,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"string","kind":0,"prods":[36,37],"nullable":0,"id":27,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"token_def","kind":0,"prods":[13,14],"nullable":0,"id":28,"code":"","level":0,"special":0,"defined":true,"first":[13,14]},{"label":"identifier","kind":0,"prods":[38],"nullable":0,"id":29,"code":"","level":0,"special":0,"defined":true,"first":[15]},{"label":"grammar_def","kind":0,"prods":[17,18],"nullable":0,"id":30,"code":"","level":0,"special":0,"defined":true,"first":[15,1]},{"label":"productions","kind":0,"prods":[19,20],"nullable":1,"id":31,"code":"","level":0,"special":0,"defined":true,"first":[10,12,9,15,13,14,11]},{"label":"rhs","kind":0,"prods":[21],"nullable":1,"id":32,"code":"","level":0,"special":0,"defined":true,"first":[10,12,15,13,14,11]},{"label":"sequence_opt","kind":0,"prods":[25,26],"nullable":1,"id":33,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"rhs_prec","kind":0,"prods":[22,23,24],"nullable":1,"id":34,"code":"","level":0,"special":0,"defined":true,"first":[10]},{"label":"sequence","kind":0,"prods":[27,28],"nullable":0,"id":35,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"symbol","kind":0,"prods":[29,30,31],"nullable":0,"id":36,"code":"","level":0,"special":0,"defined":true,"first":[15,13,14,11]},{"label":"code","kind":0,"prods":[34,35],"nullable":0,"id":37,"code":"","level":0,"special":0,"defined":true,"first":[12]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":38,"code":"","level":0,"special":1,"defined":false,"first":[38]}];
+var labels = [{"label":"def'","kind":{},"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":{},"defined":true,"first":[12,3,4,5,6,13,14,15]},{"label":"ERROR_RESYNC","kind":{},"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":{},"defined":true,"first":[1]},{"label":"##","kind":{},"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":{},"defined":false,"first":[2]},{"label":"<","kind":{},"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":{},"defined":false,"first":[3]},{"label":">","kind":{},"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":{},"defined":false,"first":[4]},{"label":"^","kind":{},"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":{},"defined":false,"first":[5]},{"label":"!","kind":{},"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":{},"defined":false,"first":[6]},{"label":";","kind":{},"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":{},"defined":false,"first":[7]},{"label":":","kind":{},"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":{},"defined":false,"first":[8]},{"label":"|","kind":{},"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":{},"defined":false,"first":[9]},{"label":"&","kind":{},"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":{},"defined":false,"first":[10]},{"label":"~","kind":{},"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":{},"defined":false,"first":[11]},{"label":"=>","kind":{},"prods":[],"nullable":false,"id":12,"code":"","level":0,"special":{},"defined":false,"first":[12]},{"label":"CODE","kind":{},"prods":[],"nullable":false,"id":13,"code":"\treturn %match.substr(2, %match.length - 4 ); ","level":0,"special":{},"defined":false,"first":[13]},{"label":"STRING_SINGLE","kind":{},"prods":[],"nullable":false,"id":14,"code":"","level":0,"special":{},"defined":false,"first":[14]},{"label":"STRING_DOUBLE","kind":{},"prods":[],"nullable":false,"id":15,"code":"","level":0,"special":{},"defined":false,"first":[15]},{"label":"IDENT","kind":{},"prods":[],"nullable":false,"id":16,"code":"","level":0,"special":{},"defined":false,"first":[16]},{"label":"n","kind":{},"prods":[],"nullable":false,"id":17,"code":"return Continue.apply(null, arguments);","level":0,"special":{},"defined":false,"first":[17]},{"label":"/~([^~]/|~[^/]|[^~/])*~/","kind":{},"prods":[],"nullable":false,"id":18,"code":"return Continue.apply(null, arguments);","level":0,"special":{},"defined":false,"first":[18]},{"label":"[tr ]+","kind":{},"prods":[],"nullable":false,"id":19,"code":"return Continue.apply(null, arguments);","level":0,"special":{},"defined":false,"first":[19]},{"label":"header_code","kind":{},"prods":[2],"nullable":1,"id":20,"code":"","level":0,"special":{},"defined":true,"first":[12,13]},{"label":"token_assocs","kind":{},"prods":[4,5],"nullable":0,"id":21,"code":"","level":0,"special":{},"defined":true,"first":[3,4,5,6,14,15]},{"label":"grammar_defs","kind":{},"prods":[15,16],"nullable":0,"id":22,"code":"","level":0,"special":{},"defined":true,"first":[16,1]},{"label":"footer_code","kind":{},"prods":[3],"nullable":1,"id":23,"code":"","level":0,"special":{},"defined":true,"first":[12,13]},{"label":"def","kind":{},"prods":[1],"nullable":0,"id":24,"code":"","level":0,"special":{},"defined":true,"first":[12,3,4,5,6,13,14,15]},{"label":"code_opt","kind":{},"prods":[32,33,34,35],"nullable":1,"id":25,"code":"","level":0,"special":{},"defined":true,"first":[12,13]},{"label":"token_assoc","kind":{},"prods":[6,7,8,9,10],"nullable":0,"id":26,"code":"","level":0,"special":{},"defined":true,"first":[3,4,5,6,14,15]},{"label":"token_defs","kind":{},"prods":[11,12],"nullable":0,"id":27,"code":"","level":0,"special":{},"defined":true,"first":[14,15]},{"label":"string","kind":{},"prods":[38,39],"nullable":0,"id":28,"code":"","level":0,"special":{},"defined":true,"first":[14,15]},{"label":"token_def","kind":{},"prods":[13,14],"nullable":0,"id":29,"code":"","level":0,"special":{},"defined":true,"first":[14,15]},{"label":"identifier","kind":{},"prods":[40],"nullable":0,"id":30,"code":"","level":0,"special":{},"defined":true,"first":[16]},{"label":"grammar_def","kind":{},"prods":[17,18],"nullable":0,"id":31,"code":"","level":0,"special":{},"defined":true,"first":[16,1]},{"label":"productions","kind":{},"prods":[19,20],"nullable":1,"id":32,"code":"","level":0,"special":{},"defined":true,"first":[10,12,13,9,16,14,15,11]},{"label":"rhs","kind":{},"prods":[21],"nullable":1,"id":33,"code":"","level":0,"special":{},"defined":true,"first":[10,12,13,16,14,15,11]},{"label":"sequence_opt","kind":{},"prods":[25,26],"nullable":1,"id":34,"code":"","level":0,"special":{},"defined":true,"first":[16,14,15,11]},{"label":"rhs_prec","kind":{},"prods":[22,23,24],"nullable":1,"id":35,"code":"","level":0,"special":{},"defined":true,"first":[10]},{"label":"sequence","kind":{},"prods":[27,28],"nullable":0,"id":36,"code":"","level":0,"special":{},"defined":true,"first":[16,14,15,11]},{"label":"symbol","kind":{},"prods":[29,30,31],"nullable":0,"id":37,"code":"","level":0,"special":{},"defined":true,"first":[16,14,15,11]},{"label":"code","kind":{},"prods":[36,37],"nullable":0,"id":38,"code":"","level":0,"special":{},"defined":true,"first":[13]},{"label":"$","kind":{},"prods":[],"nullable":false,"id":39,"code":"","level":0,"special":{},"defined":false,"first":[39]}];
 
 
-	function ACTIONS(act,vstack){
-		var rval;
-rval=[		function(){
-var rval;rval = arguments[ 0 ];
+	var ACTIONS = (function(){
+		var actions = [		function(){
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
-var rval;rval = arguments[ 4 ];
+var rval;rval =  arguments[4] ;
 return rval;},
 		function(){
-var rval; code_head += arguments[ 0 ];
+var rval; code_head +=  arguments[0] ; 
 return rval;},
 		function(){
-var rval; code_foot += arguments[ 0 ];
+var rval; code_foot +=  arguments[0] ; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 1 ];
+var rval;rval =  arguments[1] ;
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < arguments[ 1 ].length; i++ ){
-															symbols[ arguments[ 1 ][i] ].level = assoc_level;
-															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_LEFT;
+														for( var i = 0; i <  arguments[1] .length; i++ ){
+															symbols[  arguments[1] [i] ].level = assoc_level;
+															symbols[  arguments[1] [i] ].assoc = ASSOC_LEFT;
 														}
-
+													
 return rval;},
 		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < arguments[ 1 ].length; i++ )
+														for( var i = 0; i <  arguments[1] .length; i++ )
 														{
-															symbols[ arguments[ 1 ][i] ].level = assoc_level;
-															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_RIGHT;
+															symbols[  arguments[1] [i] ].level = assoc_level;
+															symbols[  arguments[1] [i] ].assoc = ASSOC_RIGHT;
 														}
-
+													
 return rval;},
 		function(){
 var rval;	assoc_level++;
-														for( var i = 0; i < arguments[ 1 ].length; i++ ){
-															symbols[ arguments[ 1 ][i] ].level = assoc_level;
-															symbols[ arguments[ 1 ][i] ].assoc = ASSOC_NOASSOC;
+														for( var i = 0; i <  arguments[1] .length; i++ ){
+															symbols[  arguments[1] [i] ].level = assoc_level;
+															symbols[  arguments[1] [i] ].assoc = ASSOC_NOASSOC;
 														}
-
+													
 return rval;},
 		function(){
-var rval;rval = arguments[ 1 ];
+var rval;rval =  arguments[1] ;
 return rval;},
 		function(){
 var rval;	if( whitespace_token == -1 ){
-															var regex = arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2 );
+															var regex =  arguments[0] .substr( 1,  arguments[0] .length - 2 );
 															whitespace_token = create_symbol( "WHITESPACE", SYM_TERM, SPECIAL_WHITESPACE );
-															compile_regex( regex, whitespace_token, arguments[ 0 ][0] != '\''  );
+															compile_regex( regex, whitespace_token,  arguments[0] [0] != '\''  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
-
+													
 return rval;},
 		function(){
-var rval;	arguments[ 1 ].push(arguments[ 0 ]); return arguments[ 1 ];
+var rval;	 arguments[1] .push( arguments[0] ); return  arguments[1] ; 
 return rval;},
 		function(){
-var rval;	return [arguments[ 0 ]];
+var rval;	return [ arguments[0] ]; 
 return rval;},
 		function(){
-var rval;	rval = create_symbol( arguments[ 1 ], SYM_TERM, SPECIAL_NO_SPECIAL );
-														var regex = arguments[ 2 ].substr( 1, arguments[ 2 ].length - 2 );
-														symbols[rval].code = arguments[ 0 ];
-														compile_regex( regex, symbols[ rval ].id, arguments[ 2 ].charAt( 0 ) != '\''  );
-
+var rval;	rval = create_symbol(  arguments[1] , SYM_TERM, SPECIAL_NO_SPECIAL );
+														var regex =  arguments[2] .substr( 1,  arguments[2] .length - 2 );
+														symbols[rval].code =  arguments[0] ;
+														compile_regex( regex, symbols[ rval ].id,  arguments[2] .charAt( 0 ) != '\''  );
+													
 return rval;},
 		function(){
-var rval;	var regex = arguments[ 1 ].substr( 1, arguments[ 1 ].length - 2 );
+var rval;	var regex =  arguments[1] .substr( 1,  arguments[1] .length - 2 );
 														rval = create_symbol( regex.replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL );
-														symbols[rval].code = arguments[ 0 ];
+														symbols[rval].code =  arguments[0] ;
 
-														compile_regex( regex, symbols[ rval ].id,  arguments[ 1 ].charAt( 0 ) != '\'' );
-
+														compile_regex( regex, symbols[ rval ].id,   arguments[1] .charAt( 0 ) != '\'' );
+													
 return rval;},
 		function(){
-var rval;rval = arguments[ 1 ];
+var rval;rval =  arguments[1] ;
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;
-														var nonterm = create_symbol( arguments[ 3 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
+														var nonterm = create_symbol(  arguments[3] , SYM_NONTERM, SPECIAL_NO_SPECIAL );
 														symbols[nonterm].defined = true;
-														for( var i = 0; i < arguments[ 1 ].length; i++ ){
-															productions[ arguments[ 1 ][i] ].lhs = nonterm;
-															symbols[nonterm].prods.push( arguments[ 1 ][i] );
+														for( var i = 0; i <  arguments[1] .length; i++ ){
+															productions[  arguments[1] [i] ].lhs = nonterm;
+															symbols[nonterm].prods.push(  arguments[1] [i] );
 														}
 
 														if( first_lhs ){
@@ -3271,24 +3300,24 @@ var rval;
 															symbols[0].label = symbols[nonterm].label + "\'";
 															productions[0].rhs.push( nonterm );
 														}
-
+													
 return rval;},
 		function(){
-var rval;rval = arguments[ 1 ];
+var rval;rval =  arguments[1] ;
 return rval;},
 		function(){
-var rval;	arguments[ 2 ].push(arguments[ 0 ]); return arguments[ 2 ];
+var rval;	 arguments[2] .push( arguments[0] ); return  arguments[2] ; 
 return rval;},
 		function(){
-var rval;	return [arguments[ 0 ]];
+var rval;	return [ arguments[0] ]; 
 return rval;},
 		function(){
 var rval;
 														var prod = new PROD({
 															id:productions.length,
-															rhs:arguments[ 2 ],
-															level:arguments[ 1 ],
-															code:(arguments[ 0 ]=="")?DEF_PROD_CODE:(arguments[ 0 ])
+															rhs: arguments[2] ,
+															level: arguments[1] ,
+															code:( arguments[0] =="")?DEF_PROD_CODE:( arguments[0] )
 														});
 														//Get level of the leftmost terminal
 														//as production level.
@@ -3306,88 +3335,99 @@ var rval;
 
 														productions.push( prod );
 														return prod.id;
-
+													
 return rval;},
 		function(){
 var rval; 	var index;
-														if( ( index = find_symbol( arguments[ 0 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
+														if( ( index = find_symbol(  arguments[0] , SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															return symbols[index].level;
 														else
-															line_error( PCB.line, "Call to undefined terminal \"" + arguments[ 0 ] + "\"" );
-
+															line_error( PCB.line, "Call to undefined terminal \"" +  arguments[0]  + "\"" );
+													
 return rval;},
 		function(){
 var rval;	var index;
-														if( ( index = find_symbol( arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2).replace( /\\/g, "" ),
+														if( ( index = find_symbol(  arguments[0] .substr( 1,  arguments[0] .length - 2).replace( /\\/g, "" ),
 																		SYM_TERM, SPECIAL_NO_SPECIAL ) ) > -1 )
 															return symbols[index].level;
 														else
-															line_error(  PCB.line, "Call to undefined terminal \"" + arguments[ 0 ] + "\"" );
-
+															line_error(  PCB.line, "Call to undefined terminal \"" +  arguments[0]  + "\"" );
+													
 return rval;},
 		function(){
-var rval;	return 0;
+var rval;	return 0; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
-var rval;	return [];
+var rval;	return []; 
 return rval;},
 		function(){
-var rval; arguments[ 1 ].push(arguments[ 0 ]); return arguments[ 1 ]
+var rval;  arguments[1] .push( arguments[0] ); return  arguments[1]  
 return rval;},
 		function(){
-var rval; return [arguments[ 0 ]];
-return rval;},
-		function(){
-var rval;
-														if( ( rval = find_symbol( arguments[ 0 ], SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
-															rval = create_symbol( arguments[ 0 ], SYM_NONTERM, SPECIAL_NO_SPECIAL );
-
+var rval; return [ arguments[0] ]; 
 return rval;},
 		function(){
 var rval;
-														if( ( rval = find_symbol( arguments[ 0 ].substr( 1, arguments[ 0 ].length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
-															line_error(  PCB.line, "Call to undefined terminal " + arguments[ 0 ] );
-
+														if( ( rval = find_symbol(  arguments[0] , SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
+															rval = create_symbol(  arguments[0] , SYM_NONTERM, SPECIAL_NO_SPECIAL );
+													
 return rval;},
 		function(){
-var rval; return find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR );
+var rval;
+														if( ( rval = find_symbol(  arguments[0] .substr( 1,  arguments[0] .length - 2).replace( /\\/g, "" ), SYM_TERM, SPECIAL_NO_SPECIAL ) ) <= -1 )
+															line_error(  PCB.line, "Call to undefined terminal " +  arguments[0]  );
+													
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval; return find_symbol( "ERROR_RESYNC", SYM_TERM,	SPECIAL_ERROR ); 
 return rval;},
 		function(){
-var rval; return "";
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
-var rval; return arguments[ 1 ] + arguments[ 0 ];
+var rval; return "return " +  arguments[0]  + ".apply(null, arguments);"; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval; return "(" +  arguments[0]  + ").apply(null, arguments);"; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval; return ""; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval; return  arguments[1]  +  arguments[0] ; 
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
-][act].apply(null,vstack);
-
-
-		return rval;
-	}
-	function get_act(top, la){
+		function(){
+var rval;rval =  arguments[0] ;
+return rval;},
+		function(){
+var rval;rval =  arguments[0] ;
+return rval;},
+		function(){
+var rval;rval =  arguments[0] ;
+return rval;},
+];
+		return function (act,vstack){
+			try{
+				return actions[act].apply(null,vstack);
+			}catch(e){
+				if(e instanceof Return.Value)return e.valueOf();
+				throw e;
+			}
+		}
+	})();
+	function get_act(top, la){	
 		for(var i = 0; i < act_tab[top].length; i+=2)
 			if(act_tab[top][i] === la)
 				return act_tab[top][i+1];
 		return null;
 	}
-	function get_goto(top, pop){
+	function get_goto(top, pop){	
 		for(var i = 0; i < goto_tab[top].length; i+=2)
 			if(goto_tab[top][i] === pop)
 				return goto_tab[top][i+1];
@@ -3399,9 +3439,6 @@ return rval;},
 		var 	err_cnt			= 0;
 		var		rval;
 		var		act;
-		var		treenodes		= [];//DEBUG!!!
-		var		tree			= [];//DEBUG!!!
-		var		tmptree			= null;//DEBUG!!!
 		var i;
 
 		var PCB	= {
@@ -3411,7 +3448,14 @@ return rval;},
 			error_step:0,
 			src:src,
 			att:"",
-			lex:function(){return this.la = lex(this);}///@TODO: change `lex` function
+			lex:function(){return this.la = lex.call(this);},///@TODO: change `lex` function
+			accountChar:function(chr){
+				if( chr === 10 ){
+					this.line++;
+					this.column = 0;
+				}
+				this.column++;
+			}
 		};
 		err_off	= err_off || [];
 		err_la = err_la || [];
@@ -3420,30 +3464,7 @@ return rval;},
 			PCB.act = get_act(sstack[0],PCB.la);
 			if(PCB.act == null && defact_tab[sstack[0]] >= 0)
 				PCB.act = -defact_tab[sstack[0]];
-			if(debug._dbg_withtrace && sstack.length > 0){//DEBUG!!!
-				debug.__dbg_print( "\nState " + sstack[0] + "\n" +//DEBUG!!!
-							"\tLookahead: " + labels[PCB.la] +//DEBUG!!!
-								" (\"" + PCB.att + "\")\n" +//DEBUG!!!
-							"\tAction: " + PCB.act + "\n" + //DEBUG!!!
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +//DEBUG!!!
-									( ( PCB.offset + 30 < PCB.src.length ) ?//DEBUG!!!
-										"..." : "" ) + "\"\n" +//DEBUG!!!
-							"\tStack: " + sstack.join() + "\n" +//DEBUG!!!
-							"\tValue stack: " + vstack.join() + "\n" );//DEBUG!!!
-				if(debug._dbg_withstepbystep)//DEBUG!!!
-					debug.__dbg_wait();//DEBUG!!!
-			}//DEBUG!!!
 			if(PCB.act == null){//Parse error? Try to recover!
-				if( debug._dbg_withtrace ){//DEBUG!!!
-					var expect = "";//DEBUG!!!
-					debug.__dbg_print("Error detected: There is no reduce or shift on the symbol " + labels[PCB.la]);//DEBUG!!!
-					for(i = 0; i < act_tab[sstack[0]].length; i+=2){//DEBUG!!!
-						if( expect != "" )//DEBUG!!!
-							expect += ", ";//DEBUG!!!
-						expect += "\"" + labels[act_tab[sstack[0]][i]] + "\"";//DEBUG!!!
-					}//DEBUG!!!
-					debug.__dbg_print( "Expecting: " + expect );//DEBUG!!!
-				}//DEBUG!!!
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
 				if(PCB.error_step === 0){
@@ -3453,7 +3474,7 @@ return rval;},
 					for(i = 0; i < act_tab[sstack[0]].length; i+=2)
 						err_la[0].push(labels[act_tab[sstack[0]][i]]);
 				}
-				//Perform error recovery
+				//Perform error recovery			
 				while(sstack.length > 1 && PCB.act == null){
 					sstack.shift();
 					vstack.shift();
@@ -3462,117 +3483,53 @@ return rval;},
 					if(PCB.act === error_token){
 						sstack.unshift(PCB.act);
 						vstack.unshift("");
-						if( debug._dbg_withtrace ){//DEBUG!!!
-							debug.__dbg_print("Error recovery: error token could be shifted!" );//DEBUG!!!
-							debug.__dbg_print("Error recovery: current stack is " + sstack.join());//DEBUG!!!
-						}//DEBUG!!!
 					}
 				}
 				//Is it better to leave the parser now?
 				if(sstack.length > 1 && PCB.act != null){
 					//Ok, now try to shift on the next tokens
 					while(PCB.la !== eof){
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: Trying to shift on \""	+ labels[ PCB.la ] + "\"" );//DEBUG!!!
 						PCB.act = act_tab[sstack[0]][i+1];
 						if(PCB.act != null)break;
-
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: Discarding \"" + labels[PCB.la] + "\"" );//DEBUG!!!
-
 						while(PCB.lex() != null)PCB.offset++;
-
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: New token \"" + labels[PCB.la] + "\"" );//DEBUG!!!
 					}
 				}
-				if(PCB.act === error || PCB.la === eof){
-					if(debug._dbg_withtrace)//DEBUG!!!
-						debug.__dbg_print("\tError recovery failed, terminating parse process...");//DEBUG!!!
+				if(PCB.act == null || PCB.la === eof){
 					break;
 				}
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tError recovery succeeded, continuing");//DEBUG!!!
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
 			if(PCB.act > 0){//Shift
 				//Parse tree generation
-				if(debug._dbg_withparsetree){//DEBUG!!!
-					tree.push(treenodes.length);//DEBUG!!!
-					treenodes.push({//DEBUG!!!
-						sym:labels[ PCB.la ],//DEBUG!!!
-						att:PCB.att,//DEBUG!!!
-						child:[]//DEBUG!!!
-					});//DEBUG!!!
-				}//DEBUG!!!
-
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				sstack.unshift(PCB.act);
 				vstack.unshift(PCB.att);
 				PCB.lex();
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tNew lookahead symbol: " +	labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				//Successfull shift and right beyond error recovery?
-				if(PCB.error_step > 0)PCB.error_step--;
-			}else{	//Reduce
+				if(PCB.error_step > 0)
+					PCB.error_step--;
+			}else{	//Reduce	
 				act = -PCB.act;
-				if(debug._dbg_withtrace){//DEBUG!!!
-					debug.__dbg_print("Reducing by production: " + act);//DEBUG!!!
-					debug.__dbg_print("\tPerforming semantic action...");//DEBUG!!!
-				}//DEBUG!!!
+				//vstack.unshift(vstack);
 				rval = ACTIONS(act,vstack);
-
-				if(debug._dbg_withparsetree)//DEBUG!!!
-					tmptree = [];//DEBUG!!!
-
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tPopping " + pop_tab[act][1] +  " off the stack...");//DEBUG!!!
-
+				//vstack.shift();
 				sstack.splice(0,pop_tab[act][1]);
 				vstack.splice(0,pop_tab[act][1]);
-				if(debug._dbg_withparsetree)//DEBUG!!!
-					tmptree.push.apply(tmptree, tree.splice(tree.length - pop_tab[act][1], tree.length));//DEBUG!!!
-
+				
 				PCB.act = get_goto(sstack[0],pop_tab[act][0]);
 				//Do some parse tree construction if desired
-				if(debug._dbg_withparsetree){//DEBUG!!!
-					tree.push(treenodes.length);//DEBUG!!!
-					treenodes.push({//DEBUG!!!
-						sym:labels[pop_tab[act][0]],//DEBUG!!!
-						att:rval,//DEBUG!!!
-						child:tmptree.reverse()//DEBUG!!!
-						});//DEBUG!!!
-				}//DEBUG!!!
 				//Goal symbol match?
 				if(act === 0) break; //Don't use PCB.act here!
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tPushing non-terminal " + labels[pop_tab[act][0]]);//DEBUG!!!
-
+			
 				//...and push it!
 				sstack.unshift(PCB.act);
 				vstack.unshift(rval);
 			}
 		}
-		if(debug._dbg_withtrace){//DEBUG!!!
-			debug.__dbg_print("\nParse complete.");//DEBUG!!!
-			//This function is used for parser drivers that will output//DEBUG!!!
-			//the entire debug messages in a row.//DEBUG!!!
-			debug.__dbg_flush();//DEBUG!!!
-		}//DEBUG!!!
-
-		if(debug._dbg_withparsetree){//DEBUG!!!
-			if(err_cnt === 0){//DEBUG!!!
-				debug.__dbg_print("\n\n--- Parse tree ---");//DEBUG!!!
-				debug.__dbg_parsetree(0, treenodes, tree);//DEBUG!!!
-			}else//DEBUG!!!
-				debug.__dbg_print("\n\nParse tree cannot be viewed. There where parse errors.");//DEBUG!!!
-		}//DEBUG!!!
 		return err_cnt;
 	}
 	return parse;
-})(__jscc_debug,38,-1,1);
+})(__jscc_debug,39,-1,1);
 
 
 function parse_grammar( str, filename ){
@@ -3605,23 +3562,23 @@ function parse_grammar( str, filename ){
 */
 
 var __regex_debug=(function(){///@TODO: create this variable without function
-
+	
 	var _dbg_withparsetree	= false;
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
-
+	
 	var __dbg_print=require('sys').print;
-
+	
 	function __dbg_flush()
 	{
 		///Not required here.
 	}
-
+	
 	function __dbg_wait()
 	{
 		///Not required here.
 	}
-
+	
 	function __dbg_parsetree( indent, nodes, tree )
 	{
 		var str = "";
@@ -3630,11 +3587,11 @@ var __regex_debug=(function(){///@TODO: create this variable without function
 			str = "";
 			for( var j = indent; j > 0; j-- )
 				str += "\t";
-
+			
 			str += nodes[ tree[i] ].sym;
 			if( nodes[ tree[i] ].att != "" )
 				str += " >" + nodes[ tree[i] ].att + "<" ;
-
+				
 			__dbg_print( str );
 			if( nodes[ tree[i] ].child.length > 0 )
 				__dbg_parsetree( indent + 1, nodes, nodes[ tree[i] ].child );
@@ -3661,44 +3618,22 @@ var __regex_debug=(function(){///@TODO: create this variable without function
 
 var first_nfa;
 var last_nfa;
-var created_nfas; //Must always be initialized by compile_regex()...
-
-function create_nfa( where )
-{
-	var pos;
-	var nfa;
-	var i;
-
-	/*
-		Use an empty item if available,
-		else create a new one...
-	*/
-	for( i = 0; i < where.length; i++ )
-		if( where[i].edge == EDGE_FREE )
-			break;
-
-	if( i == where.length ){
-		nfa = new NFA()
-		where.push( nfa );
-	}else
-		nfa = where[i];
-
-	nfa.edge = EDGE_EPSILON;
-	nfa.ccl=new BitSet(MAX_CHAR);
-	nfa.accept = -1;
-	nfa.follow = -1;
-	nfa.follow2 = -1;
-	nfa.weight = -1;
-
-	created_nfas.push( i );
-
-	return i;
-}
-
 
 var __regexparse=(function(debug,eof,whitespace,error_token){
-
-var DFA_DATA=[{"line":[[[[1,
+	
+/// there was "continue" in code, we must to replace it
+var Continue = function(){throw Continue;};
+///can return value from any place of callback
+function Return(value){
+	throw new Return.Value(value);
+}
+Return.Value = function(value){
+	this.valueOf = function(){
+		return value;
+	};
+}
+	var DFA = (function(){
+		var DFA_DATA = [{"line":[[[[1,
 	[[1,
 	[[[2,
 	3],
@@ -3782,73 +3717,73 @@ var DFA_DATA=[{"line":[[[[1,
 	[11,
 	null]]]]]]]]],
 	"accept":13}];
-
-	function DFA(state,chr,match,pos,set_match,set_match_pos,set_state){
-		var line = DFA_DATA[state].line;
-		var p,st;
-		for(p=1<<8,st=line;p;p>>=1){
-			st=st[!!(chr&p)+0];
-			if(st==null)break;
-			if(st instanceof Array)continue;
-			break;
+		return function(chr,pos){
+			var line = DFA_DATA[this.state].line;
+			var p, st;
+			for(p = 1<<8, st = line; p; p>>=1){
+				st = st[!!(chr&p)+0];
+				if(st==null)break;
+				if(st instanceof Array)continue;
+				break;
+			}
+			var ac = DFA_DATA[this.state].accept;
+			this.state = st;
+			if(ac!=-1){
+				this.match = ac;
+				this.match_pos = pos;
+			}
 		}
-		var ac=DFA_DATA[state].accept;
-		set_state(st)
-		if(ac!=-1){
-			set_match(ac);
-			set_match_pos(pos);
+	})();
+	var TERMINAL_ACTIONS = (function(){
+		function emptyFn(PCB){return PCB.att;}
+		var actions = ({
+
+})
+		return function(PCB, match){
+			try{
+				return (actions[match] || emptyFn)(PCB);
+			}catch(e){
+				if(e instanceof Return.Value)return e.valueOf();
+				if(e == Continue)return Continue;
+				throw e;
+			}
 		}
-	}
-	function TERMINAL_ACTIONS(PCB,match){
-(({
-
-})[match.toString()]||(function(){}))()
-	}
-	function lex(PCB){
-		var state, match, match_pos, start, pos, chr;
-
-		///Functions for manipulation of variables
-		function set_match(v){match=v;}
-		function set_state(v){state=v;}
-		function set_match_pos(v){match_pos=v;}
-
+	})();
+	function lex(){
+		var start, pos, chr, actionResult;
+		var dfa = {
+			exec:DFA
+		}
 		while(true){
-			match_pos = 0;
-			pos = PCB.offset + 1;
+			dfa.match_pos = 0;
+			pos = this.offset + 1;
 			do{
 				pos--;
-				state = 0;
-				match = null;
+				dfa.state = 0;
+				dfa.match = null;
 				start = pos;
-				if(PCB.src.length <= start)
+				if(this.src.length <= start)
 					return eof;
 				do{
-					chr = PCB.src.charCodeAt(pos);
-					DFA(state,chr,match,pos,set_match,set_match_pos,set_state);
-					if(state != null){
-						if( chr === 10 ){
-							PCB.line++;
-							PCB.column = 0;
-						}
-						PCB.column++;
-					}
+					chr = this.src.charCodeAt(pos);
+					dfa.exec(chr,pos);
+					if(dfa.state != null)
+						this.accountChar(chr);
 					pos++;
-				}while(state != null);
-			}while(whitespace > -1 && match == whitespace);
-			if(match != null){
-				PCB.att = PCB.src.slice(start, match_pos);
-				PCB.offset = match_pos;
-				if((function(){
-					try{
-						TERMINAL_ACTIONS(PCB,match);
-					}catch(e){
-						if(e===Continue)return true;
-						else throw e;
-					}
-				})())continue;
+				}while(dfa.state != null);
+			}while(whitespace > -1 && dfa.match == whitespace);
+			if(dfa.match != null){
+				this.att = this.src.slice(start, dfa.match_pos);
+				this.offset = dfa.match_pos;
+				actionResult = TERMINAL_ACTIONS(this,dfa.match);
+				if(dfa.state != null)
+					this.accountChar(chr);
+				if(actionResult === Continue)
+					continue;
+				this.att = actionResult;
 			}else
-				PCB.att = "";
-			return match;
+				this.att = "";
+			return this.la = dfa.match;
 		}
 	}
 
@@ -3860,172 +3795,176 @@ var goto_tab =[[15,1,14,2,16,3,17,4,18,5,19,6,20,7],[],[],[17,15,18,5,19,6,20,7]
 
 var defact_tab =[-1,0,1,3,5,9,10,11,-1,17,18,19,16,14,-1,4,8,7,6,-1,-1,2,12,15,13];
 
-var labels = [{"label":"RegEx'","kind":0,"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":1,"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":3,"defined":true,"first":[1]},{"label":"|","kind":1,"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":0,"defined":false,"first":[2]},{"label":"*","kind":1,"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":0,"defined":false,"first":[3]},{"label":"+","kind":1,"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":0,"defined":false,"first":[4]},{"label":"?","kind":1,"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":0,"defined":false,"first":[5]},{"label":"(","kind":1,"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":0,"defined":false,"first":[6]},{"label":")","kind":1,"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":0,"defined":false,"first":[7]},{"label":"[","kind":1,"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":0,"defined":false,"first":[8]},{"label":"]","kind":1,"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":0,"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":1,"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":0,"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":1,"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":0,"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":1,"prods":[],"nullable":false,"id":12,"code":"","level":0,"special":0,"defined":false,"first":[12]},{"label":"ANY","kind":1,"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":0,"defined":false,"first":[13]},{"label":"Expression","kind":0,"prods":[2,3],"nullable":0,"id":14,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":0,"prods":[1],"nullable":0,"id":15,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":0,"prods":[4,5],"nullable":0,"id":16,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":0,"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":0,"prods":[10,11,12],"nullable":0,"id":18,"code":"","level":0,"special":0,"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":0,"prods":[17,18,19],"nullable":0,"id":19,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":0,"prods":[13,14],"nullable":0,"id":20,"code":"","level":0,"special":0,"defined":true,"first":[8,10]},{"label":"CharClass","kind":0,"prods":[15,16],"nullable":1,"id":21,"code":"","level":0,"special":0,"defined":true,"first":[11,12,13]},{"label":"$","kind":1,"prods":[],"nullable":false,"id":22,"code":"","level":0,"special":1,"defined":false,"first":[22]}];
+var labels = [{"label":"RegEx'","kind":{},"prods":[0],"nullable":0,"id":0,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"ERROR_RESYNC","kind":{},"prods":[],"nullable":false,"id":1,"code":"","level":0,"special":{},"defined":true,"first":[1]},{"label":"|","kind":{},"prods":[],"nullable":false,"id":2,"code":"","level":0,"special":{},"defined":false,"first":[2]},{"label":"*","kind":{},"prods":[],"nullable":false,"id":3,"code":"","level":0,"special":{},"defined":false,"first":[3]},{"label":"+","kind":{},"prods":[],"nullable":false,"id":4,"code":"","level":0,"special":{},"defined":false,"first":[4]},{"label":"?","kind":{},"prods":[],"nullable":false,"id":5,"code":"","level":0,"special":{},"defined":false,"first":[5]},{"label":"(","kind":{},"prods":[],"nullable":false,"id":6,"code":"","level":0,"special":{},"defined":false,"first":[6]},{"label":")","kind":{},"prods":[],"nullable":false,"id":7,"code":"","level":0,"special":{},"defined":false,"first":[7]},{"label":"[","kind":{},"prods":[],"nullable":false,"id":8,"code":"","level":0,"special":{},"defined":false,"first":[8]},{"label":"]","kind":{},"prods":[],"nullable":false,"id":9,"code":"","level":0,"special":{},"defined":false,"first":[9]},{"label":"ANY_CHAR","kind":{},"prods":[],"nullable":false,"id":10,"code":"","level":0,"special":{},"defined":false,"first":[10]},{"label":"ASCII_CODE","kind":{},"prods":[],"nullable":false,"id":11,"code":"","level":0,"special":{},"defined":false,"first":[11]},{"label":"ESCAPED_CHAR","kind":{},"prods":[],"nullable":false,"id":12,"code":"","level":0,"special":{},"defined":false,"first":[12]},{"label":"ANY","kind":{},"prods":[],"nullable":false,"id":13,"code":"","level":0,"special":{},"defined":false,"first":[13]},{"label":"Expression","kind":{},"prods":[2,3],"nullable":0,"id":14,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"RegEx","kind":{},"prods":[1],"nullable":0,"id":15,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"Catenation","kind":{},"prods":[4,5],"nullable":0,"id":16,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"Factor","kind":{},"prods":[6,7,8,9],"nullable":0,"id":17,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"Term","kind":{},"prods":[10,11,12],"nullable":0,"id":18,"code":"","level":0,"special":{},"defined":true,"first":[6,11,12,13,8,10]},{"label":"Character","kind":{},"prods":[17,18,19],"nullable":0,"id":19,"code":"","level":0,"special":{},"defined":true,"first":[11,12,13]},{"label":"CharacterSet","kind":{},"prods":[13,14],"nullable":0,"id":20,"code":"","level":0,"special":{},"defined":true,"first":[8,10]},{"label":"CharClass","kind":{},"prods":[15,16],"nullable":1,"id":21,"code":"","level":0,"special":{},"defined":true,"first":[11,12,13]},{"label":"$","kind":{},"prods":[],"nullable":false,"id":22,"code":"","level":0,"special":{},"defined":false,"first":[22]}];
 
 
-	function ACTIONS(act,vstack){
-		var rval;
-rval=[		function(){
-var rval;rval = arguments[ 0 ];
+	var ACTIONS = (function(){
+		var actions = [		function(){
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;	rval = new PARAM();
-													nfa_states[ first_nfa ].follow = arguments[ 0 ].start;
-													last_nfa = arguments[ 0 ].end;
-
+													NFA_states.value[ first_nfa ].follow =  arguments[0] .start;
+													last_nfa =  arguments[0] .end;
+												
 return rval;},
 		function(){
 var rval;
 													rval = new PARAM({
-														start:create_nfa( nfa_states ),
-														end:create_nfa( nfa_states )
+														start:NFA_states.create(),
+														end:NFA_states.create()
 														});
-													nfa_states[rval.start].follow = arguments[ 2 ].start;
-													nfa_states[rval.start].follow2 = arguments[ 0 ].start;
+													NFA_states.value[rval.start].follow =  arguments[2] .start;
+													NFA_states.value[rval.start].follow2 =  arguments[0] .start;
 
-													nfa_states[arguments[ 2 ].end].follow = rval.end;
-													nfa_states[arguments[ 0 ].end].follow = rval.end;
-
+													NFA_states.value[ arguments[2] .end].follow = rval.end;
+													NFA_states.value[ arguments[0] .end].follow = rval.end;
+												
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;
-													var weight=nfa_states[arguments[ 1 ].end].weight;///SV: if weight unused - delete this
-													nfa_states[arguments[ 1 ].end]=new NFA(nfa_states[arguments[ 0 ].start]);
-													nfa_states[arguments[ 1 ].end].weight=weight;///SV: if weight unused - delete this
-													nfa_states[arguments[ 0 ].start].edge = EDGE_FREE;
+													var weight=NFA_states.value[ arguments[1] .end].weight;///SV: if weight unused - delete this
+													NFA_states.value[ arguments[1] .end]=new NFA(NFA_states.value[ arguments[0] .start]);
+													NFA_states.value[ arguments[1] .end].weight=weight;///SV: if weight unused - delete this
+													NFA_states.value[ arguments[0] .start].edge = EDGE_FREE;
 
-													arguments[ 1 ].end = arguments[ 0 ].end;
+													 arguments[1] .end =  arguments[0] .end;
 
-													return arguments[ 1 ];
-
+													return  arguments[1] ;
+												
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;
 													rval = new PARAM({
-														start:create_nfa( nfa_states ),
-														end:create_nfa( nfa_states )
+														start:NFA_states.create(),
+														end:NFA_states.create()
 													});
-													nfa_states[rval.start].follow = arguments[ 1 ].start;
-													nfa_states[arguments[ 1 ].end].follow = rval.end;
+													NFA_states.value[rval.start].follow =  arguments[1] .start;
+													NFA_states.value[ arguments[1] .end].follow = rval.end;
 
-													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[arguments[ 1 ].end].follow2 = arguments[ 1 ].start;
-
+													NFA_states.value[rval.start].follow2 = rval.end;
+													NFA_states.value[ arguments[1] .end].follow2 =  arguments[1] .start;
+												
 return rval;},
 		function(){
 var rval;
 													rval = new PARAM({
-														start:create_nfa( nfa_states ),
-														end:create_nfa( nfa_states )
+														start:NFA_states.create(),
+														end:NFA_states.create()
 													});
-													nfa_states[rval.start].follow = arguments[ 1 ].start;
-													nfa_states[arguments[ 1 ].end].follow = rval.end;
+													NFA_states.value[rval.start].follow =  arguments[1] .start;
+													NFA_states.value[ arguments[1] .end].follow = rval.end;
 
-													nfa_states[arguments[ 1 ].end].follow2 = arguments[ 1 ].start;
-
+													NFA_states.value[ arguments[1] .end].follow2 =  arguments[1] .start;
+												
 return rval;},
 		function(){
 var rval;
 													rval = new PARAM({
-														start:create_nfa( nfa_states ),
-														end:create_nfa( nfa_states )
+														start:NFA_states.create(),
+														end:NFA_states.create()
 														});
-													nfa_states[rval.start].follow = arguments[ 1 ].start;
-													nfa_states[rval.start].follow2 = rval.end;
-													nfa_states[arguments[ 1 ].end].follow = rval.end;
-
+													NFA_states.value[rval.start].follow =  arguments[1] .start;
+													NFA_states.value[rval.start].follow2 = rval.end;
+													NFA_states.value[ arguments[1] .end].follow = rval.end;
+												
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
 var rval;	rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
+													rval.start = NFA_states.create();
+													rval.end = NFA_states.value[rval.start].follow
+														= NFA_states.create();
+													NFA_states.value[rval.start].edge = EDGE_CHAR;
 
-													nfa_states[rval.start].ccl.set(arguments[ 0 ].charCodeAt( 0 ), true );
-
+													NFA_states.value[rval.start].ccl.set( arguments[0] .charCodeAt( 0 ), true );
+												
 return rval;},
 		function(){
-var rval;rval = arguments[ 0 ];
+var rval;rval =  arguments[0] ;
 return rval;},
 		function(){
-var rval;	return arguments[ 1 ];
+var rval;	return  arguments[1] ; 
 return rval;},
 		function(){
 var rval;	var negate = false;
 													var i = 0, j, start;
 													rval = new PARAM();
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
+													rval.start = NFA_states.create();
+													rval.end = NFA_states.value[rval.start].follow
+														= NFA_states.create();
+													NFA_states.value[rval.start].edge = EDGE_CHAR;
 
-													if( arguments[ 1 ].charAt( i ) == '^' ){
+													if(  arguments[1] .charAt( i ) == '^' ){
 														negate = true;
 														for( var j = MIN_CHAR; j < MAX_CHAR; j++ )
-															nfa_states[rval.start].ccl.set(j,true);
+															NFA_states.value[rval.start].ccl.set(j,true);
 														i++;
 													}
-													for( ; i < arguments[ 1 ].length; i++ ){
-														if( arguments[ 1 ].charAt( i+1 ) == '-'	&& i+2 < arguments[ 1 ].length ){
+													for( ; i <  arguments[1] .length; i++ ){
+														if(  arguments[1] .charAt( i+1 ) == '-'	&& i+2 <  arguments[1] .length ){
 															i++;
-															for( j = arguments[ 1 ].charCodeAt( i-1 );
-																	j < arguments[ 1 ].charCodeAt( i+1 );
+															for( j =  arguments[1] .charCodeAt( i-1 );
+																	j <  arguments[1] .charCodeAt( i+1 );
 																		j++ )
-																nfa_states[rval.start].ccl.set(j, !negate);
+																NFA_states.value[rval.start].ccl.set(j, !negate);
 														}
 														else
-															nfa_states[rval.start].ccl.set(arguments[ 1 ].charCodeAt(i), !negate);
+															NFA_states.value[rval.start].ccl.set( arguments[1] .charCodeAt(i), !negate);
 													}
-
+												
 return rval;},
 		function(){
 var rval;	rval = new PARAM();
 
-													rval.start = create_nfa( nfa_states );
-													rval.end = nfa_states[rval.start].follow
-														= create_nfa( nfa_states );
-													nfa_states[rval.start].edge = EDGE_CHAR;
+													rval.start = NFA_states.create();
+													rval.end = NFA_states.value[rval.start].follow
+														= NFA_states.create();
+													NFA_states.value[rval.start].edge = EDGE_CHAR;
 													for( var i = MIN_CHAR; i < MAX_CHAR; i++ )
-														nfa_states[rval.start].ccl.set(i, true);
-
+														NFA_states.value[rval.start].ccl.set(i, true);
+												
 return rval;},
 		function(){
-var rval;	return arguments[ 1 ] + arguments[ 0 ];
+var rval;	return  arguments[1]  +  arguments[0] ; 
 return rval;},
 		function(){
-var rval;	return "";
+var rval;	return ""; 
 return rval;},
 		function(){
-var rval;	return String.fromCharCode( arguments[ 0 ].substr( 1 ) );
+var rval;	return String.fromCharCode(  arguments[0] .substr( 1 ) ); 
 return rval;},
 		function(){
-var rval;	return {n:'\n',r:'\r',t:'\t',a:'\a'}[arguments[ 0 ].substr(1)]||arguments[ 0 ].substr(1);
+var rval;	return {n:'\n',r:'\r',t:'\t',a:'\a'}[ arguments[0] .substr(1)]|| arguments[0] .substr(1); 
 return rval;},
 		function(){
-var rval;	return arguments[ 0 ];
+var rval;	return  arguments[0] ; 
 return rval;},
-][act].apply(null,vstack);
-
-
-		return rval;
-	}
-	function get_act(top, la){
+];
+		return function (act,vstack){
+			try{
+				return actions[act].apply(null,vstack);
+			}catch(e){
+				if(e instanceof Return.Value)return e.valueOf();
+				throw e;
+			}
+		}
+	})();
+	function get_act(top, la){	
 		for(var i = 0; i < act_tab[top].length; i+=2)
 			if(act_tab[top][i] === la)
 				return act_tab[top][i+1];
 		return null;
 	}
-	function get_goto(top, pop){
+	function get_goto(top, pop){	
 		for(var i = 0; i < goto_tab[top].length; i+=2)
 			if(goto_tab[top][i] === pop)
 				return goto_tab[top][i+1];
@@ -4037,9 +3976,6 @@ return rval;},
 		var 	err_cnt			= 0;
 		var		rval;
 		var		act;
-		var		treenodes		= [];//DEBUG!!!
-		var		tree			= [];//DEBUG!!!
-		var		tmptree			= null;//DEBUG!!!
 		var i;
 
 		var PCB	= {
@@ -4049,7 +3985,14 @@ return rval;},
 			error_step:0,
 			src:src,
 			att:"",
-			lex:function(){return this.la = lex(this);}///@TODO: change `lex` function
+			lex:function(){return this.la = lex.call(this);},///@TODO: change `lex` function
+			accountChar:function(chr){
+				if( chr === 10 ){
+					this.line++;
+					this.column = 0;
+				}
+				this.column++;
+			}
 		};
 		err_off	= err_off || [];
 		err_la = err_la || [];
@@ -4058,30 +4001,7 @@ return rval;},
 			PCB.act = get_act(sstack[0],PCB.la);
 			if(PCB.act == null && defact_tab[sstack[0]] >= 0)
 				PCB.act = -defact_tab[sstack[0]];
-			if(debug._dbg_withtrace && sstack.length > 0){//DEBUG!!!
-				debug.__dbg_print( "\nState " + sstack[0] + "\n" +//DEBUG!!!
-							"\tLookahead: " + labels[PCB.la] +//DEBUG!!!
-								" (\"" + PCB.att + "\")\n" +//DEBUG!!!
-							"\tAction: " + PCB.act + "\n" + //DEBUG!!!
-							"\tSource: \"" + PCB.src.substr( PCB.offset, 30 ) +//DEBUG!!!
-									( ( PCB.offset + 30 < PCB.src.length ) ?//DEBUG!!!
-										"..." : "" ) + "\"\n" +//DEBUG!!!
-							"\tStack: " + sstack.join() + "\n" +//DEBUG!!!
-							"\tValue stack: " + vstack.join() + "\n" );//DEBUG!!!
-				if(debug._dbg_withstepbystep)//DEBUG!!!
-					debug.__dbg_wait();//DEBUG!!!
-			}//DEBUG!!!
 			if(PCB.act == null){//Parse error? Try to recover!
-				if( debug._dbg_withtrace ){//DEBUG!!!
-					var expect = "";//DEBUG!!!
-					debug.__dbg_print("Error detected: There is no reduce or shift on the symbol " + labels[PCB.la]);//DEBUG!!!
-					for(i = 0; i < act_tab[sstack[0]].length; i+=2){//DEBUG!!!
-						if( expect != "" )//DEBUG!!!
-							expect += ", ";//DEBUG!!!
-						expect += "\"" + labels[act_tab[sstack[0]][i]] + "\"";//DEBUG!!!
-					}//DEBUG!!!
-					debug.__dbg_print( "Expecting: " + expect );//DEBUG!!!
-				}//DEBUG!!!
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
 				if(PCB.error_step === 0){
@@ -4091,7 +4011,7 @@ return rval;},
 					for(i = 0; i < act_tab[sstack[0]].length; i+=2)
 						err_la[0].push(labels[act_tab[sstack[0]][i]]);
 				}
-				//Perform error recovery
+				//Perform error recovery			
 				while(sstack.length > 1 && PCB.act == null){
 					sstack.shift();
 					vstack.shift();
@@ -4100,113 +4020,49 @@ return rval;},
 					if(PCB.act === error_token){
 						sstack.unshift(PCB.act);
 						vstack.unshift("");
-						if( debug._dbg_withtrace ){//DEBUG!!!
-							debug.__dbg_print("Error recovery: error token could be shifted!" );//DEBUG!!!
-							debug.__dbg_print("Error recovery: current stack is " + sstack.join());//DEBUG!!!
-						}//DEBUG!!!
 					}
 				}
 				//Is it better to leave the parser now?
 				if(sstack.length > 1 && PCB.act != null){
 					//Ok, now try to shift on the next tokens
 					while(PCB.la !== eof){
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: Trying to shift on \""	+ labels[ PCB.la ] + "\"" );//DEBUG!!!
 						PCB.act = act_tab[sstack[0]][i+1];
 						if(PCB.act != null)break;
-
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: Discarding \"" + labels[PCB.la] + "\"" );//DEBUG!!!
-
 						while(PCB.lex() != null)PCB.offset++;
-
-						if(debug._dbg_withtrace)//DEBUG!!!
-							debug.__dbg_print( "Error recovery: New token \"" + labels[PCB.la] + "\"" );//DEBUG!!!
 					}
 				}
-				if(PCB.act === error || PCB.la === eof){
-					if(debug._dbg_withtrace)//DEBUG!!!
-						debug.__dbg_print("\tError recovery failed, terminating parse process...");//DEBUG!!!
+				if(PCB.act == null || PCB.la === eof){
 					break;
 				}
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tError recovery succeeded, continuing");//DEBUG!!!
 				//Try to parse the next three tokens successfully...
 				PCB.error_step = 3;
 			}
 			if(PCB.act > 0){//Shift
 				//Parse tree generation
-				if(debug._dbg_withparsetree){//DEBUG!!!
-					tree.push(treenodes.length);//DEBUG!!!
-					treenodes.push({//DEBUG!!!
-						sym:labels[ PCB.la ],//DEBUG!!!
-						att:PCB.att,//DEBUG!!!
-						child:[]//DEBUG!!!
-					});//DEBUG!!!
-				}//DEBUG!!!
-
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("Shifting symbol: " + labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				sstack.unshift(PCB.act);
 				vstack.unshift(PCB.att);
 				PCB.lex();
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tNew lookahead symbol: " +	labels[PCB.la] + " (" + PCB.att + ")");//DEBUG!!!
 				//Successfull shift and right beyond error recovery?
-				if(PCB.error_step > 0)PCB.error_step--;
-			}else{	//Reduce
+				if(PCB.error_step > 0)
+					PCB.error_step--;
+			}else{	//Reduce	
 				act = -PCB.act;
-				if(debug._dbg_withtrace){//DEBUG!!!
-					debug.__dbg_print("Reducing by production: " + act);//DEBUG!!!
-					debug.__dbg_print("\tPerforming semantic action...");//DEBUG!!!
-				}//DEBUG!!!
+				//vstack.unshift(vstack);
 				rval = ACTIONS(act,vstack);
-
-				if(debug._dbg_withparsetree)//DEBUG!!!
-					tmptree = [];//DEBUG!!!
-
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tPopping " + pop_tab[act][1] +  " off the stack...");//DEBUG!!!
-
+				//vstack.shift();
 				sstack.splice(0,pop_tab[act][1]);
 				vstack.splice(0,pop_tab[act][1]);
-				if(debug._dbg_withparsetree)//DEBUG!!!
-					tmptree.push.apply(tmptree, tree.splice(tree.length - pop_tab[act][1], tree.length));//DEBUG!!!
-
+				
 				PCB.act = get_goto(sstack[0],pop_tab[act][0]);
 				//Do some parse tree construction if desired
-				if(debug._dbg_withparsetree){//DEBUG!!!
-					tree.push(treenodes.length);//DEBUG!!!
-					treenodes.push({//DEBUG!!!
-						sym:labels[pop_tab[act][0]],//DEBUG!!!
-						att:rval,//DEBUG!!!
-						child:tmptree.reverse()//DEBUG!!!
-						});//DEBUG!!!
-				}//DEBUG!!!
 				//Goal symbol match?
 				if(act === 0) break; //Don't use PCB.act here!
-				if(debug._dbg_withtrace)//DEBUG!!!
-					debug.__dbg_print("\tPushing non-terminal " + labels[pop_tab[act][0]]);//DEBUG!!!
-
+			
 				//...and push it!
 				sstack.unshift(PCB.act);
 				vstack.unshift(rval);
 			}
 		}
-		if(debug._dbg_withtrace){//DEBUG!!!
-			debug.__dbg_print("\nParse complete.");//DEBUG!!!
-			//This function is used for parser drivers that will output//DEBUG!!!
-			//the entire debug messages in a row.//DEBUG!!!
-			debug.__dbg_flush();//DEBUG!!!
-		}//DEBUG!!!
-
-		if(debug._dbg_withparsetree){//DEBUG!!!
-			if(err_cnt === 0){//DEBUG!!!
-				debug.__dbg_print("\n\n--- Parse tree ---");//DEBUG!!!
-				debug.__dbg_parsetree(0, treenodes, tree);//DEBUG!!!
-			}else//DEBUG!!!
-				debug.__dbg_print("\n\nParse tree cannot be viewed. There where parse errors.");//DEBUG!!!
-		}//DEBUG!!!
 		return err_cnt;
 	}
 	return parse;
@@ -4227,19 +4083,17 @@ function compile_regex( str, accept, case_insensitive ){
 
 	//_print( "str = >" + str + "< " + case_insensitive );
 
-	created_nfas = [];
-
-	first_nfa = create_nfa( nfa_states );
+	first_nfa = NFA_states.create();
 	if( ( error_count = __regexparse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
 		//character sets on the newly created items.
 		if( case_insensitive ){
-			for( i = 0; i < created_nfas.length; i++ ){
-				if( nfa_states[ created_nfas[i] ].edge == EDGE_CHAR ){
+			for( i = 0; i < NFA_states.value.length; i++ ){
+				if( NFA_states.value[i].edge == EDGE_CHAR ){
 					for( j = MIN_CHAR; j < MAX_CHAR; j++ ){
-						if( nfa_states[ created_nfas[i] ].ccl.get( j ) ){
-							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
-							nfa_states[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
+						if( NFA_states.value[i].ccl.get( j ) ){
+							NFA_states.value[i].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
+							NFA_states.value[i].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
 					}
 				}
@@ -4249,19 +4103,19 @@ function compile_regex( str, accept, case_insensitive ){
 		/*
 			2008-5-9	Radim Cebis:
 
-			I think that computing weight of the nfa_states is weird,
+			I think that computing weight of the NFA_states.value is weird,
 			IMHO nfa_state which accepts a symbol, should have
 			weight according to the order...
 		*/
-		nfa_states[ last_nfa ].accept = accept;
-		nfa_states[ last_nfa ].weight = regex_weight++;
+		NFA_states.value[ last_nfa ].accept = accept;
+		NFA_states.value[ last_nfa ].weight = regex_weight++;
 
 		if( first_nfa > 0 ){
 			i = 0;
-			while( nfa_states[i].follow2 != -1 )
-				i = nfa_states[i].follow2;
+			while( NFA_states.value[i].follow2 != -1 )
+				i = NFA_states.value[i].follow2;
 
-			nfa_states[i].follow2 = first_nfa;
+			NFA_states.value[i].follow2 = first_nfa;
 		}
 	}else{
 		for( i = 0; i < error_count; i++ ){
@@ -4281,7 +4135,7 @@ function compile_regex( str, accept, case_insensitive ){
 //compile_regex( "ab|c", 1 );
 //compile_regex( "[0-9]+", 1 );
 //print_nfa();
-//var d = create_subset( nfa_states );
+//var d = create_subset( NFA_states.value );
 //print_dfa( d );
 //d = minimize_dfa( d );
 //print_dfa( d );
@@ -4301,23 +4155,17 @@ You may use, modify and distribute this software under the terms and conditions
 of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 
-function version()
-{
-	var info = "";
-
-	info += "JS/CC v" + JSCC_VERSION + ": A LALR(1) Parser and Lexer " +
-				"Generator written in JavaScript\n";
-	info += "Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies," +
-				"Jan Max Meyer\n";
-	info += "http://jscc.jmksf.com ++ jscc@jmksf.com\n\n";
-
-	info += "You may use, modify and distribute this software under the " +
-				"terms and conditions\n";
-	info += "of the Artistic License. Please see ARTISTIC for more " +
-				"information.\n";
-
-	_print( info );
-}
+function version(){
+	_print( ["JS/CC v", JSCC_VERSION, ": A LALR(1) Parser and Lexer ",
+		"Generator written in JavaScript\n",
+	"Copyright (C) 2007, 2008 by J.M.K S.F. Software Technologies,",
+		"Jan Max Meyer\n",
+	"http://jscc.jmksf.com ++ jscc@jmksf.com\n\n",
+	"You may use, modify and distribute this software under the ",
+		"terms and conditions\n",
+	"of the Artistic License. Please see ARTISTIC for more ",
+				"information.\n"].join(""));
+ }
 
 function help(){
 	_print([ "usage: jscc [options] filename\n\n",
@@ -4361,7 +4209,7 @@ for( var i = 0; i < argv.length; i++ )
 		code_prefix = argv[++i];
 	else if( argv[i].toLowerCase() == "-w"
 			|| argv[i].toLowerCase() == "--warnings" )
-		show_warnings = true;
+		_warning = Function.prototype;
 	else if( argv[i].toLowerCase() == "-v"
 			|| argv[i].toLowerCase() == "--verbose" )
 		verbose = true;
@@ -4445,6 +4293,8 @@ if( src_file != "" ){
 				driver = driver.replace( /##ERROR_TOKEN##/gi, get_error_symbol_id() );
 				driver = driver.replace( /##EOF##/gi, get_eof_symbol_id() );
 				driver = driver.replace( /##WHITESPACE##/gi, get_whitespace_symbol_id() );
+
+				//driver = driver.replace( /\n.+DEBUG!!!\s+(?=\n)/g, "");
 
 				if( out_file != "" )
 					write_file( out_file, driver );
