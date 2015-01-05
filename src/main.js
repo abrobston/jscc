@@ -65,7 +65,7 @@ for( var i = 0; i < argv.length; i++ )
 		code_prefix = argv[++i];
 	else if( argv[i].toLowerCase() == "-w"
 			|| argv[i].toLowerCase() == "--warnings" )
-		show_warnings = true;
+		_warning = Function.prototype;
 	else if( argv[i].toLowerCase() == "-v"
 			|| argv[i].toLowerCase() == "--verbose" )
 		verbose = true;

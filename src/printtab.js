@@ -236,8 +236,7 @@ function pack_dfa(dfa_states){
 	return json;
 }
 function print_dfa_table(dfa_states){
-	var code="";
-	var json=[];
+	var json=[], code;
 	for(var i=0;i<dfa_states.length;i++)(function(i){
 		var line={};
 		for(var j=0;j<dfa_states[i].line.length;j++)
@@ -248,12 +247,8 @@ function print_dfa_table(dfa_states){
 			accept:dfa_states[i].accept,
 			});
 	})(i);
-
-	var test=JSON.stringify(pack_dfa(dfa_states));
-	test=test.replace(/,/g,",\n\t");
-	code+=test;
-
-	return code;
+	code = JSON.stringify(pack_dfa(dfa_states));
+	return code.replace(/,/g,",\n\t");
 }
 
 /* -FUNCTION--------------------------------------------------------------------
@@ -273,7 +268,6 @@ function print_dfa_table(dfa_states){
 	Date:		Author:			Note:
 ----------------------------------------------------------------------------- */
 function print_symbol_labels(){
-	//var i,arr
 	for(var i=0,arr=[];i<symbols.length;i++)
 		arr.push(symbols[i].label);
 	return "var labels = "+JSON.stringify(symbols)+";\n\n";
@@ -362,26 +356,27 @@ function print_actions(){
 	var code = "";
 	var re = /%[0-9]+|%%/;
 	var semcode, strmatch;
-	var i, j, k, idx;
+	var i, j, k, idx, src;
 	code += "[";
 	for( i = 0; i < productions.length; i++ ){
+		src = productions[i].code;
 		semcode = "function(){\n";
 		semcode+="var rval;"
-		for(j = 0, k = 0; j < productions[i].code.length; j++, k++){
-			strmatch = re.exec(productions[i].code.substr(j, productions[i].code.length));
+		for(j = 0, k = 0; j < src.length; j++, k++){
+			strmatch = re.exec(src.substr(j, src.length));
 			if(strmatch && strmatch.index == 0){
 				if(strmatch[0] == "%%")
 					semcode += "rval";
 				else{
 					idx = parseInt( strmatch[0].substr( 1, strmatch[0].length ) );
 					idx = productions[i].rhs.length - idx;
-					semcode += "arguments[ " + idx + " ]";
+					semcode += " arguments[" + idx + "] ";
 				}
 				j += strmatch[0].length - 1;
 				k = semcode.length;
 			}
 			else
-				semcode += productions[i].code.charAt(j);
+				semcode += src.charAt(j);
 		}
 		code += "		" + semcode + "\nreturn rval;},\n";
 	}

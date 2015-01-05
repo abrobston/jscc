@@ -18,40 +18,6 @@ of the BSD license. Please see LICENSE for more information.
 [*
 var first_nfa;
 var last_nfa;
-var created_nfas; //Must always be initialized by compile_regex()...
-
-function create_nfa( where )
-{
-	var pos;
-	var nfa;
-	var i;
-
-	/*
-		Use an empty item if available,
-		else create a new one...
-	*/
-	for( i = 0; i < where.length; i++ )
-		if( where[i].edge == EDGE_FREE )
-			break;
-
-	if( i == where.length ){
-		nfa = new NFA()
-		where.push( nfa );
-	}else
-		nfa = where[i];
-
-	nfa.edge = EDGE_EPSILON;
-	nfa.ccl=new BitSet(MAX_CHAR);
-	nfa.accept = -1;
-	nfa.follow = -1;
-	nfa.follow2 = -1;
-	nfa.weight = -1;
-
-	created_nfas.push( i );
-
-	return i;
-}
-
 *]
 
 
@@ -213,19 +179,17 @@ function compile_regex( str, accept, case_insensitive ){
 
 	//_print( "str = >" + str + "< " + case_insensitive );
 
-	created_nfas = [];
-
 	first_nfa = NFA_states.create();
 	if( ( error_count = __##PREFIX##parse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
 		//character sets on the newly created items.
 		if( case_insensitive ){
-			for( i = 0; i < created_nfas.length; i++ ){
-				if( NFA_states.value[ created_nfas[i] ].edge == EDGE_CHAR ){
+			for( i = 0; i < NFA_states.value.length; i++ ){
+				if( NFA_states.value[i].edge == EDGE_CHAR ){
 					for( j = MIN_CHAR; j < MAX_CHAR; j++ ){
-						if( NFA_states.value[ created_nfas[i] ].ccl.get( j ) ){
-							NFA_states.value[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
-							NFA_states.value[ created_nfas[i] ].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
+						if( NFA_states.value[i].ccl.get( j ) ){
+							NFA_states.value[i].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
+							NFA_states.value[i].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
 					}
 				}
