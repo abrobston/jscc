@@ -42,10 +42,10 @@ function line_error( line, txt ){
 	'=>'
 
 	/~ Lexeme: ~/
-	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]'	CODE			[*	%match = %match.substr(2, %match.length - 4 ); *]
-	'\'([^\']|\\\')*\''						STRING_SINGLE
-	'"([^"]|\\")*"'							STRING_DOUBLE
-	'[A-Za-z0-9_-]+'						IDENT
+	'\[\*([^\*]\]|\*[^\]]|[^\*\]])*\*\]' CODE [*	return %match.substr(2, %match.length - 4 ); *]
+	'\'([^\']|\\\')*\'' STRING_SINGLE
+	'"([^"]|\\")*"' STRING_DOUBLE
+	'[A-Za-z0-9_-]+' IDENT
 
 	/~ Whitespace: ~/
 	'\n' => Continue
@@ -60,11 +60,11 @@ def: 			header_code token_assocs '##' grammar_defs footer_code
 				;
 
 /~ Token definition part ~/
-header_code:	code_opt							[* code_head += %1; *]
-				;
+header_code: code_opt [* code_head += %1; *]
+;
 
-footer_code:	code_opt							[* code_foot += %1; *]
-				;
+footer_code: code_opt [* code_foot += %1; *]
+;
 
 token_assocs:	token_assocs token_assoc
 				| token_assoc
@@ -210,8 +210,9 @@ symbol:			identifier							[*
 /~ Universal elements ~/
 code_opt: code
 	| '=>' identifier [* return "return " + %2 + ".apply(null, arguments);"; *]
-				|									[* return ""; *]
-				;
+	| '=>' CODE [* return "(" + %2 + ").apply(null, arguments);"; *]
+	| [* return ""; *]
+;
 
 code:			code CODE							[* return %1 + %2; *]
 				| CODE

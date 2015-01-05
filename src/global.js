@@ -28,57 +28,57 @@ function createConstructor(a){
 */
 
 //Program version info
-var JSCC_VERSION			= "0.37";
+var JSCC_VERSION = "0.37";
 
 //Symbol types
-var SYM_NONTERM				= 0;
-var SYM_TERM				= 1;
+var SYM_NONTERM = {};
+var SYM_TERM = {};
 
 //Symbol special cases
-var SPECIAL_NO_SPECIAL		= 0;
-var SPECIAL_EOF				= 1;
-var SPECIAL_WHITESPACE		= 2;
-var SPECIAL_ERROR			= 3;
+var SPECIAL_NO_SPECIAL = {};
+var SPECIAL_EOF = {};
+var SPECIAL_WHITESPACE = {};
+var SPECIAL_ERROR = {};
 
 //Symbol associativity
-var ASSOC_NONE				= 0;
-var ASSOC_LEFT				= 1;
-var ASSOC_RIGHT				= 2;
-var ASSOC_NOASSOC			= 3;
+var ASSOC_NONE = {};
+var ASSOC_LEFT = {};
+var ASSOC_RIGHT = {};
+var ASSOC_NOASSOC = {};
 
 //Token-Definitions
 
-var TOK_ERROR				= 0;
-var TOK_EOF					= 1;
-var TOK_ID					= 2;
-var TOK_TERM				= 3;
-var TOK_TERM_S				= 4;
-var TOK_COLON				= 5;
-var TOK_SEMICOLON			= 6;
-var TOK_DELIMITER			= 7;
-var TOK_SEMANTIC			= 8;
-var	TOK_IGNORE				= 9;
-var TOK_PREFIX				= 10;
+var TOK_ERROR = {};
+var TOK_EOF = {};
+var TOK_ID = {};
+var TOK_TERM = {};
+var TOK_TERM_S = {};
+var TOK_COLON = {};
+var TOK_SEMICOLON = {};
+var TOK_DELIMITER = {};
+var TOK_SEMANTIC = {};
+var	TOK_IGNORE = {};
+var TOK_PREFIX = {};
 
 //Miscelleanous constants
-var DEF_PROD_CODE			= "%% = %1;";
+var DEF_PROD_CODE = "%% = %1;";
 
 //Code generation/output modes
-var MODE_GEN_TEXT			= 0;
-var MODE_GEN_JS				= 1;
-var MODE_GEN_HTML			= 2;
+var MODE_GEN_TEXT = {};
+var MODE_GEN_JS = {};
+var MODE_GEN_HTML = {};
 
 //Executable environment
-var EXEC_CONSOLE			= 0;
-var EXEC_WEB				= 1;
+var EXEC_CONSOLE = {};
+var EXEC_WEB = {};
 
 //Lexer state construction
-var MIN_CHAR				= 0;
-var MAX_CHAR				= 255;
+var MIN_CHAR = 0;
+var MAX_CHAR = 255;
 
-var EDGE_FREE				= 0;
-var EDGE_EPSILON			= 1;
-var EDGE_CHAR				= 2;
+var EDGE_FREE = {};
+var EDGE_EPSILON = {};
+var EDGE_CHAR = {};
 
 /*
 	Structs
@@ -97,7 +97,6 @@ function NFAStates(){
 	this.value = [];
 }
 NFAStates.prototype.create = function(){
-	var pos;
 	var nfa;
 	var i;
 	/*
@@ -105,7 +104,7 @@ NFAStates.prototype.create = function(){
 		else create a new one...
 	*/
 	for( i = 0; i < this.value.length; i++ )
-		if( this.value[i].edge == EDGE_FREE )
+		if( this.value[i].edge === EDGE_FREE )
 			break;
 
 	if( i == this.value.length ){
@@ -121,7 +120,7 @@ NFAStates.prototype.create = function(){
 	nfa.follow2 = -1;
 	nfa.weight = -1;
 
-	created_nfas.push( i );
+	//created_nfas.push( i );
 
 	return i;
 }

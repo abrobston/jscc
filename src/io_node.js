@@ -27,11 +27,8 @@ function _error( msg )
 	errors++;
 }
 
-function _warning( msg )
-{
-	if( show_warnings )
-		sys.print( file + ": warning: " + msg );
-
+function _warning( msg ){
+	sys.print( file + ": warning: " + msg );
 	warnings++;
 }
 

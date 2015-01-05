@@ -11,44 +11,35 @@ You may use, modify and distribute this software under the terms and conditions
 of the BSD license. Please see LICENSE for more information.
 ----------------------------------------------------------------------------- */
 ///SV: it is no reason to optimize data size, so we may use array of bool directly in code
-function BitSetBool(size)
-{
+function BitSetBool(size){
 	this.data=[];
 }
-BitSetBool.prototype={
-	set:function(bit,state)
-	{
+BitSetBool.prototype = {
+	set:function(bit,state){
 		return this.data[bit]=(state&&true)||false;
 	},
-	get:function(bit)
-	{
+	get:function(bit){
 		return this.data[bit];
 	},
-	count:function()
-	{
+	count:function(){
 		var i, c = 0;
-
 		for( i = 0; i < this.data.length; i++ )
 			if( this.data[i] )
 				c++;
 		return c;
 	}
 }
-function BitSet32()
-{
+function BitSet32(){
   this.data=[];
 }
 BitSet32.prototype={
-  set:function(bit,state)
-  {///@TODO simplify this if possible
+  set:function(bit,state){///@TODO simplify this if possible
     this.data[bit >> 5] = (state ? (this.data[bit >> 5] | (1 << (bit & 31))) : (this.data[bit >> 5] & ~(1 << (bit & 31))));
   },
-  get:function(bit)
-  {
+  get:function(bit){
     return ((this.data[bit >> 5] & (1 << (bit & 31)))==0) ? false : true;
   },
-  count:function()
-  {
+  count:function(){
     var i,l,c=0;
     for(i=0,l=this.data.length*32;i<l;i++)
       if(this.get(i))c++;
@@ -82,27 +73,19 @@ BitSetTest.prototype={
 var BitSet=(function(){
 	if((DEFAULT_DRIVER === "driver_node.js_") && false){
 		var Buffer = require('buffer').Buffer;
-		var DBG=require('sys').debug;
 		function BitSetBuffer(size){
-			//DBG("\nBuffer "+size);
 			this.data=new Buffer((size+7)>>3);
 		}
 		BitSetBuffer.prototype={
-		  set:function(bit,state)
-		  {///@TODO simplify this if possible
+		  set:function(bit,state){///@TODO simplify this if possible
 		    this.data[bit >> 3] = (state ? (this.data[bit >> 3] | (1 << (bit & 7))) : (this.data[bit >> 3] & ~(1 << (bit & 7))));
-		    //DBG("\nSet "+ bit +" to "+state);
 		  },
-		  get:function(bit)
-		  {
-			//DBG("\nGet bit "+bit);
+		  get:function(bit){
 			if(this.gets>10000)throw new Error("LIMIT");
 			else this.gets++;
 		    return ((this.data[bit >> 3] & (1 << (bit & 7)))==0) ? false : true;
 		  },
-		  count:function()
-		  {
-			//DBG("Count");
+		  count:function(){
 			var i,l,c=0;
 		    for(i=0,l=this.data.length*8;i<l;i++)
 		      if(this.get(i))c++;
