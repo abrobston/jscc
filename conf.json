@@ -1,0 +1,22 @@
+{
+  "tags": {
+    "allowUnknownTags": false,
+    "dictionaries": ["closure", "jsdoc"]
+  },
+  "source": {
+    "include": "./lib",
+    "includePattern": ".+\\.js(doc)?$",
+    "excludePattern": "(^|\\/|\\\\)_"
+  },
+  "plugins": [],
+  "templates": {
+    "cleverLinks": false,
+    "monospaceLinks": false
+  },
+  "opts": {
+    "recurse": true,
+    "destination": "html-documentation",
+    "package": "./package.json",
+    "readme": "./README.md"
+  }
+}

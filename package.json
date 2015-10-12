@@ -1,0 +1,54 @@
+{
+  "name": "jscc",
+  "version": "0.38.0-alpha1",
+  "main": "lib/main.js",
+  "description": "A LALR(1) Parser Generator for JavaScript written in JavaScript.",
+  "license": {
+      "type": "BSD-3-Clause",
+      "url": "https://github.com/abrobston/jscc/blob/master/LICENSE"
+    },
+  "keywords": ["jscc", "JS/CC", "lexer", "parser", "lexical analysis", "yacc", "lex"],
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/abrobston/jscc.git"
+    },
+  "contributors": [
+    {
+      "name": "Jan Max Meyer",
+      "email": "contact@phorward-software.com",
+      "web": "http://jscc.phorward-software.com/"
+    },
+    {
+      "name": "Sergiy Shatunov"
+    },
+    {
+      "name": "Louis P. Santillan"
+    },
+    {
+      "name": "Andrew Brobston",
+      "email": "andrew@brobston.com"
+    }
+  ],
+  "dependencies": {
+    "log4js": "~0.6.27",
+    "google-closure-library": "20150920.0.0"
+  },
+  "devDependencies": {
+    "mocha": "~2.3.3",
+    "gulp": "~3.9.0",
+    "requirejs": "~2.1.20",
+    "jsdoc": "~3.3.3",
+    "gulp-shell": "~0.4.3",
+    "unzip2": "~0.2.5",
+    "rest": "~1.3.1"
+  },
+  "homepage": "http://jscc.phorward-software.com/",
+  "engine": ["spidermonkey", "node", "rhino", "v8"],
+  "overlay": {
+    "node": {
+      "dependencies": {
+        "log4js": "~0.6.27"
+      }
+    }
+  }
+}

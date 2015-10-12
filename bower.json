@@ -1,0 +1,18 @@
+{
+  "name": "jscc",
+  "description": "A LALR(1) Parser for JavaScript written in JavaScript",
+  "main": "jscc-amd.js",
+  "devDependencies": {
+    "closure-compiler": "http://dl.google.com/closure-compiler/compiler-latest.zip"
+  },
+  "moduleType": ["amd", "node", "globals"],
+  "keywords": ["lexer", "parser", "lex", "yacc", "lexical-analysis"],
+  "authors": ["Jan Max Meyer <contact@phorward-software.com> (http://jscc.phorward-software.com/)",
+    "Sergiy Shatunov",
+    "Louis P. Santillan",
+    "Andrew Brobston <andrew@brobston.com>"],
+  "homepage": "http://jscc.phorward-software.com/",
+  "repository": {"type": "git", "url": "https://github.com/abrobston/jscc.git"},
+  "license": "BSD-3-Clause",
+  "ignore": ["doc/", "samples/", "_setup/", ".gitignore"]
+}

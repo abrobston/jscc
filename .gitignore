@@ -1,6 +1,16 @@
+# Generated documentation
+/html-documentation
+
+# Build outputs
+jscc-*.js
+jscc-*.js.map
+/lib/jscc/parse.js
+/lib/jscc/regex.js
+
 ### Windows template
 # Windows image file caches
 Thumbs.db
+/jar
 ehthumbs.db
 
 # Folder config file

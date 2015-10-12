@@ -1,9 +1,10 @@
 JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
---------------------------------------------------------------------------------
 
-INTRODUCION:
+INTRODUCTION
+------------
+
 
 JS/CC is the first available parser development system for JavaScript
 and ECMAScript-derivates. It has been developed, both, with the
@@ -14,7 +15,8 @@ bottom-up parsing.
 
 JS/CC brings a lex/yacc-like toolchain into the world of ECMAScript.
 
-LICENSE:
+LICENSE
+-------
 
 JS/CC is initially written by Jan Max Meyer (Phorward Software Technologies)
 with contributions by Louis P. Santillan and Sergiy Shatunov.  JS/CC is
@@ -22,7 +24,8 @@ released under the terms and conditions of the 3-clause BSD license.
 The file src/v8/v8sh.cc is based on Google's V8 shell.cc and is released under
 the terms and conditions of the New BSD License (see file header for details).
 
-REQUIREMENTS:
+REQUIREMENTS
+------------
 
 To use JS/CC, you need either Mozilla/Rhino, Mozilla/Spidermonkey, Microsoft
 Windows Script Host, Microsoft JScript.NET, Google V8, or an ordinary
@@ -50,7 +53,8 @@ These bootstrap versions are useful for making changes to the internals of
 JS/CC for the same or another platform and then having your local JS/CC
 rebuild that new JS/CC.
 
-ABOUT:
+ABOUT
+-----
 
 JS/CC is a platform-independent software that unions both: A regular
 expression-based lexical analyzer generator matching individual tokens from
@@ -72,24 +76,26 @@ To use JS/CC and for understanding its internals and behavior, some knowledge
 of context-free grammars, bottom-up parsing techniques and compiler
 construction theory, in general, is assumed.
 
-BUILDING:
+BUILDING
+--------
 
 The makefiles in src/ support 3 targets for a given platform.  So, for the
 rhino platform, you would issue the following commands:
 
 To build JS/CC:
-	make -f Makefile.rhino
+	`make -f Makefile.rhino`
 
 To rebuild JS/CC from the bootstrap files:
-	make -f Makefile.rhino bootstrap
+	`make -f Makefile.rhino bootstrap`
 
 To clean up the JS/CC before issuing one of the above:
-	make -f Makefile.rhino clean
+	`make -f Makefile.rhino clean`
 
-USAGE:
+USAGE
+-----
 
 In general, using JS/CC uses the following command line:
-<js engine> jscc.js -v -o <output.file.js> -p <prefix> -t driver_<platform>.js_ <input.js.par>
+`<js engine> jscc.js -v -o <output.file.js> -p <prefix> -t driver_<platform>.js_ <input.js.par>`
 
 For example, when using rhino, issue the following:
-rhino jscc.js -v -o rhino_out.js -p rhino -t driver_rhino.js_ rhino_input.js.par
+`rhino jscc.js -v -o rhino_out.js -p rhino -t driver_rhino.js_ rhino_input.js.par`
