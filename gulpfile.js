@@ -1,19 +1,19 @@
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'gulp-shell', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
-                'http', 'https', 'url', 'unzip2', 'stream'], factory);
+                'http', 'https', 'url', 'unzip2', 'stream', 'mocha'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('gulp-shell'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
-                    require('https'), require('url'), require('unzip2'), require('stream'));
+                    require('https'), require('url'), require('unzip2'), require('stream'), require('mocha'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.gulpShell, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
-                    root.https, root.url, root.unzip2, root.stream);
+                    root.https, root.url, root.unzip2, root.stream, root.mocha);
     }
-}(this, function(gulp, shell, rest, mime, errorCode, path, fs, http, https, urlUtil, unzip, stream) {
-    gulp.task('jsdoc', ['parse.js', 'regex.js'], function(cb) {
+}(this, function(gulp, shell, rest, mime, errorCode, path, fs, http, https, urlUtil, unzip, stream, Mocha) {
+    gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
         var cmd = shell(['jsdoc -c ./conf.json']);
         var e = null;
         cmd.on('error', function(err) {
@@ -30,7 +30,7 @@
             .pipe(cmd);
     });
 
-    gulp.task('parse.js', function(cb) {
+    gulp.task('_parse.js', function(cb) {
         var cmd = shell(['node ./src/_boot_node.js -o ./lib/jscc/parse.js -t ./src/driver/parser.js ./src/parse.par']);
         var e = null;
         cmd.on('error', function(err) {
@@ -46,7 +46,7 @@
         gulp.src('')
             .pipe(cmd);
     });
-    gulp.task('regex.js', function(cb) {
+    gulp.task('_regex.js', function(cb) {
         var cmd = shell(['node ./src/_boot_node.js -o ./lib/jscc/regex.js -t ./src/driver/parser.js ./src/regex.par']);
         var e = null;
         cmd.on('error', function(err) {
@@ -123,7 +123,7 @@
         fs.stat(destFile, downloadCallback);
     }
 
-    gulp.task('get-rhino', function(cb) {
+    gulp.task('_get-rhino', function(cb) {
         var client = rest.wrap(mime, {
             mime: "application/json",
             accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
@@ -153,11 +153,11 @@
         });
     });
 
-    gulp.task('get-closure', function(cb) {
+    gulp.task('_get-closure', function(cb) {
         downloadAndUnzip("closure-latest.zip", "http://dl.google.com/closure-compiler/compiler-latest.zip", cb);
     });
 
-    gulp.task('requirejs-optimize', ['parse.js', 'regex.js', 'get-rhino', 'get-closure'], function(cb) {
+    gulp.task('_requirejs-optimize', ['_parse.js', '_regex.js', '_get-rhino', '_get-closure'], function(cb) {
         var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
         var newestRhinoZip = "";
         var newestRhinoZipDate = new Date(0);
@@ -218,5 +218,53 @@
                 });
     });
 
-    gulp.task('default', ['jsdoc', 'requirejs-optimize']);
+    gulp.task('_test', ['_parse.js', '_regex.js'], function(cb) {
+        requirejs = require('requirejs');
+        requirejs.config({
+            baseUrl: "./lib",
+            paths: {
+                "sinon": "../node_modules/sinon/pkg/sinon"
+            },
+            nodeRequire: require
+        });
+
+        var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
+        gulp.src("test/**/*.js", { read: false })
+            .pipe(new stream.Writable({
+                      objectMode: true,
+                      write: function(chunk, encoding, next) {
+                          mocha.addFile(chunk.path);
+                          next();
+                      }
+                  }))
+            .once('error', function(err) {
+                      cb(err);
+                  })
+            .once('finish', function() {
+                      mocha.run(function(failures) {
+                          cb();
+                      })
+                  });
+    });
+
+    gulp.task('intellij-pretest', ['_parse.js', '_regex.js'], function(cb) {
+        // Process does not otherwise exit under IntelliJ's runner
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('test', ['_test'], function(cb) {
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('default', ['_jsdoc', '_requirejs-optimize'], function(cb) {
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test'], function(cb) {
+        cb();
+        process.exit(0);
+    });
 }));

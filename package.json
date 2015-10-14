@@ -30,8 +30,7 @@
     }
   ],
   "dependencies": {
-    "log4js": "~0.6.27",
-    "google-closure-library": "20150920.0.0"
+    "log4js": "~0.6.27"
   },
   "devDependencies": {
     "mocha": "~2.3.3",
@@ -40,7 +39,11 @@
     "jsdoc": "~3.3.3",
     "gulp-shell": "~0.4.3",
     "unzip2": "~0.2.5",
-    "rest": "~1.3.1"
+    "rest": "~1.3.1",
+    "sinon": "~1.17.1",
+    "chai": "~3.3.0",
+    "squirejs": "~0.2.1",
+    "amdefine": "~1.0.0"
   },
   "homepage": "http://jscc.phorward-software.com/",
   "engine": ["spidermonkey", "node", "rhino", "v8"],
