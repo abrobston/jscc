@@ -219,15 +219,6 @@
     });
 
     gulp.task('_test', ['_parse.js', '_regex.js'], function(cb) {
-        requirejs = require('requirejs');
-        requirejs.config({
-            baseUrl: "./lib",
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon"
-            },
-            nodeRequire: require
-        });
-
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
             .pipe(new stream.Writable({

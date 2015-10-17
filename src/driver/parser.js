@@ -4,7 +4,7 @@
 	created for the particular platform.
 */
 ##HEADER##
-var __##PREFIX##parse=(function(debug,eof,whitespace,error_token){
+var __##PREFIX##parse=(function(eof,whitespace,error_token){
 	
 /// there was "continue" in code, we must to replace it
 var Continue = function(){throw Continue;};
@@ -207,7 +207,7 @@ Return.Value = function(value){
 		return err_cnt;
 	}
 	return parse;
-})(__##PREFIX##_debug,##EOF##,##WHITESPACE##,##ERROR_TOKEN##);
+})(##EOF##,##WHITESPACE##,##ERROR_TOKEN##);
 
 ##FOOTER##
 
