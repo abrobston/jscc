@@ -103,7 +103,7 @@ token_assoc:	'<' token_defs	';'					[*	global.assoc_level++;
 				| '!' string						[*	if( global.whitespace_token == -1 ){
 															var regex = %2.substr( 1, %2.length - 2 );
 															global.whitespace_token = tabgen.create_symbol( "WHITESPACE", global.SYM.TERM, global.SPECIAL.WHITESPACE );
-															compile_regex( regex, global.whitespace_token, %2[0] != '\''  );
+															compile_regex( regex, global.whitespace_token, %2[0] != '\'', cur_line  );
 														}
 														else
 															line_error( PCB.line, "Multiple whitespace definition" );
@@ -117,13 +117,13 @@ token_defs:		token_defs token_def 				[*	%1.push(%2); return %1; *]
 token_def:		string identifier code_opt 			[*	%% = tabgen.create_symbol( %2, global.SYM.TERM, global.SPECIAL.NONE );
 														var regex = %1.substr( 1, %1.length - 2 );
 														global.symbols[%%].code = %3;
-														compile_regex( regex, global.symbols[ %% ].id, %1.charAt( 0 ) != '\''  );
+														compile_regex( regex, global.symbols[ %% ].id, %1.charAt( 0 ) != '\'', cur_line  );
 													*]
 				| string code_opt 					[*	var regex = %1.substr( 1, %1.length - 2 );
 														%% = tabgen.create_symbol( regex.replace( /\\/g, "" ), global.SYM.TERM, global.SPECIAL.NONE );
 														global.symbols[%%].code = %2;
 
-														compile_regex( regex, global.symbols[ %% ].id,  %1.charAt( 0 ) != '\'' );
+														compile_regex( regex, global.symbols[ %% ].id,  %1.charAt( 0 ) != '\'', cur_line );
 													*]
 				;
 
