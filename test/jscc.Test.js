@@ -26,9 +26,11 @@ suite("main", function() {
     var assert = chai.assert;
     var injector = new Squire();
 
-    var ioStub, logStub, integrityStub, parseStub;
-    suiteSetup("suite setup", function() {
-        ioStub = sinon.stub({
+    var sandbox, ioStub, logStub, integrityStub, parseStub, parseStubCallbacks;
+    setup("setup", function() {
+        injector.configure();
+        sandbox = sinon.sandbox.create();
+        ioStub = sandbox.stub({
             read_all_input: function(options) {
             },
             read_template: function(options) {
@@ -37,7 +39,7 @@ suite("main", function() {
             }
         });
         ioStub.read_template.returns("fake template");
-        logStub = sinon.stub({
+        logStub = sandbox.stub({
             fatal: function(msg) {
             },
             error: function(msg) {
@@ -53,7 +55,7 @@ suite("main", function() {
             setLevel: function(level) {
             }
         });
-        integrityStub = sinon.stub({
+        integrityStub = sandbox.stub({
             undef: function() {
             },
             unreachable: function() {
@@ -61,20 +63,28 @@ suite("main", function() {
             check_empty_states: function() {
             }
         });
-        parseStub = sinon.stub({
-            parse_grammar: function(src, file) {
-            }
+        // Allow addition of callbacks because it is difficult to stub
+        // a bare function in sinon.
+        parseStubCallbacks = [];
+        parseStub = sandbox.spy(function(str, fileName) {
+            var retVal = 0;
+            parseStubCallbacks.forEach(function(parseCallback) {
+                retVal += parseCallback(str, fileName);
+            });
+            return retVal;
         });
 
         injector.mock("jscc/io/io", ioStub)
             .mock("jscc/log/log", logStub)
             .mock("jscc/integrity", integrityStub)
             .mock("jscc/parse", parseStub)
-            .store(["jscc/tabgen", "jscc/printtab", "jscc/global", "jscc/util", "jscc/first", "jscc/integrity"]);
+            .store(["jscc/tabgen", "jscc/printtab", "jscc/global", "jscc/util", "jscc/first", "jscc/integrity",
+                    "jscc/parse"]);
     });
 
-    suiteTeardown("suite teardown", function() {
-        injector.clean();
+    teardown("teardown", function() {
+        sandbox.restore();
+        injector.remove();
     });
 
     function wrapStub(mocks, cb) {
@@ -87,10 +97,10 @@ suite("main", function() {
     }
 
     function stubPartialModules(mocks) {
-        sinon.stub(mocks.store["jscc/tabgen"], "lalr1_parse_table");
+        sandbox.stub(mocks.store["jscc/tabgen"], "lalr1_parse_table");
         ["print_parse_tables", "print_dfa_table", "print_term_actions", "print_symbol_labels",
          "print_actions"].forEach(function(methodName) {
-                                      sinon.stub(mocks.store["jscc/printtab"], methodName, function() {
+                                      sandbox.stub(mocks.store["jscc/printtab"], methodName, function() {
                                           return ""
                                       });
                                   });
@@ -148,7 +158,7 @@ suite("main", function() {
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
                  ioStub.write_output.reset();
-                 var outputCallback = sinon.stub();
+                 var outputCallback = sandbox.stub();
                  jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -225,7 +235,7 @@ suite("main", function() {
                            wrapStub(mocks, function() {
                                var oldResetAll = mocks.store["jscc/util"].reset_all;
                                try {
-                                   sinon.stub(mocks.store["jscc/util"], "reset_all", function(mode) {
+                                   sandbox.stub(mocks.store["jscc/util"], "reset_all", function(mode) {
                                        oldResetAll(mode);
                                        mocks.store["jscc/global"][item.field] = "Replacement text";
                                    });
@@ -256,7 +266,7 @@ suite("main", function() {
                        injector.run(["mocks", "jscc"], function(mocks, jscc) {
                            wrapStub(mocks, function() {
                                mocks.store["jscc/printtab"][item.method].restore();
-                               sinon.stub(mocks.store["jscc/printtab"], item.method, function() {
+                               sandbox.stub(mocks.store["jscc/printtab"], item.method, function() {
                                    return "Replacement text";
                                });
                                var output = "";
@@ -281,7 +291,7 @@ suite("main", function() {
                        injector.run(["mocks", "jscc"], function(mocks, jscc) {
                            wrapStub(mocks, function() {
                                try {
-                                   sinon.stub(mocks.store["jscc/printtab"], item.method, function() {
+                                   sandbox.stub(mocks.store["jscc/printtab"], item.method, function() {
                                        return 87654;
                                    });
                                    var output = "";
@@ -303,26 +313,21 @@ suite("main", function() {
     test("Does not proceed if parse.parse_grammar indicates errors",
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
-                 try {
-                     parseStub.parse_grammar.restore();
-                     sinon.stub(parseStub, "parse_grammar", function() {
-                         mocks.store["jscc/global"].errors = 1;
-                     });
-                     parseStub.parse_grammar.reset();
-                     integrityStub.undef.reset();
-                     integrityStub.unreachable.reset();
-                     jscc({
-                         src_file: "invalidFileName.par",
-                         tpl_file: "invalidTemplate.js",
-                         out_file: "invalidOutput.js"
-                     });
-                     sinon.assert.called(parseStub.parse_grammar);
-                     sinon.assert.notCalled(integrityStub.undef);
-                     sinon.assert.notCalled(integrityStub.unreachable);
-                 } finally {
-                     parseStub.parse_grammar.restore();
-                     sinon.stub(parseStub, "parse_grammar");
-                 }
+                 parseStubCallbacks.push(function() {
+                     mocks.store["jscc/global"].errors = 1;
+                     return 1;
+                 });
+                 parseStub.reset();
+                 integrityStub.undef.reset();
+                 integrityStub.unreachable.reset();
+                 jscc({
+                     src_file: "invalidFileName.par",
+                     tpl_file: "invalidTemplate.js",
+                     out_file: "invalidOutput.js"
+                 });
+                 sinon.assert.called(parseStub);
+                 sinon.assert.notCalled(integrityStub.undef);
+                 sinon.assert.notCalled(integrityStub.unreachable);
              });
          }));
 
@@ -336,11 +341,11 @@ suite("main", function() {
                                var firstSpy;
                                try {
                                    integrityStub[method].restore();
-                                   sinon.stub(integrityStub, method, function() {
+                                   sandbox.stub(integrityStub, method, function() {
                                        mocks.store["jscc/global"].errors = 1;
                                    });
                                    integrityStub[method].reset();
-                                   firstSpy = sinon.spy(mocks.store["jscc/first"], "first");
+                                   firstSpy = sandbox.spy(mocks.store["jscc/first"], "first");
                                    mocks.store["jscc/tabgen"].lalr1_parse_table.reset();
                                    integrityStub.check_empty_states.reset();
                                    jscc({
@@ -357,7 +362,7 @@ suite("main", function() {
                                        mocks.store["jscc/first"].first.restore();
                                    }
                                    integrityStub[method].restore();
-                                   sinon.stub(integrityStub, method);
+                                   sandbox.stub(integrityStub, method);
                                }
                            });
                        }));
@@ -379,10 +384,10 @@ suite("main", function() {
                                    } catch (e) {
                                        skipFinallyRestore = false;
                                    }
-                                   sinon.stub(mocks.store[fullModule], item.method, function() {
+                                   sandbox.stub(mocks.store[fullModule], item.method, function() {
                                        mocks.store["jscc/global"].errors = 1;
                                    });
-                                   var outputCallback = sinon.stub();
+                                   var outputCallback = sandbox.stub();
                                    jscc({
                                        src_file: "invalidFileName.par",
                                        tpl_file: "invalidTemplate.js",

@@ -69,10 +69,10 @@ def: 			header_code token_assocs '##' grammar_defs footer_code
 				;
 
 /~ Token definition part ~/
-header_code: code_opt [* code_head += %1; *]
+header_code: code_opt [* global.code_head += %1; *]
 ;
 
-footer_code: code_opt [* code_foot += %1; *]
+footer_code: code_opt [* global.code_foot += %1; *]
 ;
 
 token_assocs:	token_assocs token_assoc
@@ -100,7 +100,7 @@ token_assoc:	'<' token_defs	';'					[*	global.assoc_level++;
 														}
 													*]
 				| token_defs ';'
-				| '!' string						[*	if( global.whitespace_token == -1 ){
+				| '!' string opt_semicolon			[*	if( global.whitespace_token == -1 ){
 															var regex = %2.substr( 1, %2.length - 2 );
 															global.whitespace_token = tabgen.create_symbol( "WHITESPACE", global.SYM.TERM, global.SPECIAL.WHITESPACE );
 															compile_regex( regex, global.whitespace_token, %2[0] != '\'', cur_line  );
@@ -156,7 +156,7 @@ productions:	productions '|' rhs					[*	%1.push(%3); return %1; *]
 				;
 
 rhs:			sequence_opt rhs_prec code_opt		[*
-														var prod = global.Production({
+														var prod = new global.Production({
 															id:global.productions.length,
 															rhs:%1,
 															level:%2,
@@ -232,6 +232,10 @@ string:			STRING_SINGLE
 				;
 
 identifier:		IDENT
+				;
+
+opt_semicolon:	';'
+				|
 				;
 
 [*
