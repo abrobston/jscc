@@ -3,20 +3,20 @@ suite("parse", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../../lib'),
-            nodeRequire: require,
-            packages: [
-                {
-                    name: "squirejs",
-                    location: "../node_modules/squirejs",
-                    main: "src/Squire"
-                }
-            ],
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon",
-                "jscc/bitset": "jscc/bitset/BitSet32"
-            }
-        });
+                             baseUrl: path.join(__dirname, '../../lib'),
+                             nodeRequire: require,
+                             packages: [
+                                 {
+                                     name: "squirejs",
+                                     location: "../node_modules/squirejs",
+                                     main: "src/Squire"
+                                 }
+                             ],
+                             paths: {
+                                 "sinon": "../node_modules/sinon/pkg/sinon",
+                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                             }
+                         });
     }
 
     var sinon = requirejs('sinon');
@@ -32,21 +32,21 @@ suite("parse", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
         var logStub = sandbox.stub({
-            fatal: function(msg) {
-            },
-            error: function(msg) {
-            },
-            warn: function(msg) {
-            },
-            info: function(msg) {
-            },
-            debug: function(msg) {
-            },
-            trace: function(msg) {
-            },
-            setLevel: function(level) {
-            }
-        });
+                                       fatal: function(msg) {
+                                       },
+                                       error: function(msg) {
+                                       },
+                                       warn: function(msg) {
+                                       },
+                                       info: function(msg) {
+                                       },
+                                       debug: function(msg) {
+                                       },
+                                       trace: function(msg) {
+                                       },
+                                       setLevel: function(level) {
+                                       }
+                                   });
         injector.mock("jscc/log/log", logStub);
         injector.mock("jscc/io/io", requirejs("jscc/io/ioNode"));
         injector.store(["jscc/log/log", "jscc/global", "jscc/util"]);
@@ -62,28 +62,28 @@ suite("parse", function() {
         { semi: "", description: "no semicolon" },
         { semi: " ;", description: "a semicolon preceded by a space" },
         { semi: "\n ;", description: "a semicolon preceded by a newline and a space" },
-        { semi: "; /~ Comment ~/", description: "a semicolon followed by a comment"}
+        { semi: "; /~ Comment ~/", description: "a semicolon followed by a comment" }
     ].forEach(function(item) {
-                  test("Permits " + item.description + " after whitespace terminal definition",
-                       injector.run(["mocks", "jscc/parse", "jscc/enums/EXEC"], function(mocks, parse, EXEC) {
-                           var log = mocks.store["jscc/log/log"];
-                           log.fatal.reset();
-                           log.error.reset();
+        test("Permits " + item.description + " after whitespace terminal definition",
+             injector.run(["mocks", "jscc/parse", "jscc/enums/EXEC"], function(mocks, parse, EXEC) {
+                 var log = mocks.store["jscc/log/log"];
+                 log.fatal.reset();
+                 log.error.reset();
 
-                           var global = mocks.store["jscc/global"];
-                           var util = mocks.store["jscc/util"];
-                           util.reset_all(EXEC.CONSOLE);
+                 var global = mocks.store["jscc/global"];
+                 var util = mocks.store["jscc/util"];
+                 util.reset_all(EXEC.CONSOLE);
 
-                           var source = "!   ' '" + item.semi + "\n" +
-                                        "##\n" +
-                                        "p: e [* alert( %1 ); *]\n" +
-                                        "   ;\n" +
-                                        "e: ;\n";
+                 var source = "!   ' '" + item.semi + "\n" +
+                              "##\n" +
+                              "p: e [* alert( %1 ); *]\n" +
+                              "   ;\n" +
+                              "e: ;\n";
 
-                           parse(source, "");
+                 parse(source, "");
 
-                           assert.notCalled(log.fatal);
-                           assert.notCalled(log.error);
-                       }));
-              });
+                 assert.notCalled(log.fatal);
+                 assert.notCalled(log.error);
+             }));
+    });
 });

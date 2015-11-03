@@ -3,20 +3,20 @@ suite("util", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../../lib'),
-            nodeRequire: require,
-            packages: [
-                {
-                    name: "squirejs",
-                    location: "../node_modules/squirejs",
-                    main: "src/Squire"
-                }
-            ],
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon",
-                "jscc/bitset": "jscc/bitset/BitSet32"
-            }
-        });
+                             baseUrl: path.join(__dirname, '../../lib'),
+                             nodeRequire: require,
+                             packages: [
+                                 {
+                                     name: "squirejs",
+                                     location: "../node_modules/squirejs",
+                                     main: "src/Squire"
+                                 }
+                             ],
+                             paths: {
+                                 "sinon": "../node_modules/sinon/pkg/sinon",
+                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                             }
+                         });
     }
 
     var sinon = requirejs('sinon');
@@ -32,29 +32,29 @@ suite("util", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
         var logStub = sandbox.stub({
-            fatal: function(msg) {
-            },
-            error: function(msg) {
-            },
-            warn: function(msg) {
-            },
-            info: function(msg) {
-            },
-            debug: function(msg) {
-            },
-            trace: function(msg) {
-            },
-            setLevel: function(level) {
-            }
-        });
+                                       fatal: function(msg) {
+                                       },
+                                       error: function(msg) {
+                                       },
+                                       warn: function(msg) {
+                                       },
+                                       info: function(msg) {
+                                       },
+                                       debug: function(msg) {
+                                       },
+                                       trace: function(msg) {
+                                       },
+                                       setLevel: function(level) {
+                                       }
+                                   });
         var ioStub = sandbox.stub({
-            read_all_input: function(options) {
-            },
-            read_template: function(options) {
-            },
-            write_output: function(options) {
-            }
-        });
+                                      read_all_input: function(options) {
+                                      },
+                                      read_template: function(options) {
+                                      },
+                                      write_output: function(options) {
+                                      }
+                                  });
         injector.mock("jscc/log/log", logStub);
         injector.mock("jscc/io/io", ioStub);
     });
@@ -70,13 +70,13 @@ suite("util", function() {
         { dest: [], src: [1, 2, 3], result: [1, 2, 3] },
         { dest: [0, 1, 2, 3], src: [0.5, 1.5, 2.5, 3.5], result: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] }
     ].forEach(function(item) {
-                  test("Union of dest_array [" + item.dest.join(", ") + "] and src_array [" + item.src.join(", ") +
-                       "] produces result [" + item.result.join(", ") + "] in any order",
-                       injector.run(["mocks", "jscc/util"], function(mocks, util) {
-                           var result = util.union(item.dest, item.src);
-                           assert.sameMembers(result, item.result);
-                       }));
-              });
+        test("Union of dest_array [" + item.dest.join(", ") + "] and src_array [" + item.src.join(", ") +
+             "] produces result [" + item.result.join(", ") + "] in any order",
+             injector.run(["mocks", "jscc/util"], function(mocks, util) {
+                 var result = util.union(item.dest, item.src);
+                 assert.sameMembers(result, item.result);
+             }));
+    });
 
     test("Union does not affect its src_array parameter", injector.run(["mocks", "jscc/util"], function(mocks, util) {
         var src = [1, 2, 3];

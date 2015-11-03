@@ -3,20 +3,20 @@ suite("tabgen", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../../lib'),
-            nodeRequire: require,
-            packages: [
-                {
-                    name: "squirejs",
-                    location: "../node_modules/squirejs",
-                    main: "src/Squire"
-                }
-            ],
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon",
-                "jscc/bitset": "jscc/bitset/BitSet32"
-            }
-        });
+                             baseUrl: path.join(__dirname, '../../lib'),
+                             nodeRequire: require,
+                             packages: [
+                                 {
+                                     name: "squirejs",
+                                     location: "../node_modules/squirejs",
+                                     main: "src/Squire"
+                                 }
+                             ],
+                             paths: {
+                                 "sinon": "../node_modules/sinon/pkg/sinon",
+                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                             }
+                         });
     }
 
     var sinon = requirejs('sinon');
@@ -32,29 +32,29 @@ suite("tabgen", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
         var logStub = sandbox.stub({
-            fatal: function(msg) {
-            },
-            error: function(msg) {
-            },
-            warn: function(msg) {
-            },
-            info: function(msg) {
-            },
-            debug: function(msg) {
-            },
-            trace: function(msg) {
-            },
-            setLevel: function(level) {
-            }
-        });
+                                       fatal: function(msg) {
+                                       },
+                                       error: function(msg) {
+                                       },
+                                       warn: function(msg) {
+                                       },
+                                       info: function(msg) {
+                                       },
+                                       debug: function(msg) {
+                                       },
+                                       trace: function(msg) {
+                                       },
+                                       setLevel: function(level) {
+                                       }
+                                   });
         var ioStub = sandbox.stub({
-            read_all_input: function(options) {
-            },
-            read_template: function(options) {
-            },
-            write_output: function(options) {
-            }
-        });
+                                      read_all_input: function(options) {
+                                      },
+                                      read_template: function(options) {
+                                      },
+                                      write_output: function(options) {
+                                      }
+                                  });
         injector.mock("jscc/log/log", logStub);
         injector.mock("jscc/io/io", ioStub);
         injector.store(["jscc/global"]);
@@ -85,59 +85,59 @@ suite("tabgen", function() {
         ]
         }
     ].forEach(function(item) {
-                  test("Calling find_symbol with label '" + item.label + "', kind 'SYM." +
-                       (item.terminating ? "TERM" : "NONTERM") + "', and special '" +
-                       (typeof item.special === 'undefined' ? "undefined" : item.special) + "' returns " +
-                       item.expected,
-                       injector.run(["mocks", "jscc/tabgen", "jscc/enums/SYM", "jscc/enums/SPECIAL",
-                                     "jscc/classes/Symbol"], function(mocks, tabgen, SYM, SPECIAL, Symbol) {
-                           var global = mocks.store["jscc/global"];
-                           // Remove default symbols now added by the jscc.global constructor
-                           global.symbols = [];
-                           item.overrides.forEach(function(override) {
-                               if (typeof override.terminating === 'boolean') {
-                                   override.kind = override.terminating ? SYM.TERM : SYM.NONTERM;
-                                   delete override.terminating;
-                               }
-                               if (typeof override.special === 'string') {
-                                   var newSpecial = SPECIAL.NONE;
-                                   switch (override.special) {
-                                       case "EOF":
-                                           newSpecial = SPECIAL.EOF;
-                                           break;
-                                       case "ERROR":
-                                           newSpecial = SPECIAL.ERROR;
-                                           break;
-                                       case "WHITESPACE":
-                                           newSpecial = SPECIAL.WHITESPACE;
-                                           break;
-                                       default:
-                                           break;
-                                   }
-                                   override.special = newSpecial;
-                               }
-                               global.symbols.push(new Symbol(override));
-                           });
-                           var kind = item.terminating ? SYM.TERM : SYM.NONTERM;
-                           var special;
-                           switch (item.special) {
-                               case "NONE":
-                                   special = SPECIAL.NONE;
-                                   break;
-                               case "EOF":
-                                   special = SPECIAL.EOF;
-                                   break;
-                               case "ERROR":
-                                   special = SPECIAL.ERROR;
-                                   break;
-                               case "WHITESPACE":
-                                   special = SPECIAL.WHITESPACE;
-                                   break;
-                               default:
-                                   break;
-                           }
-                           var result = tabgen.find_symbol(item.label, kind, special);
-                           assert.strictEqual(result, item.expected);
-                       }));
-              });
+        test("Calling find_symbol with label '" + item.label + "', kind 'SYM." +
+             (item.terminating ? "TERM" : "NONTERM") + "', and special '" +
+             (typeof item.special === 'undefined' ? "undefined" : item.special) + "' returns " +
+             item.expected,
+             injector.run(["mocks", "jscc/tabgen", "jscc/enums/SYM", "jscc/enums/SPECIAL",
+                           "jscc/classes/Symbol"], function(mocks, tabgen, SYM, SPECIAL, Symbol) {
+                 var global = mocks.store["jscc/global"];
+                 // Remove default symbols now added by the jscc.global constructor
+                 global.symbols = [];
+                 item.overrides.forEach(function(override) {
+                     if (typeof override.terminating === 'boolean') {
+                         override.kind = override.terminating ? SYM.TERM : SYM.NONTERM;
+                         delete override.terminating;
+                     }
+                     if (typeof override.special === 'string') {
+                         var newSpecial = SPECIAL.NONE;
+                         switch (override.special) {
+                             case "EOF":
+                                 newSpecial = SPECIAL.EOF;
+                                 break;
+                             case "ERROR":
+                                 newSpecial = SPECIAL.ERROR;
+                                 break;
+                             case "WHITESPACE":
+                                 newSpecial = SPECIAL.WHITESPACE;
+                                 break;
+                             default:
+                                 break;
+                         }
+                         override.special = newSpecial;
+                     }
+                     global.symbols.push(new Symbol(override));
+                 });
+                 var kind = item.terminating ? SYM.TERM : SYM.NONTERM;
+                 var special;
+                 switch (item.special) {
+                     case "NONE":
+                         special = SPECIAL.NONE;
+                         break;
+                     case "EOF":
+                         special = SPECIAL.EOF;
+                         break;
+                     case "ERROR":
+                         special = SPECIAL.ERROR;
+                         break;
+                     case "WHITESPACE":
+                         special = SPECIAL.WHITESPACE;
+                         break;
+                     default:
+                         break;
+                 }
+                 var result = tabgen.find_symbol(item.label, kind, special);
+                 assert.strictEqual(result, item.expected);
+             }));
+    });
 });

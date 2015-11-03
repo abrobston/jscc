@@ -3,20 +3,20 @@ suite("samples", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../lib'),
-            nodeRequire: require,
-            packages: [
-                {
-                    name: "squirejs",
-                    location: "../node_modules/squirejs",
-                    main: "src/Squire"
-                }
-            ],
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon",
-                "jscc/bitset": "jscc/bitset/BitSet32"
-            }
-        });
+                             baseUrl: path.join(__dirname, '../lib'),
+                             nodeRequire: require,
+                             packages: [
+                                 {
+                                     name: "squirejs",
+                                     location: "../node_modules/squirejs",
+                                     main: "src/Squire"
+                                 }
+                             ],
+                             paths: {
+                                 "sinon": "../node_modules/sinon/pkg/sinon",
+                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                             }
+                         });
     }
 
     var sinon = requirejs('sinon');
@@ -32,21 +32,21 @@ suite("samples", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
         var logStub = sandbox.stub({
-            fatal: function(msg) {
-            },
-            error: function(msg) {
-            },
-            warn: function(msg) {
-            },
-            info: function(msg) {
-            },
-            debug: function(msg) {
-            },
-            trace: function(msg) {
-            },
-            setLevel: function(level) {
-            }
-        });
+                                       fatal: function(msg) {
+                                       },
+                                       error: function(msg) {
+                                       },
+                                       warn: function(msg) {
+                                       },
+                                       info: function(msg) {
+                                       },
+                                       debug: function(msg) {
+                                       },
+                                       trace: function(msg) {
+                                       },
+                                       setLevel: function(level) {
+                                       }
+                                   });
         injector.mock("jscc/log/log", logStub);
         injector.mock("jscc/io/io", requirejs("jscc/io/ioNode"));
         injector.store(["jscc/log/log"]);
@@ -62,21 +62,22 @@ suite("samples", function() {
         "../samples/xpl.par",
         "../samples/xpl_opt.par"
     ].forEach(function(inputPath) {
-                     test("Parses sample file '" + inputPath + "' without errors", injector.run(["mocks", "jscc"], function(mocks, jscc) {
-                         var log = mocks.store["jscc/log/log"];
-                         log.fatal.reset();
-                         log.error.reset();
-                         var output = "";
-                         jscc({
-                             src_file: path.join(__dirname, inputPath),
-                             tpl_file: path.join(__dirname, "../src/driver/parser.js"),
-                             outputCallback: function(text) {
-                                 output = text;
-                             }
-                         });
-                         assert.notStrictEqual(output, "");
-                         assert.notCalled(log.fatal);
-                         assert.notCalled(log.error);
-                     }));
-                  });
+        test("Parses sample file '" + inputPath + "' without errors",
+             injector.run(["mocks", "jscc"], function(mocks, jscc) {
+                 var log = mocks.store["jscc/log/log"];
+                 log.fatal.reset();
+                 log.error.reset();
+                 var output = "";
+                 jscc({
+                          src_file: path.join(__dirname, inputPath),
+                          tpl_file: path.join(__dirname, "../src/driver/parser.js"),
+                          outputCallback: function(text) {
+                              output = text;
+                          }
+                      });
+                 assert.notStrictEqual(output, "");
+                 assert.notCalled(log.fatal);
+                 assert.notCalled(log.error);
+             }));
+    });
 });

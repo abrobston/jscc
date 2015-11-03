@@ -3,20 +3,20 @@ suite("regex", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../../lib'),
-            nodeRequire: require,
-            packages: [
-                {
-                    name: "squirejs",
-                    location: "../node_modules/squirejs",
-                    main: "src/Squire"
-                }
-            ],
-            paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon",
-                "jscc/bitset": "jscc/bitset/BitSet32"
-            }
-        });
+                             baseUrl: path.join(__dirname, '../../lib'),
+                             nodeRequire: require,
+                             packages: [
+                                 {
+                                     name: "squirejs",
+                                     location: "../node_modules/squirejs",
+                                     main: "src/Squire"
+                                 }
+                             ],
+                             paths: {
+                                 "sinon": "../node_modules/sinon/pkg/sinon",
+                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                             }
+                         });
     }
 
     var sinon = requirejs('sinon');
@@ -32,29 +32,29 @@ suite("regex", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
         var logStub = sandbox.stub({
-            fatal: function(msg) {
-            },
-            error: function(msg) {
-            },
-            warn: function(msg) {
-            },
-            info: function(msg) {
-            },
-            debug: function(msg) {
-            },
-            trace: function(msg) {
-            },
-            setLevel: function(level) {
-            }
-        });
+                                       fatal: function(msg) {
+                                       },
+                                       error: function(msg) {
+                                       },
+                                       warn: function(msg) {
+                                       },
+                                       info: function(msg) {
+                                       },
+                                       debug: function(msg) {
+                                       },
+                                       trace: function(msg) {
+                                       },
+                                       setLevel: function(level) {
+                                       }
+                                   });
         var ioStub = sandbox.stub({
-            read_all_input: function(options) {
-            },
-            read_template: function(options) {
-            },
-            write_output: function(options) {
-            }
-        });
+                                      read_all_input: function(options) {
+                                      },
+                                      read_template: function(options) {
+                                      },
+                                      write_output: function(options) {
+                                      }
+                                  });
         injector.mock("jscc/log/log", logStub);
         injector.mock("jscc/io/io", ioStub);
         injector.store(["jscc/global", "jscc/log/log"]);
@@ -92,19 +92,19 @@ suite("regex", function() {
         { pattern: "\\.", valid: true },
         { pattern: "\\220", valid: true }
     ].forEach(function(item) {
-                  test("Regex '" + item.pattern + "' " + (item.valid ? "does not log" : "logs") + " an error",
-                       injector.run(["mocks", "jscc/regex", "jscc/util", "jscc/enums/EXEC"],
-                           function(mocks, regex, util, EXEC) {
-                               util.reset_all(EXEC.CONSOLE);
-                               var log = mocks.store["jscc/log/log"];
-                               log.error.reset();
-                               regex(item.pattern, 0, false);
-                               if (item.valid) {
-                                   assert.notCalled(log.error);
-                               } else {
-                                   assert.called(log.error);
-                               }
-                           }));
-              });
+        test("Regex '" + item.pattern + "' " + (item.valid ? "does not log" : "logs") + " an error",
+             injector.run(["mocks", "jscc/regex", "jscc/util", "jscc/enums/EXEC"],
+                          function(mocks, regex, util, EXEC) {
+                              util.reset_all(EXEC.CONSOLE);
+                              var log = mocks.store["jscc/log/log"];
+                              log.error.reset();
+                              regex(item.pattern, 0, false);
+                              if (item.valid) {
+                                  assert.notCalled(log.error);
+                              } else {
+                                  assert.called(log.error);
+                              }
+                          }));
+    });
 
 });
