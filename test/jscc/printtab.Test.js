@@ -65,7 +65,7 @@ suite("printtab", function() {
         sandbox.restore();
     });
 
-    test.skip("print_actions logs an error if a %n wildcard does not match the right-hand side of a production",
+    test("print_actions logs an error if a %n wildcard does not match the right-hand side of a production",
          injector.run(["mocks", "jscc/printtab", "jscc/classes/Production"], function(mocks, printtab, Production) {
              var global = mocks.store["jscc/global"];
              var log = mocks.store["jscc/log/log"];

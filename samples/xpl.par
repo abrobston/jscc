@@ -233,11 +233,11 @@ function execute( node )
 ##
 
 Program:		Program Stmt										[* execute( %2 ); *]
-				|
+				|                                                   [* %% = ""; *]
 				;
 
 Stmt_List:		Stmt_List Stmt										[* %% = createNode( NODE_OP, OP_NONE, %1, %2 ); *]
-				|
+				|                                                   [* %% = ""; *]
 				;
 								
 Stmt:			IF Expression Stmt 									[* %% = createNode( NODE_OP, OP_IF, %2, %3 ); *]
