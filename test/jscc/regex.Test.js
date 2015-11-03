@@ -13,7 +13,8 @@ suite("regex", function() {
                 }
             ],
             paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon"
+                "sinon": "../node_modules/sinon/pkg/sinon",
+                "jscc/bitset": "jscc/bitset/BitSet32"
             }
         });
     }
@@ -46,7 +47,16 @@ suite("regex", function() {
             setLevel: function(level) {
             }
         });
+        var ioStub = sandbox.stub({
+            read_all_input: function(options) {
+            },
+            read_template: function(options) {
+            },
+            write_output: function(options) {
+            }
+        });
         injector.mock("jscc/log/log", logStub);
+        injector.mock("jscc/io/io", ioStub);
         injector.store(["jscc/global", "jscc/log/log"]);
     });
 
@@ -83,18 +93,18 @@ suite("regex", function() {
         { pattern: "\\220", valid: true }
     ].forEach(function(item) {
                   test("Regex '" + item.pattern + "' " + (item.valid ? "does not log" : "logs") + " an error",
-                       injector.run(["mocks", "jscc/regex", "jscc/util"], function(mocks, regex, util) {
-                           var global = mocks.store["jscc/global"];
-                           util.reset_all(global.EXEC.CONSOLE);
-                           var log = mocks.store["jscc/log/log"];
-                           log.error.reset();
-                           regex(item.pattern, 0, false);
-                           if (item.valid) {
-                               sinon.assert.notCalled(log.error);
-                           } else {
-                               sinon.assert.called(log.error);
-                           }
-                       }));
+                       injector.run(["mocks", "jscc/regex", "jscc/util", "jscc/enums/EXEC"],
+                           function(mocks, regex, util, EXEC) {
+                               util.reset_all(EXEC.CONSOLE);
+                               var log = mocks.store["jscc/log/log"];
+                               log.error.reset();
+                               regex(item.pattern, 0, false);
+                               if (item.valid) {
+                                   assert.notCalled(log.error);
+                               } else {
+                                   assert.called(log.error);
+                               }
+                           }));
               });
 
 });

@@ -13,7 +13,8 @@ suite("integrity", function() {
                 }
             ],
             paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon"
+                "sinon": "../node_modules/sinon/pkg/sinon",
+                "jscc/bitset": "jscc/bitset/BitSet32"
             }
         });
     }
@@ -67,14 +68,14 @@ suite("integrity", function() {
                   test("integrity.undef logs " + item.errorCount + " error" + (item.errorCount == 1 ? "" : "s") +
                        " with " + item.symbolTypes.length + " symbol" + (item.symbolTypes.length == 1 ? "" : "s") +
                        " and " + item.errorCount + " undefined terminal" + (item.errorCount == 1 ? "" : "s"),
-                       injector.run(["mocks", "jscc/integrity"], function(mocks, integrity) {
+                       injector.run(["mocks", "jscc/integrity", "jscc/classes/Symbol", "jscc/enums/SYM"], function(mocks, integrity, Symbol, SYM) {
                            var global = mocks.store["jscc/global"];
                            var log = mocks.store["jscc/log/log"];
                            log.error.reset();
-                           var term = new global.Symbol({ kind: global.SYM.TERM, defined: false });
-                           var defined = new global.Symbol({ kind: global.SYM.NONTERM, defined: true });
-                           var definedTerm = new global.Symbol({ kind: global.SYM.TERM, defined: true });
-                           var undefined = new global.Symbol({ kind: global.SYM.NONTERM, defined: false });
+                           var term = new Symbol({ kind: SYM.TERM, defined: false });
+                           var defined = new Symbol({ kind: SYM.NONTERM, defined: true });
+                           var definedTerm = new Symbol({ kind: SYM.TERM, defined: true });
+                           var undefined = new Symbol({ kind: SYM.NONTERM, defined: false });
                            var symbols = [term, defined, definedTerm, undefined];
                            item.symbolTypes.forEach(function(index) {
                                global.symbols.push(symbols[index]);
@@ -82,7 +83,7 @@ suite("integrity", function() {
 
                            integrity.undef();
 
-                           sinon.assert.callCount(log.error, item.errorCount);
+                           assert.callCount(log.error, item.errorCount);
                        }));
               });
 });

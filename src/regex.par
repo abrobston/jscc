@@ -18,13 +18,13 @@ of the BSD license. Please see LICENSE for more information.
 [*
 (function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
-		define(['./global', './log/log'], factory);
+		define(['./global', './log/log', './classes/Param', './classes/Nfa', './enums/EDGE'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./log/log'));
+		module.exports = factory(require('./global'), require('./log/log'), require('./classes/Param'), require('./classes/Nfa'), require('./enums/EDGE'));
 	} else {
-		root.regex = factory(root.global, root.log);
+		root.regex = factory(root.global, root.log, root.Param, root.Nfa, root.EDGE);
 	}
-}(this, function(/** module:jscc/global */ global, /** log */ log) {
+}(this, function(/** jscc.global */ global, /** jscc.log */ log, /** function(new:jscc.classes.Param, number=, number=) */ Param, /** function(new:jscc.classes.Nfa, ?NfaOptions=) */ Nfa, EDGE) {
 var first_nfa;
 var last_nfa;
 *]
@@ -48,14 +48,14 @@ var last_nfa;
 ##
 
 
-RegEx:			Expression						[*	%% = new global.Param();
+RegEx:			Expression						[*	%% = new Param();
 													global.NFA_states.value[ first_nfa ].follow = %1.start;
 													last_nfa = %1.end;
 												*]
 				;
 
 Expression:		Expression '|' Catenation		[*
-													%% = new global.Param(global.NFA_states.create(), global.NFA_states.create());
+													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
 													global.NFA_states.value[%%.start].follow = %1.start;
 													global.NFA_states.value[%%.start].follow2 = %3.start;
 
@@ -67,19 +67,19 @@ Expression:		Expression '|' Catenation		[*
 
 Catenation:		Catenation Factor				[*
 													var weight=global.NFA_states.value[%1.end].weight;///SV: if weight unused - delete this
-													global.NFA_states.value[%1.end]=new global.Nfa(global.NFA_states.value[%2.start]);
+													global.NFA_states.value[%1.end]=new Nfa(global.NFA_states.value[%2.start]);
 													global.NFA_states.value[%1.end].weight=weight;///SV: if weight unused - delete this
-													global.NFA_states.value[%2.start].edge = global.EDGE.FREE;
+													global.NFA_states.value[%2.start].edge = EDGE.FREE;
 
 													%1.end = %2.end;
 
-													return %1;
+													%% = %1;
 												*]
 				| Factor
 				;
 
 Factor:			Term '*'						[*
-													%% = new global.Param(global.NFA_states.create(), global.NFA_states.create());
+													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
 													global.NFA_states.value[%%.start].follow = %1.start;
 													global.NFA_states.value[%1.end].follow = %%.end;
 
@@ -87,14 +87,14 @@ Factor:			Term '*'						[*
 													global.NFA_states.value[%1.end].follow2 = %1.start;
 												*]
 				| Term '+'						[*
-													%% = new global.Param(global.NFA_states.create(), global.NFA_states.create());
+													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
 													global.NFA_states.value[%%.start].follow = %1.start;
 													global.NFA_states.value[%1.end].follow = %%.end;
 
 													global.NFA_states.value[%1.end].follow2 = %1.start;
 												*]
 				| Term '?'						[*
-													%% = new global.Param(global.NFA_states.create(), global.NFA_states.create());
+													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
 													global.NFA_states.value[%%.start].follow = %1.start;
 													global.NFA_states.value[%%.start].follow2 = %%.end;
 													global.NFA_states.value[%1.end].follow = %%.end;
@@ -102,29 +102,29 @@ Factor:			Term '*'						[*
 				| Term
 				;
 
-Term:			Character						[*	%% = new global.Param();
+Term:			Character						[*	%% = new Param();
 													%%.start = global.NFA_states.create();
 													%%.end = global.NFA_states.value[%%.start].follow
 														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = global.EDGE.CHAR;
+													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
 
 													global.NFA_states.value[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
 												*]
 				| CharacterSet
-				| '(' Expression ')'			[*	return %2; *]
+				| '(' Expression ')'			[*	%% = %2; *]
 				;
 
 CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 													var i = 0, j, start;
-													%% = new global.Param();
+													%% = new Param();
 													%%.start = global.NFA_states.create();
 													%%.end = global.NFA_states.value[%%.start].follow
 														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = global.EDGE.CHAR;
+													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
 
 													if( %2.charAt( i ) == '^' ){
 														negate = true;
-														for( var j = global.MIN_CHAR; j < global.MAX_CHAR; j++ )
+														for( j = global.MIN_CHAR; j < global.MAX_CHAR; j++ )
 															global.NFA_states.value[%%.start].ccl.set(j,true);
 														i++;
 													}
@@ -140,25 +140,25 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 															global.NFA_states.value[%%.start].ccl.set(%2.charCodeAt(i), !negate);
 													}
 												*]
-				| ANY_CHAR						[*	%% = new global.Param();
+				| ANY_CHAR						[*	%% = new Param();
 
 													%%.start = global.NFA_states.create();
 													%%.end = global.NFA_states.value[%%.start].follow
 														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = global.EDGE.CHAR;
+													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
 													for( var i = global.MIN_CHAR; i < global.MAX_CHAR; i++ )
 														global.NFA_states.value[%%.start].ccl.set(i, true);
 												*]
 				;
 
-CharClass:		CharClass Character				[*	return %1 + %2; *]
-				|								[*	return ""; *]
+CharClass:		CharClass Character				[*	%% = %1 + %2; *]
+				|								[*	%% = ""; *]
 				;
 
 
-Character:		ASCII_CODE						[*	return String.fromCharCode( %1.substr( 1 ) ); *]
-				| ESCAPED_CHAR					[*	return {n:'\n',r:'\r',t:'\t',a:'\a'}[%1.substr(1)]||%1.substr(1); *]
-				| ANY							[*	return %1; *]
+Character:		ASCII_CODE						[*	%% = String.fromCharCode( %1.substr( 1 ) ); *]
+				| ESCAPED_CHAR					[*	%% = {n:'\n',r:'\r',t:'\t',a:'\a'}[%1.substr(1)]||%1.substr(1); *]
+				| ANY							[*	%% = %1; *]
 				;
 
 [*
@@ -169,7 +169,7 @@ Character:		ASCII_CODE						[*	return String.fromCharCode( %1.substr( 1 ) ); *]
  * @param {boolean} case_insensitive - Whether the regex is case insensitive.
  * @param {number} cur_line - The current line number being parsed.  Used in error
  * logging.
- * @module jscc/regex
+ * @module {jscc.regex} jscc/regex
  * @requires module:jscc/global
  * @requires module:jscc/log/log
  */
@@ -194,7 +194,7 @@ function compile_regex( str, accept, case_insensitive, cur_line ){
 		//character sets on the newly created items.
 		if( case_insensitive ){
 			for( i = 0; i < global.NFA_states.value.length; i++ ){
-				if( global.NFA_states.value[i].edge == global.EDGE.CHAR ){
+				if( global.NFA_states.value[i].edge == EDGE.CHAR ){
 					for( j = global.MIN_CHAR; j < global.MAX_CHAR; j++ ){
 						if( global.NFA_states.value[i].ccl.get( j ) ){
 							global.NFA_states.value[i].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );

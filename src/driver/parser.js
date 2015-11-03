@@ -13,10 +13,14 @@ function Return(value){
 	throw new Return.Value(value);
 }
 Return.Value = function(value){
-	this.valueOf = function(){
-		return value;
+	this._value = value;
+};
+	Return.Value.prototype = {
+		_value: null,
+		valueOf: function() {
+			return this._value;
+		}
 	};
-}
 	var DFA = (function(){
 		var DFA_DATA = ##DFA##;
 		return function(chr,pos){
@@ -53,7 +57,7 @@ Return.Value = function(value){
 		var start, pos, chr, actionResult;
 		var dfa = {
 			exec:DFA
-		}
+		};
 		while(true){
 			dfa.match_pos = 0;
 			pos = this.offset + 1;
@@ -89,9 +93,11 @@ Return.Value = function(value){
 ##TABLES##
 ##LABELS##
 	var ACTIONS = (function(){
+		var PCB = {};
 		var actions = ##ACTIONS##;
-		return function (act,vstack){
+		return function (act,vstack,pcb){
 			try{
+				PCB = pcb || {};
 				return actions[act].apply(null,vstack);
 			}catch(e){
 				if(e instanceof Return.Value)return e.valueOf();
@@ -189,7 +195,7 @@ Return.Value = function(value){
 			}else{	//Reduce	
 				act = -PCB.act;
 				//vstack.unshift(vstack);
-				rval = ACTIONS(act,vstack);
+				rval = ACTIONS(act,vstack,PCB);
 				//vstack.shift();
 				sstack.splice(0,pop_tab[act][1]);
 				vstack.splice(0,pop_tab[act][1]);

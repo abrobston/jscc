@@ -13,7 +13,8 @@ suite("main", function() {
                 }
             ],
             paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon"
+                "sinon": "../node_modules/sinon/pkg/sinon",
+                "jscc/bitset": "jscc/bitset/BitSet32"
             }
         });
     }
@@ -227,8 +228,7 @@ suite("main", function() {
 
     [
         { token: "HEADER", field: "code_head" },
-        { token: "FOOTER", field: "code_foot" },
-        { token: "PREFIX", field: "code_prefix" }
+        { token: "FOOTER", field: "code_foot" }
     ].forEach(function(item) {
                   test("Replaces ##" + item.token + "## with global." + item.field,
                        injector.run(["mocks", "jscc"], function(mocks, jscc) {
@@ -306,6 +306,43 @@ suite("main", function() {
                                } finally {
                                    mocks.store["jscc/printtab"][item.method].restore();
                                }
+                           });
+                       }));
+              });
+
+    [
+        "print_parse_tables",
+        "print_dfa_table",
+        "print_term_actions",
+        "print_symbol_labels",
+        "print_actions",
+        "get_error_symbol_id",
+        "get_eof_symbol_id",
+        "get_whitespace_symbol_id"
+    ].forEach(function(methodName) {
+                  test("Does not write output if printtab." + methodName + " indicates errors",
+                       injector.run(["mocks", "jscc"], function(mocks, jscc) {
+                           wrapStub(mocks, function() {
+                               var printtab = mocks.store["jscc/printtab"];
+                               if (/_id$/.test(methodName)) {
+                                   sandbox.stub(printtab, methodName, function() {
+                                       mocks.store["jscc/global"].errors = 1;
+                                       return 1;
+                                   });
+                               } else {
+                                   printtab[methodName].restore();
+                                   sandbox.stub(printtab, methodName, function() {
+                                       mocks.store["jscc/global"].errors = 1;
+                                       return "";
+                                   });
+                               }
+                               var callback = sandbox.spy();
+                               jscc({
+                                   src_file: "invalidFileName.par",
+                                   tpl_file: "invalidTemplate.js",
+                                   outputCallback: callback
+                               });
+                               assert.notCalled(callback);
                            });
                        }));
               });

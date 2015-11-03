@@ -17,13 +17,13 @@ of the BSD license. Please see LICENSE for more information.
 [*
 (function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
-		define(['./global', './regex', './tabgen', './log/log'], factory);
+		define(['./global', './regex', './tabgen', './log/log', './classes/Production', './enums/ASSOC', './enums/SYM', './enums/SPECIAL'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./regex'), require('./tabgen'), require('./log/log'));
+		module.exports = factory(require('./global'), require('./regex'), require('./tabgen'), require('./log/log'), require('./classes/Production'), require('./enums/ASSOC'), require('./enums/SYM'), require('./enums/SPECIAL'));
 	} else {
-		root.parse = factory(root.global, root.regex, root.tabgen, root.log);
+		root.parse = factory(root.global, root.regex, root.tabgen, root.log, root.Production, root.ASSOC, root.SYM, root.SPECIAL);
 	}
-}(this, function(global, compile_regex, tabgen, log) {
+}(this, function(global, compile_regex, tabgen, log, Production, ASSOC, SYM, SPECIAL) {
 var		first_lhs;
 var		cur_line;
 
@@ -83,26 +83,26 @@ token_assocs:	token_assocs token_assoc
 token_assoc:	'<' token_defs	';'					[*	global.assoc_level++;
 														for( var i = 0; i < %2.length; i++ ){
 															global.symbols[ %2[i] ].level = global.assoc_level;
-															global.symbols[ %2[i] ].assoc = global.ASSOC.LEFT;
+															global.symbols[ %2[i] ].assoc = ASSOC.LEFT;
 														}
 													*]
 				| '>' token_defs ';'				[*	global.assoc_level++;
 														for( var i = 0; i < %2.length; i++ )
 														{
 															global.symbols[ %2[i] ].level = global.assoc_level;
-															global.symbols[ %2[i] ].assoc = global.ASSOC.RIGHT;
+															global.symbols[ %2[i] ].assoc = ASSOC.RIGHT;
 														}
 													*]
 				| '^' token_defs ';'				[*	global.assoc_level++;
 														for( var i = 0; i < %2.length; i++ ){
 															global.symbols[ %2[i] ].level = global.assoc_level;
-															global.symbols[ %2[i] ].assoc = global.ASSOC.NOASSOC;
+															global.symbols[ %2[i] ].assoc = ASSOC.NOASSOC;
 														}
 													*]
 				| token_defs ';'
 				| '!' string opt_semicolon			[*	if( global.whitespace_token == -1 ){
 															var regex = %2.substr( 1, %2.length - 2 );
-															global.whitespace_token = tabgen.create_symbol( "WHITESPACE", global.SYM.TERM, global.SPECIAL.WHITESPACE );
+															global.whitespace_token = tabgen.create_symbol( "WHITESPACE", SYM.TERM, SPECIAL.WHITESPACE );
 															compile_regex( regex, global.whitespace_token, %2[0] != '\'', cur_line  );
 														}
 														else
@@ -111,16 +111,16 @@ token_assoc:	'<' token_defs	';'					[*	global.assoc_level++;
 				;
 
 
-token_defs:		token_defs token_def 				[*	%1.push(%2); return %1; *]
-				| token_def							[*	return [%1]; *]
+token_defs:		token_defs token_def 				[*	%1.push(%2); %% = %1; *]
+				| token_def							[*	%% = [%1]; *]
 				;
-token_def:		string identifier code_opt 			[*	%% = tabgen.create_symbol( %2, global.SYM.TERM, global.SPECIAL.NONE );
+token_def:		string identifier code_opt 			[*	%% = tabgen.create_symbol( %2, SYM.TERM, SPECIAL.NONE );
 														var regex = %1.substr( 1, %1.length - 2 );
 														global.symbols[%%].code = %3;
 														compile_regex( regex, global.symbols[ %% ].id, %1.charAt( 0 ) != '\'', cur_line  );
 													*]
 				| string code_opt 					[*	var regex = %1.substr( 1, %1.length - 2 );
-														%% = tabgen.create_symbol( regex.replace( /\\/g, "" ), global.SYM.TERM, global.SPECIAL.NONE );
+														%% = tabgen.create_symbol( regex.replace( /\\/g, "" ), SYM.TERM, SPECIAL.NONE );
 														global.symbols[%%].code = %2;
 
 														compile_regex( regex, global.symbols[ %% ].id,  %1.charAt( 0 ) != '\'', cur_line );
@@ -135,7 +135,7 @@ grammar_defs:	grammar_defs grammar_def
 				;
 
 grammar_def:	identifier ':' productions ';'		[*
-														var nonterm = tabgen.create_symbol( %1, global.SYM.NONTERM, global.SPECIAL.NONE );
+														var nonterm = tabgen.create_symbol( %1, SYM.NONTERM, SPECIAL.NONE );
 														global.symbols[nonterm].defined = true;
 														for( var i = 0; i < %3.length; i++ ){
 															global.productions[ %3[i] ].lhs = nonterm;
@@ -151,12 +151,12 @@ grammar_def:	identifier ':' productions ';'		[*
 				| ~ ';'
 				;
 
-productions:	productions '|' rhs					[*	%1.push(%3); return %1; *]
-				| rhs								[*	return [%1]; *]
+productions:	productions '|' rhs					[*	%1.push(%3); %% = %1; *]
+				| rhs								[*	%% = [%1]; *]
 				;
 
 rhs:			sequence_opt rhs_prec code_opt		[*
-														var prod = new global.Production({
+														var prod = new Production({
 															id:global.productions.length,
 															rhs:%1,
 															level:%2,
@@ -169,7 +169,7 @@ rhs:			sequence_opt rhs_prec code_opt		[*
 															if( prod.rhs.length > 0 )
 																for( var i = prod.rhs.length-1; i >= 0; i-- )
 																	if( global.symbols[prod.rhs[i]] &&
-																		global.symbols[prod.rhs[i]].kind == global.SYM.TERM )
+																		global.symbols[prod.rhs[i]].kind == SYM.TERM )
 																	{
 																		prod.level = global.symbols[prod.rhs[i]].level;
 																		break;
@@ -177,53 +177,53 @@ rhs:			sequence_opt rhs_prec code_opt		[*
 														}
 
 														global.productions.push( prod );
-														return prod.id;
+														%% = prod.id;
 													*]
 				;
 
 rhs_prec:		'&' identifier						[* 	var index;
-														if( ( index = tabgen.find_symbol( %2, global.SYM.TERM, global.SPECIAL.NONE ) ) > -1 )
-															return global.symbols[index].level;
+														if( ( index = tabgen.find_symbol( %2, SYM.TERM, SPECIAL.NONE ) ) > -1 )
+															%% = global.symbols[index].level;
 														else
 															line_error( PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
 				| '&' string						[*	var index;
 														if( ( index = tabgen.find_symbol( %2.substr( 1, %2.length - 2).replace( /\\/g, "" ),
-																		global.SYM.TERM, global.SPECIAL.NONE ) ) > -1 )
-															return global.symbols[index].level;
+																		SYM.TERM, SPECIAL.NONE ) ) > -1 )
+															%% = global.symbols[index].level;
 														else
 															line_error(  PCB.line, "Call to undefined terminal \"" + %2 + "\"" );
 													*]
-				|									[*	return 0; *]
+				|									[*	%% = 0; *]
 				;
 
 sequence_opt:	sequence
-				|									[*	return []; *]
+				|									[*	%% = []; *]
 				;
 
-sequence:		sequence symbol						[* %1.push(%2); return %1 *]
-				| symbol							[* return [%1]; *]
+sequence:		sequence symbol						[* %1.push(%2); %% = %1 *]
+				| symbol							[* %% = [%1]; *]
 				;
 
 symbol:			identifier							[*
-														if( ( %% = tabgen.find_symbol( %1, global.SYM.TERM, global.SPECIAL.NONE ) ) <= -1 )
-															%% = tabgen.create_symbol( %1, global.SYM.NONTERM, global.SPECIAL.NONE );
+														if( ( %% = tabgen.find_symbol( %1, SYM.TERM, SPECIAL.NONE ) ) <= -1 )
+															%% = tabgen.create_symbol( %1, SYM.NONTERM, SPECIAL.NONE );
 													*]
 				| string							[*
-														if( ( %% = tabgen.find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ), global.SYM.TERM, global.SPECIAL.NONE ) ) <= -1 )
+														if( ( %% = tabgen.find_symbol( %1.substr( 1, %1.length - 2).replace( /\\/g, "" ), SYM.TERM, SPECIAL.NONE ) ) <= -1 )
 															line_error(  PCB.line, "Call to undefined terminal " + %1 );
 													*]
-				| '~'								[* return tabgen.find_symbol( "ERROR_RESYNC", global.SYM.TERM,	global.SPECIAL.ERROR ); *]
+				| '~'								[* %% = tabgen.find_symbol( "ERROR_RESYNC", SYM.TERM,	SPECIAL.ERROR ); *]
 				;
 
 /~ Universal elements ~/
 code_opt: code
-	| '=>' identifier [* return "return " + %2 + ".apply(null, arguments);"; *]
-	| '=>' CODE [* return "(" + %2 + ").apply(null, arguments);"; *]
-	| [* return ""; *]
+	| '=>' identifier [* %% = "return " + %2 + ".apply(null, arguments);"; *]
+	| '=>' CODE [* %% = "(" + %2 + ").apply(null, arguments);"; *]
+	| [* %% = ""; *]
 ;
 
-code:			code CODE							[* return %1 + %2; *]
+code:			code CODE							[* %% = %1 + %2; *]
 				| CODE
 				;
 
@@ -235,13 +235,13 @@ identifier:		IDENT
 				;
 
 opt_semicolon:	';'
-				|
+				|									[* %% = ""; *]
 				;
 
 [*
 /**
  * Parses the specified grammar.
- * @module jscc/parse
+ * @module {jscc.parse} jscc/parse
  * @requires module:jscc/global
  * @requires module:jscc/regex
  * @requires module:jscc/tabgen
@@ -263,7 +263,7 @@ function parse_grammar( str, filename ){
 
 	if( ( parse_error += __parse( str, error_offsets, error_expects ) ) > 0 )
 	{
-		for( i = 0; i < parse_error; i++ )
+		for( var i = 0; i < parse_error; i++ )
 			line_error( ( str.substr( 0, error_offsets[i] ).match( /\n/g ) ?
 				str.substr( 0, error_offsets[i] ).match( /\n/g ).length : 1 ),
 					"Parse error near\n\t"  + str.substr( error_offsets[i], 30 ) +

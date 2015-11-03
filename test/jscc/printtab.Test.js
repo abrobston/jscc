@@ -1,9 +1,9 @@
-suite("samples", function() {
+suite("printtab", function() {
     var path = require('path');
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-            baseUrl: path.join(__dirname, '../lib'),
+            baseUrl: path.join(__dirname, '../../lib'),
             nodeRequire: require,
             packages: [
                 {
@@ -47,9 +47,17 @@ suite("samples", function() {
             setLevel: function(level) {
             }
         });
+        var ioStub = sandbox.stub({
+            read_all_input: function(options) {
+            },
+            read_template: function(options) {
+            },
+            write_output: function(options) {
+            }
+        });
         injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", requirejs("jscc/io/ioNode"));
-        injector.store(["jscc/log/log"]);
+        injector.mock("jscc/io/io", ioStub);
+        injector.store(["jscc/global", "jscc/log/log"]);
     });
 
     teardown("teardown", function() {
@@ -57,26 +65,18 @@ suite("samples", function() {
         sandbox.restore();
     });
 
-    [
-        "../samples/calc_web.par",
-        "../samples/xpl.par",
-        "../samples/xpl_opt.par"
-    ].forEach(function(inputPath) {
-                     test("Parses sample file '" + inputPath + "' without errors", injector.run(["mocks", "jscc"], function(mocks, jscc) {
-                         var log = mocks.store["jscc/log/log"];
-                         log.fatal.reset();
-                         log.error.reset();
-                         var output = "";
-                         jscc({
-                             src_file: path.join(__dirname, inputPath),
-                             tpl_file: path.join(__dirname, "../src/driver/parser.js"),
-                             outputCallback: function(text) {
-                                 output = text;
-                             }
-                         });
-                         assert.notStrictEqual(output, "");
-                         assert.notCalled(log.fatal);
-                         assert.notCalled(log.error);
-                     }));
-                  });
+    test.skip("print_actions logs an error if a %n wildcard does not match the right-hand side of a production",
+         injector.run(["mocks", "jscc/printtab", "jscc/classes/Production"], function(mocks, printtab, Production) {
+             var global = mocks.store["jscc/global"];
+             var log = mocks.store["jscc/log/log"];
+             global.productions = [];
+             global.productions.push(new Production({
+                 id: 0,
+                 code: "return %1;",
+                 rhs: []
+             }));
+             log.error.reset();
+             printtab.print_actions();
+             assert.called(log.error);
+         }));
 });

@@ -13,7 +13,8 @@ suite("parse", function() {
                 }
             ],
             paths: {
-                "sinon": "../node_modules/sinon/pkg/sinon"
+                "sinon": "../node_modules/sinon/pkg/sinon",
+                "jscc/bitset": "jscc/bitset/BitSet32"
             }
         });
     }
@@ -64,14 +65,14 @@ suite("parse", function() {
         { semi: "; /~ Comment ~/", description: "a semicolon followed by a comment"}
     ].forEach(function(item) {
                   test("Permits " + item.description + " after whitespace terminal definition",
-                       injector.run(["mocks", "jscc/parse"], function(mocks, parse) {
+                       injector.run(["mocks", "jscc/parse", "jscc/enums/EXEC"], function(mocks, parse, EXEC) {
                            var log = mocks.store["jscc/log/log"];
                            log.fatal.reset();
                            log.error.reset();
 
                            var global = mocks.store["jscc/global"];
                            var util = mocks.store["jscc/util"];
-                           util.reset_all(global.EXEC.CONSOLE);
+                           util.reset_all(EXEC.CONSOLE);
 
                            var source = "!   ' '" + item.semi + "\n" +
                                         "##\n" +

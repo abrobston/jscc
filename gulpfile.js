@@ -197,18 +197,18 @@
                                     return;
                                 }
                                 var lastError = "";
-                                var rjsCommand = 'java -classpath "' + rhinoJarPath + '"' + path.delimiter + '"' +
+                                var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath + '"' + path.delimiter + '"' +
                                                  closureJarPath +
                                                  '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
                                                  path.join(process.cwd(), "node_modules", "requirejs", "bin", "r.js") +
                                                  '" ';
-                                gulp.src('./require-*-build.js', { read: false })
+                                gulp.src('./require-rhino-build.js', { read: false })
                                     .pipe(shell(rjsCommand + " -o <%= file.path %>"))
                                     .on('error', function(err) {
                                             lastError = err;
                                         })
                                     .on('end', function() {
-                                            if (lastError == "") {
+                                            if (lastError === "") {
                                                 cb();
                                             } else {
                                                 cb(new Error(lastError));
@@ -218,7 +218,10 @@
                 });
     });
 
+    var testFailures = 0;
+
     gulp.task('_test', ['_parse.js', '_regex.js'], function(cb) {
+        testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
             .pipe(new stream.Writable({
@@ -233,6 +236,7 @@
                   })
             .once('finish', function() {
                       mocha.run(function(failures) {
+                          testFailures = failures;
                           cb();
                       })
                   });
@@ -246,7 +250,7 @@
 
     gulp.task('test', ['_test'], function(cb) {
         cb();
-        process.exit(0);
+        process.exit(testFailures);
     });
 
     gulp.task('default', ['_jsdoc', '_requirejs-optimize'], function(cb) {
