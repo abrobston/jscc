@@ -4,61 +4,183 @@
 	created for the particular platform.
 */
 ##HEADER##
-var __##PREFIX##parse=(function(eof,whitespace,error_token){
+var __parse=(function(/** number */ eof, /** number */ whitespace, /** number */ error_token){
 	
 /// there was "continue" in code, we must to replace it
 var Continue = function(){throw Continue;};
-///can return value from any place of callback
-function Return(value){
-	throw new Return.Value(value);
-}
-Return.Value = function(value){
-	this._value = value;
-};
-	Return.Value.prototype = {
-		_value: null,
-		valueOf: function() {
-			return this._value;
-		}
+
+	/**
+	 * @template T
+	 * @param {T} value
+	 * @constructor
+	 * @extends {Error}
+     */
+	var ReturnValue = function(value) {
+		Error.call(this);
+		this._value = value;
 	};
-	var DFA = (function(){
-		var DFA_DATA = ##DFA##;
-		return function(chr,pos){
-			var line = DFA_DATA[this.state].line;
-			var p, st;
-			for(p = 1<<8, st = line; p; p>>=1){
-				st = st[!!(chr&p)+0];
-				if(st==null)break;
-				if(st instanceof Array)continue;
-				break;
-			}
-			var ac = DFA_DATA[this.state].accept;
-			this.state = st;
-			if(ac!=-1){
-				this.match = ac;
-				this.match_pos = pos;
-			}
-		}
-	})();
+	ReturnValue.prototype = Object.create(Error.prototype);
+	ReturnValue.prototype.constructor = ReturnValue;
+	/**
+	 * @type {T}
+	 * @private
+     */
+	ReturnValue.prototype._value = null;
+	/**
+	 * @returns {T}
+     */
+	ReturnValue.prototype.valueOf = function() {
+		return this._value;
+	};
+
+	///can return value from any place of callback
+	function Return(value){
+		throw new ReturnValue(value);
+	}
+
 	var TERMINAL_ACTIONS = (function(){
 		function emptyFn(PCB){return PCB.att;}
 		var actions = ##TERMINAL_ACTIONS##
-		return function(PCB, match){
+		return function(/** @type {!PcbClass} */ PCB, match){
 			try{
 				return (actions[match] || emptyFn)(PCB);
 			}catch(e){
-				if(e instanceof Return.Value)return e.valueOf();
+				if(e instanceof ReturnValue)return e.valueOf();
 				if(e == Continue)return Continue;
 				throw e;
 			}
 		}
 	})();
-	function lex(){
-		var start, pos, chr, actionResult;
-		var dfa = {
-			exec:DFA
-		};
-		while(true){
+	/**
+	 * @constructor
+     */
+	var DfaLex = function() {
+		this._dfaData = ##DFA##;
+	};
+	/**
+	 * @type {!Array<!{line: !Array, accept: !number}>}
+	 * @private
+     */
+	DfaLex.prototype._dfaData = [];
+	/**
+	 * @type {number}
+     */
+	DfaLex.prototype.match_pos = 0;
+	/**
+	 * @type {?number}
+     */
+	DfaLex.prototype.state = 0;
+	/**
+	 * @type {?number}
+     */
+	DfaLex.prototype.match = null;
+	/**
+	 * @param {number} chr
+	 * @param {number} pos
+     */
+	DfaLex.prototype.exec = function(chr, pos) {
+		if (this.state !== null) {
+			var line = this._dfaData[this.state].line;
+			var p, st;
+			for (p = 1 << 8, st = line; p; p >>= 1) {
+				if ((chr & p) !== 0) {
+					st = st[1];
+				} else {
+					st = st[0];
+				}
+				if (st == null)break;
+				if (st instanceof Array)continue;
+				break;
+			}
+			var ac = this._dfaData[this.state].accept;
+			this.state = /** @type {?number} */ (st);
+			if (ac != -1) {
+				this.match = /** @type{number} */ (ac);
+				this.match_pos = pos;
+			}
+		}
+	};
+##TABLES##
+##LABELS##
+	var ACTIONS = (function(){
+		var PCB = {};
+		var actions = ##ACTIONS##;
+		return function (/** number */ act, /** Array<*> */ vstack, /** !PcbClass */ pcb){
+			try{
+				PCB = pcb;
+				return actions[act].apply(null,vstack);
+			}catch(e){
+				if(e instanceof ReturnValue)return e.valueOf();
+				throw e;
+			}
+		}
+	})();
+
+	/**
+	 * @param {number} top
+	 * @param {?number} la
+	 * @returns {?number}
+     */
+	function get_act(top, la){	
+		for(var i = 0; i < act_tab[top].length; i+=2)
+			if(act_tab[top][i] === la)
+				return act_tab[top][i+1];
+		return null;
+	}
+	function get_goto(top, pop){	
+		for(var i = 0; i < goto_tab[top].length; i+=2)
+			if(goto_tab[top][i] === pop)
+				return goto_tab[top][i+1];
+		return null;
+	}
+
+	/**
+	 * @param {!string} src
+	 * @constructor
+     */
+	var PcbClass = function(src) {
+		this.src = src;
+	};
+	/**
+	 * @type {number}
+     */
+	PcbClass.prototype.line = 1;
+	/**
+	 * @type {number}
+     */
+	PcbClass.prototype.column = 1;
+	/**
+	 * @type {number}
+     */
+	PcbClass.prototype.offset = 0;
+	/**
+	 * @type {number}
+     */
+	PcbClass.prototype.error_step = 0;
+	/**
+	 * @type {string}
+     */
+	PcbClass.prototype.src = "";
+	/**
+	 * @type {string}
+     */
+	PcbClass.prototype.att = "";
+	/**
+	 * @type {?number}
+     */
+	PcbClass.prototype.la = null;
+	/**
+	 * @type {?number}
+     */
+	PcbClass.prototype.act = null;
+	/**
+	 * @returns {?number}
+     */
+	PcbClass.prototype.lex = function() {
+        var /** number */ start, /** number */ pos, /** number */ chr, actionResult;
+		var dfa = new DfaLex();
+		var loop = true;
+		while(loop){
 			dfa.match_pos = 0;
 			pos = this.offset + 1;
 			do{
@@ -66,8 +188,10 @@ Return.Value = function(value){
 				dfa.state = 0;
 				dfa.match = null;
 				start = pos;
-				if(this.src.length <= start)
+				if(this.src.length <= start) {
+					this.la = eof;
 					return eof;
+				}
 				do{
 					chr = this.src.charCodeAt(pos);
 					dfa.exec(chr,pos);
@@ -85,62 +209,51 @@ Return.Value = function(value){
 				if(actionResult === Continue)
 					continue;
 				this.att = actionResult;
-			}else
+			}else {
 				this.att = "";
-			return this.la = dfa.match;
-		}
-	}
-##TABLES##
-##LABELS##
-	var ACTIONS = (function(){
-		var PCB = {};
-		var actions = ##ACTIONS##;
-		return function (act,vstack,pcb){
-			try{
-				PCB = pcb || {};
-				return actions[act].apply(null,vstack);
-			}catch(e){
-				if(e instanceof Return.Value)return e.valueOf();
-				throw e;
 			}
+			loop = false;
 		}
-	})();
-	function get_act(top, la){	
-		for(var i = 0; i < act_tab[top].length; i+=2)
-			if(act_tab[top][i] === la)
-				return act_tab[top][i+1];
-		return null;
-	}
-	function get_goto(top, pop){	
-		for(var i = 0; i < goto_tab[top].length; i+=2)
-			if(goto_tab[top][i] === pop)
-				return goto_tab[top][i+1];
-		return null;
-	}
-	function parse(src, err_off, err_la){
+		this.la = dfa.match;
+		return this.la;
+	};
+	/**
+	 * @param {number} chr
+     */
+    PcbClass.prototype.accountChar = function(chr) {
+		if( chr === 10 ){
+			this.line++;
+			this.column = 0;
+		}
+		this.column++;
+	};
+	function parse(/** string */ src, err_off, err_la){
+		/**
+		 * @type {!Array<number>}
+         */
 		var		sstack			= [0];
+		/**
+		 * @type {!Array<*>}
+         */
 		var		vstack			= [0];
+		/**
+		 * @type {number}
+         */
 		var 	err_cnt			= 0;
+		/**
+		 * @type {*}
+		 */
 		var		rval;
+		/**
+		 * @type {?number}
+		 */
 		var		act;
-		var i;
+		/**
+		 * @type {number}
+		 */
+		var i = 0;
 
-		var PCB	= {
-			line:1,
-			column:1,
-			offset:0,
-			error_step:0,
-			src:src,
-			att:"",
-			lex:function(){return this.la = lex.call(this);},///@TODO: change `lex` function
-			accountChar:function(chr){
-				if( chr === 10 ){
-					this.line++;
-					this.column = 0;
-				}
-				this.column++;
-			}
-		};
+		var PCB	= new PcbClass(src);
 		err_off	= err_off || [];
 		err_la = err_la || [];
 		PCB.lex();

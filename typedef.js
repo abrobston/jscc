@@ -7,19 +7,19 @@
  * @namespace
  * @const
  */
-var jscc = {
-    /*
-     * The namespace to which enum definitions belong.
-     * @const
-     */
-    enums: {},
-    /*
-     * The namespace to which certain classes belong.
-     * @namespace
-     * @const
-     */
-    classes: {}
-};
+var jscc = {};
+/**
+ * The namespace to which enum definitions belong.
+ * @namespace
+ * @const
+ */
+jscc.enums = {};
+/**
+ * The namespace to which certain classes belong.
+ * @namespace
+ * @const
+ */
+jscc.classes = {};
 
 /*
  * Some option-override, fictional types.

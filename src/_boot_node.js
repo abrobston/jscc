@@ -769,7 +769,7 @@ function print_parse_tables( mode ){
 				for( j = 0; j < states[i].actionrow.length; j++ )
 					act_tab_json_item.push(states[i].actionrow[j][0],states[i].actionrow[j][1]);
 				act_tab_json.push(act_tab_json_item);}
-			code +="\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
+			code +="\n/** @type {!Array<!Array<number>>} */\nvar act_tab ="+JSON.stringify(act_tab_json)+";\n";
 
 			var goto_tab_json = [];
 			for( i = 0; i < states.length; i++ ){
@@ -903,7 +903,7 @@ function print_term_actions(){
 	for( i = 0; i < symbols.length; i++ ){
 		if( symbols[i].kind == SYM_TERM	&& symbols[i].code != "" ){
 			code += "	\"" + i + "\":";
-			code += "function(PCB){";
+			code += " /** @suppress {uselessCode} */ function(PCB){";
 			semcode = "";
 			for( j = 0, k = 0; j < symbols[i].code.length; j++, k++ ){
 				strmatch = re.exec( symbols[i].code.substr( j, symbols[i].code.length ) );

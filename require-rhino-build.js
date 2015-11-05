@@ -1,7 +1,7 @@
 ({
     "mainConfigFile": "./require-rhino-config.js",
-    "paths": {
-        "jscc/namespace": "jscc/namespaceClosure"
+    "pragmas": {
+        "closure": true
     },
     "optimize": "closure",
     "preserveLicenseComments": false,
