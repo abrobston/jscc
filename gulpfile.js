@@ -77,12 +77,12 @@
             var parsedUrl = urlUtil.parse(url);
             var web = /^https:?$/i.test(parsedUrl.protocol) ? https : http;
             web.get({
-                protocol: parsedUrl.protocol,
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port,
-                path: parsedUrl.path,
-                headers: requestHeaders
-            }, function(res) {
+                        protocol: parsedUrl.protocol,
+                        hostname: parsedUrl.hostname,
+                        port: parsedUrl.port,
+                        path: parsedUrl.path,
+                        headers: requestHeaders
+                    }, function(res) {
                 switch (res.statusCode) {
                     case 304:
                         // Not Modified
@@ -102,13 +102,13 @@
                         res.on('end', function() {
                             outStream.end();
                             fs.createReadStream(destFile)
-                                .pipe(unzip.Extract({
-                                          path: path.join(process.cwd(), "jar",
-                                                          filename.substr(0, filename.length - 4))
-                                      }))
-                                .on('close', function() {
-                                        cb();
-                                    });
+                              .pipe(unzip.Extract({
+                                                      path: path.join(process.cwd(), "jar",
+                                                                      filename.substr(0, filename.length - 4))
+                                                  }))
+                              .on('close', function() {
+                                  cb();
+                              });
                         });
                         res.on('data', function(data) {
                             outStream.write(data);
@@ -125,14 +125,14 @@
 
     gulp.task('_get-rhino', function(cb) {
         var client = rest.wrap(mime, {
-            mime: "application/json",
-            accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
-        })
-            .wrap(errorCode);
+                             mime: "application/json",
+                             accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
+                         })
+                         .wrap(errorCode);
         client({
-            path: "https://api.github.com/repos/mozilla/rhino/releases/latest",
-            headers: { "User-Agent": "jscc" }
-        }).then(function(response) {
+                   path: "https://api.github.com/repos/mozilla/rhino/releases/latest",
+                   headers: { "User-Agent": "jscc" }
+               }).then(function(response) {
             var data = response.entity;
             var url = "";
             var filename = "";
@@ -163,59 +163,64 @@
         var newestRhinoZipDate = new Date(0);
         gulp.src("./jar/*rhino*.zip", { read: false })
             .pipe(new stream.Writable({
-                      objectMode: true,
-                      write: function(vinylFile, encoding, next) {
-                          fs.stat(vinylFile.path, function(err, stats) {
-                              if (!err && (stats.birthtime > newestRhinoZipDate)) {
-                                  newestRhinoZip = vinylFile.path;
-                                  newestRhinoZipDate = stats.birthtime;
-                              }
-                              next();
-                          });
-                      }
-                  }))
+                objectMode: true,
+                write: function(vinylFile, encoding, next) {
+                    fs.stat(vinylFile.path, function(err, stats) {
+                        if (!err && (stats.birthtime > newestRhinoZipDate)) {
+                            newestRhinoZip = vinylFile.path;
+                            newestRhinoZipDate = stats.birthtime;
+                        }
+                        next();
+                    });
+                }
+            }))
             .on('finish', function() {
-                    if (newestRhinoZip == "") {
-                        cb(new Error("No Rhino zip files were found; something may be wrong with this gulpfile."));
-                        return;
-                    }
-                    var rhinoJarPath = "";
-                    gulp.src(path.join(process.cwd(), "jar", path.basename(newestRhinoZip, ".zip"), "**/js.jar"),
-                        { read: false })
-                        .pipe(new stream.Writable({
-                                  objectMode: true,
-                                  write: function(vinylFile, encoding, next) {
-                                      rhinoJarPath = vinylFile.path;
-                                      next();
-                                  }
-                              }))
-                        .on('finish', function() {
-                                if (rhinoJarPath == "") {
-                                    cb(new Error("js.jar was not found in the Rhino directory '" +
-                                                 path.join(process.cwd(), "jar",
-                                                           path.basename(newestRhinoZip, ".zip")) + "'"));
-                                    return;
+                if (newestRhinoZip == "") {
+                    cb(new Error("No Rhino zip files were found; something may be wrong with this gulpfile."));
+                    return;
+                }
+                var rhinoJarPath = "";
+                gulp.src(path.join(process.cwd(), "jar", path.basename(newestRhinoZip, ".zip"), "**/js.jar"),
+                         { read: false })
+                    .pipe(new stream.Writable({
+                        objectMode: true,
+                        write: function(vinylFile, encoding, next) {
+                            rhinoJarPath = vinylFile.path;
+                            next();
+                        }
+                    }))
+                    .on('finish', function() {
+                        if (rhinoJarPath == "") {
+                            cb(new Error("js.jar was not found in the Rhino directory '" +
+                                         path.join(process.cwd(), "jar",
+                                                   path.basename(newestRhinoZip, ".zip")) + "'"));
+                            return;
+                        }
+                        var lastError = "";
+                        // The path to r.js is due to our local build, which incorporates the code
+                        // in https://github.com/jrburke/r.js/pull/861.  If that request ever makes it
+                        // into a release, it may be better to go back to using
+                        // node_modules/requirejs/bin/r.js instead.
+                        var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath + '"' +
+                                         path.delimiter + '"' +
+                                         closureJarPath +
+                                         '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
+                                         path.join(process.cwd(), "bin", "r.js") +
+                                         '" ';
+                        gulp.src('./require-*-build.js', { read: false })
+                            .pipe(shell(rjsCommand + " -o <%= file.path %>"))
+                            .on('error', function(err) {
+                                lastError = err;
+                            })
+                            .on('end', function() {
+                                if (lastError === "") {
+                                    cb();
+                                } else {
+                                    cb(new Error(lastError));
                                 }
-                                var lastError = "";
-                                var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath + '"' + path.delimiter + '"' +
-                                                 closureJarPath +
-                                                 '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
-                                                 path.join(process.cwd(), "node_modules", "requirejs", "bin", "r.js") +
-                                                 '" ';
-                                gulp.src('./require-*-build.js', { read: false })
-                                    .pipe(shell(rjsCommand + " -o <%= file.path %>"))
-                                    .on('error', function(err) {
-                                            lastError = err;
-                                        })
-                                    .on('end', function() {
-                                            if (lastError === "") {
-                                                cb();
-                                            } else {
-                                                cb(new Error(lastError));
-                                            }
-                                        });
                             });
-                });
+                    });
+            });
     });
 
     var testFailures = 0;
@@ -225,21 +230,21 @@
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
             .pipe(new stream.Writable({
-                      objectMode: true,
-                      write: function(chunk, encoding, next) {
-                          mocha.addFile(chunk.path);
-                          next();
-                      }
-                  }))
+                objectMode: true,
+                write: function(chunk, encoding, next) {
+                    mocha.addFile(chunk.path);
+                    next();
+                }
+            }))
             .once('error', function(err) {
-                      cb(err);
-                  })
+                cb(err);
+            })
             .once('finish', function() {
-                      mocha.run(function(failures) {
-                          testFailures = failures;
-                          cb();
-                      })
-                  });
+                mocha.run(function(failures) {
+                    testFailures = failures;
+                    cb();
+                })
+            });
     });
 
     gulp.task('intellij-pretest', ['_parse.js', '_regex.js'], function(cb) {
