@@ -22,6 +22,6 @@
         "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js"]
     },
-    "out": "./jscc-browser.js",
+    "out": "./bin/jscc-browser.js",
     "logLevel": 2
 })

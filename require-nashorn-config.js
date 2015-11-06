@@ -12,7 +12,7 @@ requirejs.config({
     config: {
         "jscc/global": {
             "version": "0.38.0",
-            "defaultDriver": "./src/driver/parser.js"
+            "defaultDriver": "./bin/parser-driver.js"
         }
     }
 });

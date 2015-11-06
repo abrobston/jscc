@@ -31,7 +31,7 @@
     });
 
     gulp.task('_parse.js', function(cb) {
-        var cmd = shell(['node ./src/_boot_node.js -o ./lib/jscc/parse.js -t ./src/driver/parser.js ./src/parse.par']);
+        var cmd = shell(['node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./bin/parser-driver.js ./lib/jscc/parse.par']);
         var e = null;
         cmd.on('error', function(err) {
             e = err;
@@ -47,7 +47,7 @@
             .pipe(cmd);
     });
     gulp.task('_regex.js', function(cb) {
-        var cmd = shell(['node ./src/_boot_node.js -o ./lib/jscc/regex.js -t ./src/driver/parser.js ./src/regex.par']);
+        var cmd = shell(['node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./bin/parser-driver.js ./lib/jscc/regex.par']);
         var e = null;
         cmd.on('error', function(err) {
             e = err;

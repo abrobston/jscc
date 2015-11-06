@@ -70,7 +70,7 @@ suite("samples", function() {
                  var output = "";
                  jscc({
                           src_file: path.join(__dirname, inputPath),
-                          tpl_file: path.join(__dirname, "../src/driver/parser.js"),
+                          tpl_file: path.join(__dirname, "../bin/parser-driver.js"),
                           outputCallback: function(text) {
                               output = text;
                           }

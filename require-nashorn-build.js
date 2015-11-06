@@ -22,6 +22,6 @@
         "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js"]
     },
-    "out": "./jscc-nashorn.js",
+    "out": "./bin/jscc-nashorn.js",
     "logLevel": 2
 })
