@@ -174,7 +174,7 @@ of the BSD license. Please see LICENSE for more information.
 
 var DEFAULT_DRIVER = "driver_node.js_";
 
-var sys=require("sys");
+var sys=require("util");
 var fs=require("fs");
 
 function _error( msg )
@@ -2539,7 +2539,7 @@ var __jscc_debug=(function(){///@TODO: create this variable without function
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
 	
-	var __dbg_print=require('sys').print;
+	var __dbg_print=require("util").print;
 	
 	function __dbg_flush()
 	{
@@ -3567,7 +3567,7 @@ var __regex_debug=(function(){///@TODO: create this variable without function
 	var _dbg_withtrace		= false;
 	var _dbg_withstepbystep	= false;
 	
-	var __dbg_print=require('sys').print;
+	var __dbg_print=require("util").print;
 	
 	function __dbg_flush()
 	{
