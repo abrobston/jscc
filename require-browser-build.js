@@ -1,17 +1,27 @@
 ({
-  "mainConfigFile": "./require-browser-config.js",
-  "optimize": "closure",
-  "preserveLicenseComments": false,
-  "generateSourceMaps": true,
-  "closure": {
-    "CompilerOptions": {
-      "language": com.google.javascript.jscomp.CompilerOptions.LanguageMode.ECMASCRIPT5
+    "mainConfigFile": "./require-browser-config.js",
+    "pragmas": {
+        "closure": true
     },
-    "CompilationLevel": "ADVANCED_OPTIMIZATIONS",
-    "externExportsPath": "./externs.js",
-    "loggingLevel": "FINE"
-  },
-  "name": "jscc",
-  "out": "./jscc-browser.js",
-  "logLevel": 2
+    "optimize": "closure",
+    "preserveLicenseComments": false,
+    "generateSourceMaps": true,
+    "closure": {
+        "CompilerOptions": {
+            "language": com.google.javascript.jscomp.CompilerOptions.LanguageMode.ECMASCRIPT5,
+            "checkSymbols": true,
+            "checkTypes": true,
+            "newTypeInference": true
+        },
+        "CompilationLevel": "ADVANCED_OPTIMIZATIONS",
+        "externExportsPath": "./externs.js",
+        "loggingLevel": "FINE"
+    },
+    "name": "jscc",
+    "wrap": {
+        "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "endFile": ["exports.js"]
+    },
+    "out": "./jscc-browser.js",
+    "logLevel": 2
 })

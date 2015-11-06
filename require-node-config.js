@@ -5,7 +5,8 @@ requirejs.config({
     baseUrl: "./lib",
     paths: {
         "jscc/io/io": "jscc/io/ioNode",
-        "jscc/log/log": "jscc/log/logNode"
+        "jscc/log/log": "jscc/log/logNode",
+        "jscc/bitset": "jscc/bitset/BitSet32"
     },
     nodeRequire: require,
     config: {

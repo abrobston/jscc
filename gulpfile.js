@@ -202,7 +202,7 @@
                                                  '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
                                                  path.join(process.cwd(), "node_modules", "requirejs", "bin", "r.js") +
                                                  '" ';
-                                gulp.src('./require-rhino-build.js', { read: false })
+                                gulp.src('./require-*-build.js', { read: false })
                                     .pipe(shell(rjsCommand + " -o <%= file.path %>"))
                                     .on('error', function(err) {
                                             lastError = err;

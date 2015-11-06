@@ -29,9 +29,6 @@
       "email": "andrew@brobston.com"
     }
   ],
-  "dependencies": {
-    "log4js": "~0.6.27"
-  },
   "devDependencies": {
     "mocha": "~2.3.3",
     "gulp": "~3.9.0",
@@ -46,12 +43,5 @@
     "amdefine": "~1.0.0"
   },
   "homepage": "http://jscc.phorward-software.com/",
-  "engine": ["spidermonkey", "node", "rhino", "v8"],
-  "overlay": {
-    "node": {
-      "dependencies": {
-        "log4js": "~0.6.27"
-      }
-    }
-  }
+  "engine": ["node", "rhino", "v8"]
 }

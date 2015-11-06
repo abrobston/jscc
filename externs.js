@@ -40,3 +40,31 @@ var print = function(msg) {
 };
 var require = function(path) {
 };
+var process = {};
+process.stdin = {};
+/**
+ * @param {string} enc
+ */
+process.stdin.setEncoding = function(enc) {
+};
+/**
+ * @param {string} e
+ * @param {Function} cb
+ */
+process.stdin.on = function(e, cb) {
+};
+process.stdout = {};
+/**
+ * @param {string} text
+ * @param {string} enc
+ */
+process.stdout.write = function(text, enc) {
+};
+/**
+ * @param {string} e
+ * @param {Function} cb
+ */
+process.stdout.on = function(e, cb) {
+};
+process.stdout.end = function() {
+};
