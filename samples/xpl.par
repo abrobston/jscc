@@ -17,6 +17,15 @@
 	
 	
 [*
+(function(root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define(["jscc/io/io"], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory(require("jscc/io/io"));
+    } else {
+        root.xpl = factory(root.io);
+    }
+}(this, function(io) {
 
 //Structs
 function NODE()
@@ -283,64 +292,41 @@ Value:			Integer												[* %% = createNode( NODE_CONST, %1 ); *]
 
 [*
 
-function open_file( file )
-{
-	var fs = new ActiveXObject( 'Scripting.FileSystemObject' );	
-	var src = new String();
+    function open_file( file ) {
+        return io.read_all_input(file);
+    }
 
-	if( fs && fs.fileExists( file ) )
-	{
-		var f = fs.OpenTextFile( file, 1 );
-		if( f )
-		{
-			src = f.ReadAll();
-			f.Close();
-		}
-	}
-	
-	return src;
-}
+    function read_string() {
+       var kbd = new java.io.BufferedReader(
+            new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
 
-function read_string()
-{
-   var kbd = new java.io.BufferedReader(
-   		new java.io.InputStreamReader( java.lang.System[ "in" ] ) );
+       return kbd.readLine();
+    }
 
-   return kbd.readLine();
-}
+    function read_file(file) {
+        return io.read_all_input(file);
+    }
 
-function read_file( file )
-{
-	var src = new String();
-	
-	if( ( new java.io.File( file ).exists() ) )
-		src = readFile( file );
-	else
-	{
-		print( "unable to open file '" + file + "'" );
-		quit();
-	}
-	
-	return src;
-}
+    return function(filename) {
+        if (typeof filename === 'string')
+        {
+            var str			= read_file(filename);
+            var error_cnt 	= 0;
+            var error_off	= new Array();
+            var error_la	= new Array();
 
-if( arguments.length > 0 )
-{
-	var str			= read_file( arguments[0] );
-	var error_cnt 	= 0;
-	var error_off	= new Array();
-	var error_la	= new Array();
-	
-	if( ( error_cnt = __##PREFIX##parse( str, error_off, error_la ) ) > 0 )
-	{
-		var i;
-		for( i = 0; i < error_cnt; i++ )
-			print( "Parse error near >" 
-				+ str.substr( error_off[i], 30 ) + "<, expecting \"" + error_la[i].join() + "\"" );
-	}
-}
-else
-{
-	print( 'usage: xpl.js <filename>' );
-}
+            if( ( error_cnt = __parse( str, error_off, error_la ) ) > 0 )
+            {
+                var i;
+                for( i = 0; i < error_cnt; i++ )
+                    io.write_debug( "Parse error near >"
+                        + str.substr( error_off[i], 30 ) + "<, expecting \"" + error_la[i].join() + "\"" );
+            }
+        }
+        else
+        {
+            io.write_debug( 'usage: xpl.js <filename>' );
+        }
+    };
+}));
 *]

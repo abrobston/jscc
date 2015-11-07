@@ -40,7 +40,8 @@
     "sinon": "~1.17.1",
     "chai": "~3.3.0",
     "squirejs": "~0.2.1",
-    "amdefine": "~1.0.0"
+    "amdefine": "~1.0.0",
+    "temp": "~0.8.3"
   },
   "homepage": "http://jscc.phorward-software.com/",
   "engine": ["node", "rhino", "v8"]

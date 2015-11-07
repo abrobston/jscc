@@ -14,7 +14,9 @@ suite("tabgen", function() {
                              ],
                              paths: {
                                  "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32"
+                                 "jscc/bitset": "jscc/bitset/BitSet32",
+                                 "jscc/io/io": "jscc/io/ioNode",
+                                 "jscc/log/log": "jscc/log/logNode"
                              }
                          });
     }
