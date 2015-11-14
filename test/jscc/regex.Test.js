@@ -95,9 +95,8 @@ suite("regex", function() {
         { pattern: "\\220", valid: true }
     ].forEach(function(item) {
         test("Regex '" + item.pattern + "' " + (item.valid ? "does not log" : "logs") + " an error",
-             injector.run(["mocks", "jscc/regex", "jscc/util", "jscc/enums/EXEC"],
-                          function(mocks, regex, util, EXEC) {
-                              util.reset_all(EXEC.CONSOLE);
+             injector.run(["mocks", "jscc/regex"],
+                          function(mocks, regex) {
                               var log = mocks.store["jscc/log/log"];
                               log.error.reset();
                               regex(item.pattern, 0, false);

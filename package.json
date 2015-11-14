@@ -1,7 +1,7 @@
 {
   "name": "jscc",
   "version": "0.38.0-alpha1",
-  "main": "lib/main.js",
+  "main": "lib/jscc.js",
   "description": "A LALR(1) Parser Generator for JavaScript written in JavaScript.",
   "license": {
       "type": "BSD-3-Clause",

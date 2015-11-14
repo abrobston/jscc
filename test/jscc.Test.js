@@ -235,24 +235,16 @@ suite("main", function() {
         test("Replaces ##" + item.token + "## with global." + item.field,
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
-                     var oldResetAll = mocks.store["jscc/util"].reset_all;
-                     try {
-                         sandbox.stub(mocks.store["jscc/util"], "reset_all", function(mode) {
-                             oldResetAll(mode);
-                             mocks.store["jscc/global"][item.field] = "Replacement text";
-                         });
-                         var output = "";
-                         jscc({
-                                  src_file: "invalidFileName.par",
-                                  template: "Replace ##" + item.token + "## with something",
-                                  outputCallback: function(text) {
-                                      output = text;
-                                  }
-                              });
-                         assert.strictEqual(output, "Replace Replacement text with something");
-                     } finally {
-                         mocks.store["jscc/util"].reset_all.restore();
-                     }
+                     mocks.store["jscc/global"][item.field] = "Replacement text";
+                     var output = "";
+                     jscc({
+                              src_file: "invalidFileName.par",
+                              template: "Replace ##" + item.token + "## with something",
+                              outputCallback: function(text) {
+                                  output = text;
+                              }
+                          });
+                     assert.strictEqual(output, "Replace Replacement text with something");
                  });
              }));
     });
