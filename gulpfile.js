@@ -168,6 +168,7 @@
                 path: "./lib",
                 filez: ["*.js", "jscc/*.js", "jscc/io/ioNode.js", "jscc/log/logNode.js", "jscc/bitset/BitSet32.js",
                         "jscc/classes/*.js", "jscc/enums/*.js"],
+                name: "jscc",
                 main: "jscc",
                 dependencies: {
                     replace: {
@@ -181,7 +182,7 @@
                 dstPath: "./bin/jscc-node.js",
                 template: "combined",
                 verbose: true,
-                optimize: true,
+                optimize: false,
                 afterBuild: [function(errors) {
                     if (typeof errors !== 'undefined' && errors !== true) {
                         error = errors;
