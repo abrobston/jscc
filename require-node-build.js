@@ -19,7 +19,7 @@
     },
     "name": "jscc",
     "wrap": {
-        "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "startFile": ["node_modules/almond/almond.js", "typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js"]
     },
     "out": "./bin/jscc-node.js",
