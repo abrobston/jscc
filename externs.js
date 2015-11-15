@@ -1,9 +1,9 @@
-/**
- * @type {function(?, ?=, ?=)}
+/*
+ * type {function(?, ?=, ?=)}
  */
-var define = function(name, deps, callback) {
-};
-define.amd = {};
+//var define = function(name, deps, callback) {
+//};
+//define.amd = {};
 var module = {};
 module.exports = {};
 java.lang = {};
@@ -38,8 +38,8 @@ var quit = function(exitCode) {
 };
 var print = function(msg) {
 };
-var require = function(path) {
-};
+//var require = function(path) {
+//};
 var process = {};
 process.stdin = {};
 /**
@@ -68,3 +68,7 @@ process.stdout.on = function(e, cb) {
 };
 process.stdout.end = function() {
 };
+/**
+ * @type {?string}
+ */
+var __dirname = "";
