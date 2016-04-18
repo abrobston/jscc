@@ -16,7 +16,8 @@ suite("tabgen", function() {
                                  "sinon": "../node_modules/sinon/pkg/sinon",
                                  "jscc/bitset": "jscc/bitset/BitSet32",
                                  "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode"
+                                 "jscc/log/log": "jscc/log/logNode",
+                                 "text": "../node_modules/requirejs-text/text"
                              }
                          });
     }

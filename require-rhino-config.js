@@ -6,13 +6,14 @@ requirejs.config({
     paths: {
         "jscc/io/io": "jscc/io/ioRhino",
         "jscc/log/log": "jscc/log/logJava",
-        "jscc/bitset": "jscc/bitset/BitSet32"
+        "jscc/bitset": "jscc/bitset/BitSetJava",
+        "text": "../node_modules/requirejs-text/text"
     },
     nodeRequire: require,
     config: {
         "jscc/global": {
-            "version": "0.38.0",
-            "defaultDriver": "./bin/parser-driver.js"
-        }
+            "version": "0.38.0"
+        },
+        "env": "rhino"
     }
 });

@@ -1,7 +1,8 @@
 ({
     "mainConfigFile": "./require-nashorn-config.js",
     "pragmas": {
-        "closure": true
+        "closure": true,
+        "nashorn": true
     },
     "optimize": "closure",
     "preserveLicenseComments": false,
@@ -10,17 +11,18 @@
         "CompilerOptions": {
             "language": com.google.javascript.jscomp.CompilerOptions.LanguageMode.ECMASCRIPT5,
             "checkSymbols": true,
-            "checkTypes": true,
-            "newTypeInference": true
+            "checkTypes": true
         },
         "CompilationLevel": "ADVANCED_OPTIMIZATIONS",
         "loggingLevel": "FINE",
         "externExportsPath": "./externs.js"
     },
-    "name": "jscc",
+    "name": "../node_modules/almond/almond",
+    "include": ["jscc"],
+    "insertRequire": ["jscc"],
     "wrap": {
-        "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
-        "endFile": ["exports.js"]
+        "startFile": ["typedef.js", "global-backfills.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "endFile": ["exports.js", "exports-require.js"]
     },
     "out": "./bin/jscc-nashorn.js",
     "logLevel": 2

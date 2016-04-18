@@ -16,7 +16,8 @@ suite("main", function() {
                                  "sinon": "../node_modules/sinon/pkg/sinon",
                                  "jscc/bitset": "jscc/bitset/BitSet32",
                                  "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode"
+                                 "jscc/log/log": "jscc/log/logNode",
+                                 "text": "../node_modules/requirejs-text/text"
                              }
                          });
     }
@@ -186,7 +187,7 @@ suite("main", function() {
         });
     }));
 
-    test("Ignores tpl_file when template string is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
+    test("Ignores template string when tpl_file is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
             ioStub.read_template.reset();
             jscc({
@@ -195,7 +196,7 @@ suite("main", function() {
                      out_file: "invalidOutputFile.js",
                      template: "This is a template string"
                  });
-            sinon.assert.notCalled(ioStub.read_template);
+            sinon.assert.calledOnce(ioStub.read_template);
         });
     }));
 
@@ -214,17 +215,20 @@ suite("main", function() {
         });
     }));
 
-    test("Uses tpl_file when no template string or function is present",
+    test("Uses template string when no tpl_file or function is present",
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
                  ioStub.read_template.reset();
+                 var output = "";
                  jscc({
                           src_file: "invalidFileName.par",
-                          tpl_file: "invalidTemplateFile.js",
-                          out_file: "invalidOutputFile.js"
+                          template: "This is a template string",
+                          outputCallback: function(text) {
+                              output = text;
+                          }
                       });
-                 sinon.assert.calledOnce(ioStub.read_template);
-                 sinon.assert.alwaysCalledWith(ioStub.read_template, "invalidTemplateFile.js");
+                 sinon.assert.notCalled(ioStub.read_template);
+                 assert.strictEqual(output, "This is a template string");
              });
          }));
 

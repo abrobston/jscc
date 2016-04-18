@@ -1,4 +1,6 @@
-var jscc = require('./jscc-node');
+var args = arguments;
+var currentDirectory = args[0];
+var runnerName = args[1];
 var possibleOptions = {
     "out_file": "string",
     "src_file": "string",
@@ -11,18 +13,18 @@ var possibleOptions = {
     "logLevel": "LOG_LEVEL"
 };
 var options = {};
-var argLength = process.argv.length;
+var argLength = args.length;
 var onDeck = "";
 var nextIsLogLevel = false;
 for (var index = 2; index < argLength; index++) {
     if (onDeck === "") {
-        var optMatch = /^(--|\/)([a-zA-Z0-9_]+)$/.exec(process.argv[index]);
+        var optMatch = /^(--|\/)([a-zA-Z0-9_]+)$/.exec(args[index]);
         if (optMatch !== null) {
             var optName = optMatch[2];
             if (possibleOptions.hasOwnProperty(optName)) {
                 if (options.hasOwnProperty(optName)) {
-                    console.error("Duplicate option: " + optName);
-                    process.exit(1);
+                    java.lang.System.err.println("Duplicate option: " + optName);
+                    quit(1);
                 }
                 var optType = possibleOptions[optName];
                 switch (optType) {
@@ -37,19 +39,19 @@ for (var index = 2; index < argLength; index++) {
                         onDeck = optName;
                         break;
                     default:
-                        console.error("Invalid option: " + optName);
-                        process.exit(1);
+                        java.lang.System.err.println("Invalid option: " + optName);
+                        quit(1);
                         break;
                 }
             }
         } else if (!options.hasOwnProperty("src_file")) {
-            options["src_file"] = process.argv[index];
+            options["src_file"] = args[index];
         } else {
-            console.error("Extra command-line argument: " + process.argv[index]);
-            process.exit(1);
+            java.lang.System.err.println("Extra command-line argument: " + args[index]);
+            quit(1);
         }
     } else if (nextIsLogLevel) {
-        var logLevelName = process.argv[index].toUpperCase();
+        var logLevelName = args[index].toUpperCase();
         switch (logLevelName) {
             case "FATAL":
             case "ERROR":
@@ -72,20 +74,24 @@ for (var index = 2; index < argLength; index++) {
                 onDeck = "";
                 break;
             default:
-                console.error("Invalid log level: " + process.argv[index]);
-                process.exit(1);
+                java.lang.System.err.println("Invalid log level: " + args[index]);
+                quit(1);
                 break;
         }
     } else {
-        options[onDeck] = process.argv[index];
+        options[onDeck] = args[index];
         onDeck = "";
     }
 }
 
 if (onDeck !== "") {
-    console.error("No value specified for option: " + onDeck);
-    process.exit(1);
+    java.lang.System.err.println("No value specified for option: " + onDeck);
+    quit(1);
 }
 
-jscc.jscc(options);
-process.exit(0);
+var jsccPath = java.nio.file.Paths.get(currentDirectory, "jscc-" + runnerName + ".js").toAbsolutePath().toString();
+
+load(jsccPath);
+var jscc = require("jscc");
+jscc(options);
+quit(0);

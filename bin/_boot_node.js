@@ -843,7 +843,8 @@ function print_dfa_table(dfa_states){
 			});
 	})(i);
 	code = JSON.stringify(pack_dfa(dfa_states));
-	return code.replace(/,/g,",\n\t");
+	// JSON quotes object keys, of course -- but doing so breaks code minimization, so replace keys when possible
+	return code.replace(/"([A-Za-z_][A-Za-z0-9_]*)"\s*:/g, "$1:").replace(/,/g, ",\n\t");
 }
 
 /* -FUNCTION--------------------------------------------------------------------

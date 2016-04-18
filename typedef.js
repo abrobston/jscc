@@ -2,22 +2,25 @@
  * Contains type definitions for Closure's benefit.  Used as a
  * start file when optimizing with requirejs.
  */
+"use strict";
 /**
  * The root namespace.  Re-add the const tag after Closure bug #1235 is fixed.
  * @namespace
- * @const
  */
+//>>excludeStart("jsccNamespacePreDefined", pragmas.jsccNamespacePreDefined);
 var jscc = {};
+//>>excludeEnd("jsccNamespacePreDefined");
+//>>includeStart("jsccNamespacePreDefined", pragmas.jsccNamespacePreDefined);
+jscc = {};
+//>>includeEnd("jsccNamespacePreDefined");
 /**
  * The namespace to which enum definitions belong.
  * @namespace
- * @const
  */
 jscc.enums = {};
 /**
  * The namespace to which certain classes belong.
  * @namespace
- * @const
  */
 jscc.classes = {};
 

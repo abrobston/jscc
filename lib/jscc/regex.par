@@ -49,27 +49,27 @@ var last_nfa;
 
 
 RegEx:			Expression						[*	%% = new Param();
-													global.NFA_states.value[ first_nfa ].follow = %1.start;
+													global.nfa_states.value[ first_nfa ].follow = %1.start;
 													last_nfa = %1.end;
 												*]
 				;
 
 Expression:		Expression '|' Catenation		[*
-													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
-													global.NFA_states.value[%%.start].follow = %1.start;
-													global.NFA_states.value[%%.start].follow2 = %3.start;
+													%% = new Param(global.nfa_states.create(), global.nfa_states.create());
+													global.nfa_states.value[%%.start].follow = %1.start;
+													global.nfa_states.value[%%.start].follow2 = %3.start;
 
-													global.NFA_states.value[%1.end].follow = %%.end;
-													global.NFA_states.value[%3.end].follow = %%.end;
+													global.nfa_states.value[%1.end].follow = %%.end;
+													global.nfa_states.value[%3.end].follow = %%.end;
 												*]
 				| Catenation
 				;
 
 Catenation:		Catenation Factor				[*
-													var weight=global.NFA_states.value[%1.end].weight;///SV: if weight unused - delete this
-													global.NFA_states.value[%1.end]=new Nfa(global.NFA_states.value[%2.start]);
-													global.NFA_states.value[%1.end].weight=weight;///SV: if weight unused - delete this
-													global.NFA_states.value[%2.start].edge = EDGE.FREE;
+													var weight=global.nfa_states.value[%1.end].weight;///SV: if weight unused - delete this
+													global.nfa_states.value[%1.end]=new Nfa(global.nfa_states.value[%2.start]);
+													global.nfa_states.value[%1.end].weight=weight;///SV: if weight unused - delete this
+													global.nfa_states.value[%2.start].edge = EDGE.FREE;
 
 													%1.end = %2.end;
 
@@ -79,36 +79,36 @@ Catenation:		Catenation Factor				[*
 				;
 
 Factor:			Term '*'						[*
-													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
-													global.NFA_states.value[%%.start].follow = %1.start;
-													global.NFA_states.value[%1.end].follow = %%.end;
+													%% = new Param(global.nfa_states.create(), global.nfa_states.create());
+													global.nfa_states.value[%%.start].follow = %1.start;
+													global.nfa_states.value[%1.end].follow = %%.end;
 
-													global.NFA_states.value[%%.start].follow2 = %%.end;
-													global.NFA_states.value[%1.end].follow2 = %1.start;
+													global.nfa_states.value[%%.start].follow2 = %%.end;
+													global.nfa_states.value[%1.end].follow2 = %1.start;
 												*]
 				| Term '+'						[*
-													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
-													global.NFA_states.value[%%.start].follow = %1.start;
-													global.NFA_states.value[%1.end].follow = %%.end;
+													%% = new Param(global.nfa_states.create(), global.nfa_states.create());
+													global.nfa_states.value[%%.start].follow = %1.start;
+													global.nfa_states.value[%1.end].follow = %%.end;
 
-													global.NFA_states.value[%1.end].follow2 = %1.start;
+													global.nfa_states.value[%1.end].follow2 = %1.start;
 												*]
 				| Term '?'						[*
-													%% = new Param(global.NFA_states.create(), global.NFA_states.create());
-													global.NFA_states.value[%%.start].follow = %1.start;
-													global.NFA_states.value[%%.start].follow2 = %%.end;
-													global.NFA_states.value[%1.end].follow = %%.end;
+													%% = new Param(global.nfa_states.create(), global.nfa_states.create());
+													global.nfa_states.value[%%.start].follow = %1.start;
+													global.nfa_states.value[%%.start].follow2 = %%.end;
+													global.nfa_states.value[%1.end].follow = %%.end;
 												*]
 				| Term
 				;
 
 Term:			Character						[*	%% = new Param();
-													%%.start = global.NFA_states.create();
-													%%.end = global.NFA_states.value[%%.start].follow
-														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
+													%%.start = global.nfa_states.create();
+													%%.end = global.nfa_states.value[%%.start].follow
+														= global.nfa_states.create();
+													global.nfa_states.value[%%.start].edge = EDGE.CHAR;
 
-													global.NFA_states.value[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
+													global.nfa_states.value[%%.start].ccl.set(%1.charCodeAt( 0 ), true );
 												*]
 				| CharacterSet
 				| '(' Expression ')'			[*	%% = %2; *]
@@ -117,15 +117,15 @@ Term:			Character						[*	%% = new Param();
 CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 													var i = 0, j, start;
 													%% = new Param();
-													%%.start = global.NFA_states.create();
-													%%.end = global.NFA_states.value[%%.start].follow
-														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
+													%%.start = global.nfa_states.create();
+													%%.end = global.nfa_states.value[%%.start].follow
+														= global.nfa_states.create();
+													global.nfa_states.value[%%.start].edge = EDGE.CHAR;
 
 													if( %2.charAt( i ) == '^' ){
 														negate = true;
 														for( j = global.MIN_CHAR; j < global.MAX_CHAR; j++ )
-															global.NFA_states.value[%%.start].ccl.set(j,true);
+															global.nfa_states.value[%%.start].ccl.set(j,true);
 														i++;
 													}
 													for( ; i < %2.length; i++ ){
@@ -134,20 +134,20 @@ CharacterSet:	'[' CharClass ']'				[*	var negate = false;
 															for( j = %2.charCodeAt( i-1 );
 																	j < %2.charCodeAt( i+1 );
 																		j++ )
-																global.NFA_states.value[%%.start].ccl.set(j, !negate);
+																global.nfa_states.value[%%.start].ccl.set(j, !negate);
 														}
 														else
-															global.NFA_states.value[%%.start].ccl.set(%2.charCodeAt(i), !negate);
+															global.nfa_states.value[%%.start].ccl.set(%2.charCodeAt(i), !negate);
 													}
 												*]
 				| ANY_CHAR						[*	%% = new Param();
 
-													%%.start = global.NFA_states.create();
-													%%.end = global.NFA_states.value[%%.start].follow
-														= global.NFA_states.create();
-													global.NFA_states.value[%%.start].edge = EDGE.CHAR;
+													%%.start = global.nfa_states.create();
+													%%.end = global.nfa_states.value[%%.start].follow
+														= global.nfa_states.create();
+													global.nfa_states.value[%%.start].edge = EDGE.CHAR;
 													for( var i = global.MIN_CHAR; i < global.MAX_CHAR; i++ )
-														global.NFA_states.value[%%.start].ccl.set(i, true);
+														global.nfa_states.value[%%.start].ccl.set(i, true);
 												*]
 				;
 
@@ -188,17 +188,17 @@ function compile_regex( str, accept, case_insensitive, cur_line ){
 
 	//_print( "str = >" + str + "< " + case_insensitive );
 
-	first_nfa = global.NFA_states.create();
+	first_nfa = global.nfa_states.create();
 	if( ( error_count = __parse( str, error_offsets, error_expects ) ) == 0 ){
 		//If the symbol should be case-insensitive, manipulate the
 		//character sets on the newly created items.
 		if( case_insensitive ){
-			for( i = 0; i < global.NFA_states.value.length; i++ ){
-				if( global.NFA_states.value[i].edge == EDGE.CHAR ){
+			for( i = 0; i < global.nfa_states.value.length; i++ ){
+				if( global.nfa_states.value[i].edge == EDGE.CHAR ){
 					for( j = global.MIN_CHAR; j < global.MAX_CHAR; j++ ){
-						if( global.NFA_states.value[i].ccl.get( j ) ){
-							global.NFA_states.value[i].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
-							global.NFA_states.value[i].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
+						if( global.nfa_states.value[i].ccl.get( j ) ){
+							global.nfa_states.value[i].ccl.set(String.fromCharCode( j ).toUpperCase().charCodeAt( 0 ), true );
+							global.nfa_states.value[i].ccl.set(String.fromCharCode( j ).toLowerCase().charCodeAt( 0 ), true );
 						}
 					}
 				}
@@ -208,19 +208,19 @@ function compile_regex( str, accept, case_insensitive, cur_line ){
 		/*
 			2008-5-9	Radim Cebis:
 
-			I think that computing weight of the NFA_states.value is weird,
+			I think that computing weight of the nfa_states.value is weird,
 			IMHO nfa_state which accepts a symbol, should have
 			weight according to the order...
 		*/
-		global.NFA_states.value[ last_nfa ].accept = accept;
-		global.NFA_states.value[ last_nfa ].weight = global.regex_weight++;
+		global.nfa_states.value[ last_nfa ].accept = accept;
+		global.nfa_states.value[ last_nfa ].weight = global.regex_weight++;
 
 		if( first_nfa > 0 ){
 			i = 0;
-			while( global.NFA_states.value[i].follow2 != -1 )
-				i = global.NFA_states.value[i].follow2;
+			while( global.nfa_states.value[i].follow2 != -1 )
+				i = global.nfa_states.value[i].follow2;
 
-			global.NFA_states.value[i].follow2 = first_nfa;
+			global.nfa_states.value[i].follow2 = first_nfa;
 		}
 	}else{
 		for( i = 0; i < error_count; i++ ){
@@ -241,7 +241,7 @@ return compile_regex;
 //compile_regex( "ab|c", 1 );
 //compile_regex( "[0-9]+", 1 );
 //print_nfa();
-//var d = create_subset( NFA_states.value );
+//var d = create_subset( nfa_states.value );
 //print_dfa( d );
 //d = minimize_dfa( d );
 //print_dfa( d );

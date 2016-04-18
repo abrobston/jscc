@@ -6,13 +6,14 @@ requirejs.config({
     paths: {
         "jscc/io/io": "jscc/io/ioBrowser",
         "jscc/log/log": "jscc/log/logBrowser",
-        "jscc/bitset": "jscc/bitset/BitSet32"
+        "jscc/bitset": "jscc/bitset/BitSet32",
+        "text": "../node_modules/requirejs-text/text",
+        "requireLib": "../node_modules/requirejs/require"
     },
     nodeRequire: require,
     config: {
         "jscc/global": {
-            "version": "0.38.0",
-            "defaultDriver": "./bin/parser-driver.js"
+            "version": "0.38.0"
         }
     }
 });

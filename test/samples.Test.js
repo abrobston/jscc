@@ -16,7 +16,8 @@ suite("samples", function() {
                                  "sinon": "../node_modules/sinon/pkg/sinon",
                                  "jscc/bitset": "jscc/bitset/BitSet32",
                                  "jscc/log/log": "jscc/log/logNode",
-                                 "jscc/io/io": "jscc/io/ioNode"
+                                 "jscc/io/io": "jscc/io/ioNode",
+                                 "text": "../node_modules/requirejs-text/text"
                              }
                          });
     }
@@ -58,7 +59,7 @@ suite("samples", function() {
                  var output = "";
                  jscc({
                           src_file: path.join(__dirname, inputPath),
-                          tpl_file: path.join(__dirname, "../bin/parser-driver.js"),
+                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver.js.txt"),
                           outputCallback: function(text) {
                               output = text;
                           }
@@ -78,7 +79,7 @@ suite("samples", function() {
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  jscc({
                           src_file: path.join(__dirname, "../samples/xpl.par"),
-                          tpl_file: path.join(__dirname, "../bin/parser-driver.js"),
+                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver.js.txt"),
                           out_file: path.join(tempDir, "xpl.js")
                       });
                  var req = requirejs.config({
@@ -88,6 +89,7 @@ suite("samples", function() {
                                                     "jscc/io/io": "jscc/io/ioNode",
                                                     "jscc/log/log": "jscc/log/logNode",
                                                     "jscc/bitset": "jscc/bitset/BitSet32",
+                                                    "text": "../node_modules/requirejs-text/text",
                                                     "xpl": path.join(tempDir, "xpl")
                                                 }
                                             });

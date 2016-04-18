@@ -4,6 +4,9 @@
 # Build outputs
 jscc-*.js
 jscc-*.js.map
+/samples/NashornProfile.txt
+/samples/output.js
+/externsWithRequire.js
 /lib/jscc/parse.js
 /lib/jscc/regex.js
 

@@ -1,18 +1,23 @@
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'gulp-shell', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
-                'http', 'https', 'url', 'unzip2', 'stream', 'mocha'], factory);
+                'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
+                'child_process'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('gulp-shell'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
-                    require('https'), require('url'), require('unzip2'), require('stream'), require('mocha'));
+                    require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
+                    Buffer,
+                    require('os'), require('jformatter'), require('child_process'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.gulpShell, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
-                    root.https, root.url, root.unzip2, root.stream, root.mocha);
+                    root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
+                    root.jformatter, root.child_process);
     }
-}(this, function(gulp, shell, rest, mime, errorCode, path, fs, http, https, urlUtil, unzip, stream, Mocha) {
+}(this, function(gulp, shell, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
+                 jformatter, childProcess) {
     gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
         var cmd = shell(['jsdoc -c ./conf.json']);
         var e = null;
@@ -32,7 +37,7 @@
 
     gulp.task('_parse.js', function(cb) {
         var cmd = shell(
-            ['node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./bin/parser-driver.js ./lib/jscc/parse.par']);
+            ['node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/parse.par']);
         var e = null;
         cmd.on('error', function(err) {
             e = err;
@@ -49,7 +54,7 @@
     });
     gulp.task('_regex.js', function(cb) {
         var cmd = shell(
-            ['node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./bin/parser-driver.js ./lib/jscc/regex.par']);
+            ['node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/regex.par']);
         var e = null;
         cmd.on('error', function(err) {
             e = err;
@@ -63,6 +68,34 @@
         });
         gulp.src('')
             .pipe(cmd);
+    });
+
+    gulp.task('_externsWithRequire.js', function(cb) {
+        var bufferOutput = false,
+            buffer = new Buffer("// This file is generated.  Edit externs.js instead." + os.EOL +
+                                "/**" + os.EOL +
+                                " * @type {function(?, ?=, ?=)}" + os.EOL +
+                                " */" + os.EOL +
+                                "var define = function(name, deps, callback) {" + os.EOL +
+                                "};" + os.EOL +
+                                "define.amd = {};" + os.EOL +
+                                "var require = function(path) {" + os.EOL +
+                                "};" + os.EOL + os.EOL);
+
+        fs.createReadStream('./externs.js')
+          .pipe(new stream.Transform({
+              transform: function(chunk, encoding, next) {
+                  if (!bufferOutput) {
+                      bufferOutput = true;
+                      var enc = encoding === "buffer" ? "utf8" : encoding;
+                      this.push(buffer.toString(enc));
+                  }
+                  next(null, chunk);
+              }
+          }))
+          .pipe(fs.createWriteStream('./externsWithRequire.js'))
+          .on('finish', cb)
+          .on('error', cb);
     });
 
     function downloadAndUnzip(filename, url, cb) {
@@ -103,14 +136,15 @@
                         var outStream = fs.createWriteStream(destFile, { defaultEncoding: "binary" });
                         res.on('end', function() {
                             outStream.end();
-                            fs.createReadStream(destFile)
-                              .pipe(unzip.Extract({
-                                                      path: path.join(process.cwd(), "jar",
-                                                                      filename.substr(0, filename.length - 4))
-                                                  }))
-                              .on('close', function() {
-                                  cb();
-                              });
+                            extract(destFile,
+                                    { dir: path.join(process.cwd(), "jar", filename.substr(0, filename.length - 4)) },
+                                    function(err) {
+                                        if (err) {
+                                            cb(err);
+                                        } else {
+                                            cb();
+                                        }
+                                    });
                         });
                         res.on('data', function(data) {
                             outStream.write(data);
@@ -208,69 +242,195 @@
         waitForDone();
     });
 
-    gulp.task('_requirejs-optimize', ['_parse.js', '_regex.js', '_get-rhino', '_get-closure'], function(cb) {
-        var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
-        var newestRhinoZip = "";
-        var newestRhinoZipDate = new Date(0);
-        gulp.src("./jar/*rhino*.zip", { read: false })
-            .pipe(new stream.Writable({
+    gulp.task('_requirejs-optimize', ['_parse.js', '_regex.js', '_get-rhino', '_get-closure', '_externsWithRequire.js'],
+              function(cb) {
+                  var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
+                  var newestRhinoZip = "";
+                  var newestRhinoZipDate = new Date(0);
+                  gulp.src("./jar/*rhino*.zip", { read: false })
+                      .pipe(new stream.Writable({
+                          objectMode: true,
+                          write: function(vinylFile, encoding, next) {
+                              fs.stat(vinylFile.path, function(err, stats) {
+                                  if (!err && (stats.birthtime > newestRhinoZipDate)) {
+                                      newestRhinoZip = vinylFile.path;
+                                      newestRhinoZipDate = stats.birthtime;
+                                  }
+                                  next();
+                              });
+                          }
+                      }))
+                      .on('finish', function() {
+                          if (newestRhinoZip == "") {
+                              cb(new Error("No Rhino zip files were found; something may be wrong with this gulpfile."));
+                              return;
+                          }
+                          var rhinoJarPath = "";
+                          var ParallelCompiler = function(rjsCommand) {
+                              var that = this;
+                              stream.Duplex.call(this, { writableObjectMode: true });
+                              this._rjsCommand = rjsCommand;
+                              this.on("finish", function() {
+                                  that._writingFinished = true;
+                              });
+                          };
+                          ParallelCompiler.prototype = Object.create(stream.Duplex.prototype);
+                          ParallelCompiler.prototype.constructor = ParallelCompiler;
+                          ParallelCompiler.prototype._writingFinished = false;
+                          ParallelCompiler.prototype._processesRemaining = 0;
+                          ParallelCompiler.prototype._rjsCommand = null;
+                          ParallelCompiler.prototype._shellResults = [];
+                          ParallelCompiler.prototype._write = function(chunk, encoding, next) {
+                              var that = this, command = this._rjsCommand + " -o \"" + chunk.path + "\"";
+                              this._processesRemaining++;
+                              childProcess.exec(command, {
+                                  maxBuffer: 1024 * 1024,
+                                  encoding: "buffer"
+                              }, function(error, stdout, stderr) {
+                                  var stdoutBuffer = Buffer.concat([
+                                                                       Buffer.from("Standard output for " + chunk.path +
+                                                                                   ":" + os.EOL, "utf8"),
+                                                                       stdout]),
+                                      stderrBuffer = Buffer.concat([
+                                                                       Buffer.from("Standard error for " + chunk.path +
+                                                                                   ":" + os.EOL, "utf8"),
+                                                                       stderr]);
+                                  that._shellResults.push({
+                                                              path: chunk.path,
+                                                              stdout: stdoutBuffer,
+                                                              stderr: stderrBuffer,
+                                                              error: error,
+                                                              stdoutPos: 0,
+                                                              stderrPos: 0
+                                                          });
+                              });
+                              next();
+                          };
+                          ParallelCompiler.prototype._innerRead = function(bytes) {
+                              var that = this,
+                                  currentResult = this._shellResults.shift(),
+                                  keepReading = true,
+                                  currentStart, currentEnd, currentChunk;
+                              if (bytes <= 0) {
+                                  bytes = 1024;
+                              }
+                              if (typeof currentResult === "undefined") {
+                                  keepReading = false;
+                                  if (this._writingFinished && this._processesRemaining === 0) {
+                                      this.push(null);
+                                  } else {
+                                      setTimeout(function() {
+                                          that._innerRead(bytes);
+                                      }, 250);
+                                  }
+                              }
+                              while (keepReading) {
+                                  if (currentResult.stdoutPos < currentResult.stdout.length) {
+                                      currentStart = currentResult.stdoutPos;
+                                      currentEnd = Math.min(currentStart + bytes, currentResult.stdout.length);
+                                      currentChunk = currentResult.stdout.toString("utf8", currentStart, currentEnd);
+                                      keepReading = this.push(currentChunk, "utf8");
+                                      currentResult.stdoutPos = currentEnd;
+                                  } else if (currentResult.stderrPos < currentResult.stderr.length) {
+                                      currentStart = currentResult.stderrPos;
+                                      currentEnd = Math.min(currentStart + bytes, currentResult.stderr.length);
+                                      currentChunk = currentResult.stderr.toString("utf8", currentStart, currentEnd);
+                                      keepReading = this.push(currentChunk, "utf8");
+                                      currentResult.stderrPos = currentEnd;
+                                  } else {
+                                      this._processesRemaining--;
+                                      currentResult = this._shellResults.shift();
+                                      if (typeof currentResult === "undefined") {
+                                          keepReading = false;
+                                          if (this._writingFinished && this._processesRemaining === 0) {
+                                              this.push(null);
+                                          } else {
+                                              setTimeout(function() {
+                                                  that._innerRead(bytes);
+                                              }, 250);
+                                          }
+                                      }
+                                  }
+                              }
+                              if (typeof currentResult !== "undefined") {
+                                  this._shellResults.unshift(currentResult);
+                              }
+                          };
+                          ParallelCompiler.prototype._read = function(bytes) {
+                              var that = this;
+                              setImmediate(function() {
+                                  that._innerRead(bytes);
+                              });
+                          };
+
+                          gulp.src(
+                              path.join(process.cwd(), "jar", path.basename(newestRhinoZip, ".zip"), "**/rhino*.jar"),
+                              { read: false })
+                              .pipe(new stream.Writable({
+                                  objectMode: true,
+                                  write: function(vinylFile, encoding, next) {
+                                      rhinoJarPath = vinylFile.path;
+                                      next();
+                                  }
+                              }))
+                              .on('finish', function() {
+                                  if (rhinoJarPath == "") {
+                                      cb(new Error("rhino*.jar was not found in the Rhino directory '" +
+                                                   path.join(process.cwd(), "jar",
+                                                             path.basename(newestRhinoZip, ".zip")) + "'"));
+                                      return;
+                                  }
+                                  var lastError = "";
+                                  var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath +
+                                                   '"' +
+                                                   path.delimiter + '"' +
+                                                   closureJarPath +
+                                                   '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
+                                                   path.join(process.cwd(), "node_modules", "requirejs", "bin",
+                                                             "r.js") +
+                                                   '" ';
+                                  gulp.src('./require-*-build.js', { read: false })
+                                      .pipe(new ParallelCompiler(rjsCommand))
+                                      //.pipe(shell(rjsCommand + " -o <%= file.path %>"))
+                                      .pipe(new stream.Writable({
+                                          write: function(chunk, encoding, next) {
+                                              var text = chunk;
+                                              if (encoding === "buffer") {
+                                                  text = chunk.toString("utf8");
+                                              }
+                                              console.log(text);
+                                              next();
+                                          }
+                                      }))
+                                      .on('error', function(err) {
+                                          lastError = err;
+                                      })
+                                      .on('finish', function() {
+                                          if (lastError === "") {
+                                              cb();
+                                          } else {
+                                              cb(new Error(lastError));
+                                          }
+                                      });
+                              });
+                      });
+              });
+
+    gulp.task('_formatMinifiedCode', ['_requirejs-optimize'], function(cb) {
+        gulp.src("bin/jscc-+([a-z]).js")
+            .pipe(new stream.Transform({
                 objectMode: true,
-                write: function(vinylFile, encoding, next) {
-                    fs.stat(vinylFile.path, function(err, stats) {
-                        if (!err && (stats.birthtime > newestRhinoZipDate)) {
-                            newestRhinoZip = vinylFile.path;
-                            newestRhinoZipDate = stats.birthtime;
-                        }
-                        next();
-                    });
+                transform: function(vinylFile, encoding, next) {
+                    vinylFile.contents = new Buffer(jformatter.format(vinylFile.contents.toString("utf8")), "utf8");
+                    next(null, vinylFile);
                 }
             }))
-            .on('finish', function() {
-                if (newestRhinoZip == "") {
-                    cb(new Error("No Rhino zip files were found; something may be wrong with this gulpfile."));
-                    return;
-                }
-                var rhinoJarPath = "";
-                gulp.src(path.join(process.cwd(), "jar", path.basename(newestRhinoZip, ".zip"), "**/js.jar"),
-                         { read: false })
-                    .pipe(new stream.Writable({
-                        objectMode: true,
-                        write: function(vinylFile, encoding, next) {
-                            rhinoJarPath = vinylFile.path;
-                            next();
-                        }
-                    }))
-                    .on('finish', function() {
-                        if (rhinoJarPath == "") {
-                            cb(new Error("js.jar was not found in the Rhino directory '" +
-                                         path.join(process.cwd(), "jar",
-                                                   path.basename(newestRhinoZip, ".zip")) + "'"));
-                            return;
-                        }
-                        var lastError = "";
-                        // The path to r.js is due to our local build, which incorporates the code
-                        // in https://github.com/jrburke/r.js/pull/861.  If that request ever makes it
-                        // into a release, it may be better to go back to using
-                        // node_modules/requirejs/bin/r.js instead.
-                        var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath + '"' +
-                                         path.delimiter + '"' +
-                                         closureJarPath +
-                                         '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
-                                         path.join(process.cwd(), "bin", "r.js") +
-                                         '" ';
-                        gulp.src('./require-*-build.js', { read: false })
-                            .pipe(shell(rjsCommand + " -o <%= file.path %>"))
-                            .on('error', function(err) {
-                                lastError = err;
-                            })
-                            .on('end', function() {
-                                if (lastError === "") {
-                                    cb();
-                                } else {
-                                    cb(new Error(lastError));
-                                }
-                            });
-                    });
+            .pipe(gulp.dest("bin/formatted"))
+            .on("error", function(err) {
+                cb(new Error(err));
+            })
+            .on("end", function() {
+                cb();
             });
     });
 
@@ -315,6 +475,11 @@
     });
 
     gulp.task('default', ['_jsdoc', '_requirejs-optimize'], function(cb) {
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('unminify', ['_requirejs-optimize', '_formatMinifiedCode'], function(cb) {
         cb();
         process.exit(0);
     });
