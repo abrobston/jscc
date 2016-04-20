@@ -40,6 +40,8 @@ suite("main", function() {
                                   read_template: function(options) {
                                   },
                                   write_output: function(options) {
+                                  },
+                                  exit: function(exitCode) {
                                   }
                               });
         ioStub.read_template.returns("fake template");
@@ -438,4 +440,126 @@ suite("main", function() {
                  });
              }));
     });
+
+    test("Throws an exception if there are errors when the throwIfErrors option is true",
+         injector.run(["mocks", "jscc"], function(mocks, jscc) {
+             wrapStub(mocks, function() {
+                 var skipFinallyRestore = true;
+                 try {
+                     try {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     } catch (e) {
+                         skipFinallyRestore = false;
+                     }
+                     sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
+                         mocks.store["jscc/global"].errors = 1;
+                     });
+                     assert.throws(function() {
+                         jscc({
+                                  src_file: "invalidFileName.par",
+                                  tpl_file: "invalidTemplate.js",
+                                  outputCallback: function() {
+                                  },
+                                  throwIfErrors: true
+                              });
+                     }, Error);
+                 } finally {
+                     if (!skipFinallyRestore) {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     }
+                 }
+             });
+         }));
+
+    test("Does not throw an exception if there are ordinary errors when the throwIfErrors option is false",
+         injector.run(["mocks", "jscc"], function(mocks, jscc) {
+             wrapStub(mocks, function() {
+                 var integrityStub, skipFinallyRestore = true;
+                 try {
+                     try {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     } catch (e) {
+                         skipFinallyRestore = false;
+                     }
+                     integrityStub = sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
+                         mocks.store["jscc/global"].errors = 1;
+                     });
+                     assert.doesNotThrow(function() {
+                         jscc({
+                                  src_file: "invalidFileName.par",
+                                  tpl_file: "invalidTemplate.js",
+                                  outputCallback: function() {
+                                  }
+                              });
+                     }, Error);
+                     assert.called(integrityStub);
+                 } finally {
+                     if (!skipFinallyRestore) {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     }
+                 }
+             });
+         }));
+
+    test("Calls io.exit with a non-zero exit code if there are ordinary errors when the exitIfErrors option is true",
+         injector.run(["mocks", "jscc"], function(mocks, jscc) {
+             wrapStub(mocks, function() {
+                 var skipFinallyRestore = true, exitStub = ioStub.exit;
+                 try {
+                     try {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     } catch (e) {
+                         skipFinallyRestore = false;
+                     }
+                     sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
+                         mocks.store["jscc/global"].errors = 1;
+                     });
+                     exitStub.reset();
+                     jscc({
+                              src_file: "invalidFileName.par",
+                              tpl_file: "invalidTemplate.js",
+                              outputCallback: function() {
+                              },
+                              exitIfErrors: true
+                          });
+                     assert.calledOnce(exitStub);
+                     assert.neverCalledWith(exitStub, 0);
+                     assert.alwaysCalledWith(exitStub, sinon.match.number);
+                 } finally {
+                     if (!skipFinallyRestore) {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     }
+                 }
+             });
+         }));
+
+    test("Does not call io.exit when exitIfErrors is false",
+         injector.run(["mocks", "jscc"], function(mocks, jscc) {
+             wrapStub(mocks, function() {
+                 var integrityStub, skipFinallyRestore = true, exitStub = ioStub.exit;
+                 try {
+                     try {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     } catch (e) {
+                         skipFinallyRestore = false;
+                     }
+                     integrityStub = sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
+                         mocks.store["jscc/global"].errors = 1;
+                     });
+                     exitStub.reset();
+                     jscc({
+                              src_file: "invalidFileName.par",
+                              tpl_file: "invalidTemplate.js",
+                              outputCallback: function() {
+                              }
+                          });
+                     assert.notCalled(exitStub);
+                     assert.called(integrityStub);
+                 } finally {
+                     if (!skipFinallyRestore) {
+                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                     }
+                 }
+             })
+         }));
 });

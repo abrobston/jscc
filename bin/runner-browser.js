@@ -1,3 +1,10 @@
+phantom.onError = function(msg, trace) {
+    console.error("Uncaught error: " + msg);
+    if (trace && trace.length) {
+        console.error(trace.join("\n"));
+    }
+    phantom.exit(1);
+};
 var system = require("system");
 var fs = require("fs");
 var args = system.args;
@@ -12,7 +19,9 @@ var possibleOptions = {
     "template": "string",
     "logLevel": "LOG_LEVEL"
 };
-var options = {};
+var options = {
+    throwIfErrors: true
+};
 var argLength = args.length;
 var onDeck = "";
 var nextIsLogLevel = false;
@@ -116,5 +125,10 @@ if (options.hasOwnProperty("tpl_file")) {
 var jsccPath = phantom.libraryPath + fs.separator + "jscc-browser.js";
 phantom.injectJs(jsccPath);
 var jscc = requireLib("jscc");
-jscc(options);
-phantom.exit(0);
+try {
+    jscc(options);
+    phantom.exit(0);
+} catch (e) {
+    console.error(e.message);
+    phantom.exit(1);
+}

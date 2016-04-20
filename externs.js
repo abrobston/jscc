@@ -33,6 +33,11 @@ java.lang.System.err = null;
 java.lang.System.lineSeparator = function() {
 };
 /**
+ * @param {!number} exitCode
+ */
+java.lang.System.exit = function(exitCode) {
+};
+/**
  * @param {string=} str
  * @constructor
  */

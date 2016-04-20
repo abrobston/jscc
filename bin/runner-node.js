@@ -10,7 +10,9 @@ var possibleOptions = {
     "template": "string",
     "logLevel": "LOG_LEVEL"
 };
-var options = {};
+var options = {
+    exitIfErrors: true
+};
 var argLength = process.argv.length;
 var onDeck = "";
 var nextIsLogLevel = false;

@@ -86,6 +86,11 @@ var DfaOptions;
  * @property {?(string|jscc.enums.LOG_LEVEL)} logLevel - The logging
  * level.  Can be the name of one of the {@link module:jscc.enums.LOG_LEVEL} values
  * or one of the values themselves.  Defaults to WARN.
+ * @property {?boolean} throwIfErrors - Whether to throw an exception before completion
+ * of the main method if there are any errors.
+ * @property {?boolean} exitIfErrors - Whether to exit the process with a non-zero exit
+ * code if there are any errors, provided that the platform permits doing so.  Intended
+ * for use with shell scripts.
  */
 var mainOptions;
 

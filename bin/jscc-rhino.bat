@@ -7,7 +7,7 @@ FOR /F "delims=`" %%g IN ('DIR %_jar_dir% /S /A:-D /O:D /b ^| FINDSTR /I "rhino[
 IF "%_rhino_path%"=="none" (
     ECHO "rhino*.jar was not found in any subdirectory of %_jar_dir%"
     EXIT 1
-) ELSE (
-    "%JAVA_HOME%\bin\java.exe" -server -XX:+TieredCompilation -classpath "%_rhino_path%" org.mozilla.javascript.tools.shell.Main -opt -1 %~dp0\runner-java.js %~dp0 rhino %*
 )
+"%JAVA_HOME%\bin\java.exe" -server -XX:+TieredCompilation -classpath "%_rhino_path%" org.mozilla.javascript.tools.shell.Main -opt -1 %~dp0\runner-java.js %~dp0 rhino %*
+EXIT %ERRORLEVEL%
 ENDLOCAL

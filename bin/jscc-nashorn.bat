@@ -7,4 +7,5 @@ IF NOT EXIST "%_jjs%" (
     EXIT 1
 )
 "%_jjs%" -doe --debug-locals=true --debug-lines=true %~dp0\runner-java.js -- %~dp0 nashorn %*
+EXIT %ERRORLEVEL%
 ENDLOCAL

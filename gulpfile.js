@@ -436,7 +436,7 @@
 
     var testFailures = 0;
 
-    gulp.task('_test', ['_parse.js', '_regex.js'], function(cb) {
+    gulp.task('_test', ['_requirejs-optimize', '_get-phantom'], function(cb) {
         testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
@@ -458,7 +458,14 @@
             });
     });
 
-    gulp.task('intellij-pretest', ['_parse.js', '_regex.js'], function(cb) {
+    gulp.task('_get-phantom', function(cb) {
+        var phantomWorkingDirectory = path.join(__dirname, "node_modules", "phantomjs-prebuilt");
+        childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" }, function(error) {
+            cb(error);
+        });
+    });
+
+    gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom'], function(cb) {
         // Process does not otherwise exit under IntelliJ's runner
         cb();
         process.exit(0);
@@ -474,7 +481,7 @@
         process.exit(0);
     });
 
-    gulp.task('default', ['_jsdoc', '_requirejs-optimize'], function(cb) {
+    gulp.task('default', ['_requirejs-optimize', '_test'], function(cb) {
         cb();
         process.exit(0);
     });
@@ -484,7 +491,7 @@
         process.exit(0);
     });
 
-    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test'], function(cb) {
+    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test', '_formatMinifiedCode'], function(cb) {
         cb();
         process.exit(0);
     });

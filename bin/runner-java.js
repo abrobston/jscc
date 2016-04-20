@@ -12,7 +12,9 @@ var possibleOptions = {
     "template": "string",
     "logLevel": "LOG_LEVEL"
 };
-var options = {};
+var options = {
+    throwIfErrors: true
+};
 var argLength = args.length;
 var onDeck = "";
 var nextIsLogLevel = false;
@@ -93,5 +95,10 @@ var jsccPath = java.nio.file.Paths.get(currentDirectory, "jscc-" + runnerName + 
 
 load(jsccPath);
 var jscc = require("jscc");
-jscc(options);
+try {
+    jscc(options);
+} catch (e) {
+    java.lang.System.err.println("Uncaught error: " + e);
+    quit(1);
+}
 quit(0);
