@@ -27,7 +27,7 @@ var writeFunctionProperties =
 };
 
 /**
- * @typedef {function((string|Array<string>), function(string=)=)}
+ * @typedef {function((string|Array<string>), function(string)=)}
  */
 var ReqFunction;
 
@@ -470,7 +470,9 @@ define(['module'], function (/** @type {{children: Array, config: function(): Co
             typeof Packages !== 'undefined' && typeof java !== 'undefined')) {
         //Why Java, why is this so awkward?
         text.get = function (url, callback) {
-            var stringBuffer, line,
+            var stringBuffer,
+                /** @type {java.lang.String} */
+                line,
                 encoding = "utf-8",
                 file = new java.io.File(url),
                 lineSeparator = java.lang.System.getProperty("line.separator"),
@@ -478,7 +480,8 @@ define(['module'], function (/** @type {{children: Array, config: function(): Co
                 content = '';
             try {
                 stringBuffer = new java.lang.StringBuffer();
-                line = input.readLine();
+                // amdclean
+                line = /** @type {java.lang.String} */ (input.readLine());
 
                 // Byte Order Mark (BOM) - The Unicode Standard, version 3.0, page 324
                 // http://www.unicode.org/faq/utf_bom.html

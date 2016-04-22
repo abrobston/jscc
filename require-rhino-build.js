@@ -20,7 +20,7 @@
     "include": ["jscc"],
     "insertRequire": ["jscc"],
     "wrap": {
-        "startFile": ["typedef.js", "global-backfills.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "startFile": ["fileoverview.js", "typedef.js", "global-backfills.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js", "exports-require.js"]
     },
     "out": "./bin/jscc-rhino.js",

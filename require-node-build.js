@@ -2,7 +2,8 @@
     "mainConfigFile": "./require-node-config.js",
     "pragmas": {
         "closure": true,
-        "jsccNamespacePreDefined": true
+        "jsccNamespacePreDefined": true,
+        "amdclean": true
     },
     "optimize": "closure",
     "preserveLicenseComments": false,
@@ -19,7 +20,7 @@
     },
     "name": "jscc",
     "wrap": {
-        "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "startFile": ["fileoverview-node.js", "typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js"]
     },
     "out": "./bin/jscc-node.js",

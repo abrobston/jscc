@@ -20,7 +20,7 @@
     "include": ["jscc"],
     "insertRequire": ["jscc"],
     "wrap": {
-        "startFile": ["typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
+        "startFile": ["fileoverview.js", "typedef.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
         "endFile": ["exports.js", "exports-requireLib.js"]
     },
     "out": "./bin/jscc-browser.js",

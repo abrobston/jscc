@@ -1,2 +1,3 @@
+//noinspection ThisExpressionReferencesGlobalObjectJS
 /** @suppress {globalThis} */
-this["require"] = require;
+(this["require"] = require);

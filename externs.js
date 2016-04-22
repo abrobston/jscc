@@ -14,7 +14,11 @@ var Java = {};
 Java.type = function(str) {
 };
 java.lang = {};
-java.lang.System = {};
+/**
+ * @constructor
+ */
+java.lang.System = function() {
+};
 /**
  * @type {java.io.InputStream}
  */
@@ -103,7 +107,7 @@ java.io.FileReader.prototype.close = function() {
 java.io.BufferedReader = function(reader) {
 };
 /**
- * @return {(string|java.lang.String)}
+ * @return {java.lang.String}
  */
 java.io.BufferedReader.prototype.readLine = function() {
 };
@@ -151,12 +155,31 @@ java.io.PrintWriter.prototype.print = function(str) {
 
 java.util = {};
 java.util.logging = {};
-java.util.logging.Level = {};
-java.util.logging.Level.SEVERE = {};
-java.util.logging.Level.WARNING = {};
-java.util.logging.Level.INFO = {};
-java.util.logging.Level.FINE = {};
-java.util.logging.Level.FINER = {};
+/**
+ * @constructor
+ */
+java.util.logging.Level = function() {
+};
+/**
+ * @type {java.util.logging.Level}
+ */
+java.util.logging.Level.SEVERE = new java.util.logging.Level();
+/**
+ * @type {java.util.logging.Level}
+ */
+java.util.logging.Level.WARNING = new java.util.logging.Level();
+/**
+ * @type {java.util.logging.Level}
+ */
+java.util.logging.Level.INFO = new java.util.logging.Level();
+/**
+ * @type {java.util.logging.Level}
+ */
+java.util.logging.Level.FINE = new java.util.logging.Level();
+/**
+ * @type {java.util.logging.Level}
+ */
+java.util.logging.Level.FINER = new java.util.logging.Level();
 /**
  * @constructor
  */
@@ -170,7 +193,7 @@ java.util.logging.Logger.getLogger = function(str) {
     return new java.util.logging.Logger();
 };
 /**
- * @param {?} level
+ * @param {java.util.logging.Level} level
  */
 java.util.logging.Logger.prototype.setLevel = function(level) {
 };
@@ -320,7 +343,34 @@ fs.prototype.existsSync = function(f) {
  */
 fs.prototype.writeFileSync = function(f, d, opt) {
 };
-
+/**
+ * @param {string=} str
+ * @param {string=} encoding
+ * @constructor
+ */
+var Buffer = function(str, encoding) {
+};
+/**
+ * @param {?} obj
+ * @return {!boolean}
+ */
+Buffer.isBuffer = function(obj) {
+};
+/**
+ * @param {!Array<Buffer>} list
+ * @param {number=} totalLength
+ * @return {Buffer}
+ */
+Buffer.concat = function(list, totalLength) {
+};
+/**
+ * @param {string=} encoding
+ * @param {number=} start
+ * @param {number=} end
+ * @return {string}
+ */
+Buffer.prototype.toString = function(encoding, start, end) {
+};
 var Components = {};
 Components.interfaces = {};
 Components.interfaces.nsIFileInputStream = {};
@@ -345,13 +395,6 @@ var FileUtils = {};
  * @constructor
  */
 FileUtils.File = function(str) {
-};
-
-/**
- * @param {*} input
- * @constructor
- */
-var Buffer = function(input) {
 };
 
 /**

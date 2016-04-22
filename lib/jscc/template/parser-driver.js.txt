@@ -80,6 +80,10 @@ var Continue = function(){throw Continue;};
      */
 	DfaLex.prototype.exec = function(chr, pos) {
 		if (this.state !== null) {
+		    if ((typeof this.state !== "number") || this.state >= this._dfaData.length) {
+		        this.state = null;
+		        throw new Error("Invalid value for DfaLex.state at chr " + chr + " and pos " + pos);
+		    }
 			var line = this._dfaData[this.state].line;
 			var p, st;
 			for (p = 1 << 8, st = line; p; p >>= 1) {
@@ -88,13 +92,16 @@ var Continue = function(){throw Continue;};
 				} else {
 					st = st[0];
 				}
-				if (st == null)break;
-				if (st instanceof Array)continue;
+				if (typeof st === "undefined") {
+				    st = null;
+				}
+				if (st === null)break;
+				if (Array.isArray(st))continue;
 				break;
 			}
 			var ac = this._dfaData[this.state].accept;
 			this.state = /** @type {?number} */ (st);
-			if (ac != -1) {
+			if (ac !== -1) {
 				this.match = /** @type{number} */ (ac);
 				this.match_pos = pos;
 			}
@@ -195,16 +202,16 @@ var Continue = function(){throw Continue;};
 				do{
 					chr = this.src.charCodeAt(pos);
 					dfa.exec(chr,pos);
-					if(dfa.state != null)
+					if(dfa.state !== null)
 						this.accountChar(chr);
 					pos++;
-				}while(dfa.state != null);
-			}while(whitespace > -1 && dfa.match == whitespace);
-			if(dfa.match != null){
+				}while(dfa.state !== null);
+			}while(whitespace > -1 && dfa.match === whitespace);
+			if(dfa.match !== null){
 				this.att = this.src.slice(start, dfa.match_pos);
 				this.offset = dfa.match_pos;
 				actionResult = TERMINAL_ACTIONS(this,dfa.match);
-				if(dfa.state != null)
+				if(dfa.state !== null)
 					this.accountChar(chr);
 				if(actionResult === Continue)
 					continue;
@@ -259,9 +266,9 @@ var Continue = function(){throw Continue;};
 		PCB.lex();
 		while(true){
 			PCB.act = get_act(sstack[0],PCB.la);
-			if(PCB.act == null && defact_tab[sstack[0]] >= 0)
+			if(PCB.act === null && defact_tab[sstack[0]] >= 0)
 				PCB.act = -defact_tab[sstack[0]];
-			if(PCB.act == null){//Parse error? Try to recover!
+			if(PCB.act === null){//Parse error? Try to recover!
 				//Report errors only when error_step is 0, and this is not a
 				//subsequent error from a previous parse
 				if(PCB.error_step === 0){
@@ -272,7 +279,7 @@ var Continue = function(){throw Continue;};
 						err_la[0].push(labels[act_tab[sstack[0]][i]]);
 				}
 				//Perform error recovery			
-				while(sstack.length > 1 && PCB.act == null){
+				while(sstack.length > 1 && PCB.act === null){
 					sstack.shift();
 					vstack.shift();
 					//Try to shift on error token
@@ -283,7 +290,7 @@ var Continue = function(){throw Continue;};
 					}
 				}
 				//Is it better to leave the parser now?
-				if(sstack.length > 1 && PCB.act != null){
+				if(sstack.length > 1 && PCB.act !== null){
 					//Ok, now try to shift on the next tokens
 					while(PCB.la !== eof){
 						PCB.act = act_tab[sstack[0]][i+1];
@@ -291,7 +298,7 @@ var Continue = function(){throw Continue;};
 						while(PCB.lex() != null)PCB.offset++;
 					}
 				}
-				if(PCB.act == null || PCB.la === eof){
+				if(PCB.act === null || PCB.la === eof){
 					break;
 				}
 				//Try to parse the next three tokens successfully...

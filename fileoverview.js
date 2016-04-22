@@ -1,0 +1,4 @@
+/**
+ * @fileoverview
+ * @suppress {globalThis}
+ */

@@ -4,6 +4,7 @@
 # Build outputs
 jscc-*.js
 jscc-*.js.map
+/bin/jscc-node.js.map.old.map
 /samples/NashornProfile.txt
 /samples/output.js
 /externsWithRequire.js
