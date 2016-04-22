@@ -7,7 +7,7 @@ requirejs.config({
         "jscc/io/io": "jscc/io/ioNashorn",
         "jscc/log/log": "jscc/log/logJava",
         "jscc/bitset": "jscc/bitset/BitSetJava",
-        "text": "../node_modules/requirejs-text/text"
+        "text": "../bin/text"
     },
     nodeRequire: require,
     config: {

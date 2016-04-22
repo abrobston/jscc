@@ -17,7 +17,7 @@
         "loggingLevel": "FINE",
         "externExportsPath": "./externs.js"
     },
-    "name": "../node_modules/almond/almond",
+    "name": "../bin/almond",
     "include": ["jscc"],
     "insertRequire": ["jscc"],
     "wrap": {

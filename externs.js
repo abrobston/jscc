@@ -62,9 +62,10 @@ java.io.InputStream = function() {
 };
 /**
  * @param {java.io.InputStream} inputStream
+ * @param {string=} encoding
  * @constructor
  */
-java.io.InputStreamReader = function(inputStream) {
+java.io.InputStreamReader = function(inputStream, encoding) {
 };
 /**
  * @constructor
@@ -102,7 +103,7 @@ java.io.FileReader.prototype.close = function() {
 java.io.BufferedReader = function(reader) {
 };
 /**
- * @return {string}
+ * @return {(string|java.lang.String)}
  */
 java.io.BufferedReader.prototype.readLine = function() {
 };
@@ -287,33 +288,37 @@ path.parse = function(p) {
  */
 path.dirname = function(p) {
 };
-var fs = {};
+/**
+ * @constructor
+ */
+var fs = function() {
+};
 /**
  * @param {string} f
- * @param {string=} opt
+ * @param {(string|Object)=} opt
  * @return {(string|Buffer)}
  */
-fs.readFileSync = function(f, opt) {
+fs.prototype.readFileSync = function(f, opt) {
 };
 /**
  * @param {string} f
  * @param {(string|{encoding: ?string, flag: string})} opt
  * @param {function(?string, (string|Buffer))} cb
  */
-fs.readFile = function(f, opt, cb) {
+fs.prototype.readFile = function(f, opt, cb) {
 };
 /**
  * @param {!string} f
  * @return {!boolean}
  */
-fs.existsSync = function(f) {
+fs.prototype.existsSync = function(f) {
 };
 /**
  * @param {!(string|number)} f
  * @param {!(string|Buffer)} d
  * @param {(string|{encoding: ?string, mode: number, flag: string})=} opt
  */
-fs.writeFileSync = function(f, d, opt) {
+fs.prototype.writeFileSync = function(f, d, opt) {
 };
 
 var Components = {};
@@ -340,4 +345,93 @@ var FileUtils = {};
  * @constructor
  */
 FileUtils.File = function(str) {
+};
+
+/**
+ * @param {*} input
+ * @constructor
+ */
+var Buffer = function(input) {
+};
+
+/**
+ * @constructor
+ */
+var Config = function() {
+};
+Config.prototype = {
+    /**
+     * @returns {(XMLHttpRequest|ActiveXObject)}
+     */
+    createXhr: function() {
+
+    },
+
+    /**
+     * @type {?boolean}
+     */
+    isBuild: false,
+
+    /**
+     * @type {?boolean}
+     */
+    inlineText: false,
+
+    /**
+     *
+     * @param {string} url
+     * @param {string=} protocol
+     * @param {string=} hostname
+     * @param {string=} port
+     * @returns {boolean}
+     */
+    useXhr: function(url, protocol, hostname, port) {
+    },
+
+    /**
+     * @type {?string}
+     */
+    env: ""
+};
+
+/**
+ * @param {string=} str
+ * @constructor
+ */
+java.lang.StringBuffer = function(str) {
+};
+/**
+ * @param {!*} s
+ * @returns {java.lang.StringBuffer}
+ */
+java.lang.StringBuffer.prototype.append = function(s) {
+};
+/**
+ * @returns {string}
+ */
+java.lang.StringBuffer.prototype.toString = function() {
+};
+
+/**
+ * @constructor
+ */
+java.lang.String = function() {
+};
+/**
+ * @returns {!number}
+ */
+java.lang.String.prototype.length = function() {
+};
+/**
+ * @param {!number} index
+ * @returns {(number|string)}
+ */
+java.lang.String.prototype.charAt = function(index) {
+};
+/**
+ * @param {!number} beginIndex
+ * @param {number=} endIndex
+ * @returns {java.lang.String}
+ */
+java.lang.String.prototype.substring = function(beginIndex, endIndex) {
 };

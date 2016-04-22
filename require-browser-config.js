@@ -7,7 +7,7 @@ requirejs.config({
         "jscc/io/io": "jscc/io/ioBrowser",
         "jscc/log/log": "jscc/log/logBrowser",
         "jscc/bitset": "jscc/bitset/BitSet32",
-        "text": "../node_modules/requirejs-text/text",
+        "text": "../bin/text",
         "requireLib": "../node_modules/requirejs/require"
     },
     nodeRequire: require,
