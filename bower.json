@@ -11,5 +11,32 @@
   "homepage": "http://jscc.phorward-software.com/",
   "repository": {"type": "git", "url": "https://github.com/abrobston/jscc.git"},
   "license": "BSD-3-Clause",
-  "ignore": ["doc/", "samples/", "_setup/", ".gitignore"]
+  "ignore": [
+    "/samples",
+    "/test",
+    "/webenv",
+    ".travis.yml",
+    "code-style.xml",
+    "conf.json",
+    "exports*.js",
+    "externs*.js",
+    "fileoverview*.js",
+    "global-backfills.js",
+    "gulpfile.js",
+    "require-*-build.js",
+    "require-*-config.js",
+    "run-amdclean.js",
+    "typedef.js",
+    "wrap-*.js",
+    "/jar",
+    "*.log",
+    "*.iml",
+    ".idea/",
+    "[._]*.s[a-w][a-z]",
+    "[._]s[a-w][a-z]",
+    "*.un~",
+    "Session.vim",
+    ".netrwhist",
+    "*~"
+  ]
 }
