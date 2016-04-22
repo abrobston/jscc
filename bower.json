@@ -1,10 +1,7 @@
 {
   "name": "jscc",
   "description": "A LALR(1) Parser for JavaScript written in JavaScript",
-  "main": "jscc-amd.js",
-  "devDependencies": {
-    "closure-compiler": "http://dl.google.com/closure-compiler/compiler-latest.zip"
-  },
+  "main": "lib/jscc.js",
   "moduleType": ["amd", "node", "globals"],
   "keywords": ["lexer", "parser", "lex", "yacc", "lexical-analysis"],
   "authors": ["Jan Max Meyer <contact@phorward-software.com> (http://jscc.phorward-software.com/)",
