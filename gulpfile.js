@@ -95,7 +95,18 @@
     });
 
     function downloadAndUnzip(filename, url, cb) {
-        var destFile = path.join(process.cwd(), "jar", filename);
+        var jarDir = path.join(__dirname, "jar");
+        try {
+            fs.mkdirSync(jarDir);
+        } catch (e) {
+            // Directory probably exists, so ignore error
+        }
+        var jarDirStat = fs.statSync(jarDir);
+        if (!jarDirStat.isDirectory()) {
+            cb(new Error("Could not create or access jar directory at " + jarDir));
+            return;
+        }
+        var destFile = path.join(jarDir, filename);
         var redirectCount = 0;
         var downloadCallback = function(err, stat) {
             var requestHeaders = {
