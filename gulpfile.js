@@ -380,8 +380,20 @@
                                                              path.basename(newestRhinoZip, ".zip")) + "'"));
                                       return;
                                   }
+                                  var javaHome = process.env["JAVA_HOME"];
+                                  if (!javaHome) {
+                                      cb(new Error("The JAVA_HOME environment variable has no value.  Ensure that JAVA_HOME is set to the path to the JDK to use."));
+                                      return;
+                                  }
+                                  var javaPath = path.join(javaHome, "bin", process.platform === "win32" ? "java.exe" : "java");
+                                  try {
+                                      fs.accessSync(javaPath, fs.X_OK);
+                                  } catch (e) {
+                                      cb(new Error("Cannot execute java at path '" + javaPath + "'.  Check your JAVA_HOME environment variable."));
+                                      return;
+                                  }
                                   var lastError = "";
-                                  var rjsCommand = 'java -server -XX:+TieredCompilation -classpath "' + rhinoJarPath +
+                                  var rjsCommand = '"' + javaPath + '" -server -XX:+TieredCompilation -classpath "' + rhinoJarPath +
                                                    '"' +
                                                    path.delimiter + '"' +
                                                    closureJarPath +
@@ -391,7 +403,6 @@
                                                    '" ';
                                   gulp.src('./require-*-build.js', { read: false })
                                       .pipe(new ParallelCompiler(rjsCommand))
-                                      //.pipe(shell(rjsCommand + " -o <%= file.path %>"))
                                       .pipe(new stream.Writable({
                                           write: function(chunk, encoding, next) {
                                               var text = chunk;
