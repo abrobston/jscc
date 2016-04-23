@@ -270,6 +270,7 @@
                               var that = this;
                               stream.Duplex.call(this, { writableObjectMode: true });
                               this._rjsCommand = rjsCommand;
+                              this._maxParallel = Math.max(1, os.cpus().length - 2);
                               this.on("finish", function() {
                                   that._writingFinished = true;
                               });
@@ -278,33 +279,49 @@
                           ParallelCompiler.prototype.constructor = ParallelCompiler;
                           ParallelCompiler.prototype._writingFinished = false;
                           ParallelCompiler.prototype._processesRemaining = 0;
+                          ParallelCompiler.prototype._maxParallel = 0;
+                          ParallelCompiler.prototype._currentParallelCount = 0;
                           ParallelCompiler.prototype._rjsCommand = null;
                           ParallelCompiler.prototype._shellResults = [];
+                          ParallelCompiler.prototype._writeExec = function(command, chunkPath, next) {
+                              var that = this;
+                              if (this._currentParallelCount < this._maxParallel) {
+                                  this._currentParallelCount++;
+                                  childProcess.exec(command, {
+                                      maxBuffer: 1024 * 1024,
+                                      encoding: "buffer"
+                                  }, function(error, stdout, stderr) {
+                                      that._currentParallelCount--;
+                                      var stdoutBuffer = Buffer.concat([
+                                                                           Buffer.from("Standard output for " + chunkPath +
+                                                                                       ":" + os.EOL, "utf8"),
+                                                                           stdout]),
+                                          stderrBuffer = Buffer.concat([
+                                                                           Buffer.from("Standard error for " + chunkPath +
+                                                                                       ":" + os.EOL, "utf8"),
+                                                                           stderr]);
+                                      that._shellResults.push({
+                                                                  path: chunkPath,
+                                                                  stdout: stdoutBuffer,
+                                                                  stderr: stderrBuffer,
+                                                                  error: error,
+                                                                  stdoutPos: 0,
+                                                                  stderrPos: 0
+                                                              });
+                                  });
+                                  next();
+                              } else {
+                                  setTimeout(function() {
+                                      that._writeExec(command, chunkPath, next);
+                                  }, 250);
+                              }
+                          };
                           ParallelCompiler.prototype._write = function(chunk, encoding, next) {
                               var that = this, command = this._rjsCommand + " -o \"" + chunk.path + "\"";
                               this._processesRemaining++;
-                              childProcess.exec(command, {
-                                  maxBuffer: 1024 * 1024,
-                                  encoding: "buffer"
-                              }, function(error, stdout, stderr) {
-                                  var stdoutBuffer = Buffer.concat([
-                                                                       Buffer.from("Standard output for " + chunk.path +
-                                                                                   ":" + os.EOL, "utf8"),
-                                                                       stdout]),
-                                      stderrBuffer = Buffer.concat([
-                                                                       Buffer.from("Standard error for " + chunk.path +
-                                                                                   ":" + os.EOL, "utf8"),
-                                                                       stderr]);
-                                  that._shellResults.push({
-                                                              path: chunk.path,
-                                                              stdout: stdoutBuffer,
-                                                              stderr: stderrBuffer,
-                                                              error: error,
-                                                              stdoutPos: 0,
-                                                              stderrPos: 0
-                                                          });
+                              setImmediate(function() {
+                                  that._writeExec(command, chunk.path, next);
                               });
-                              next();
                           };
                           ParallelCompiler.prototype._innerRead = function(bytes) {
                               var that = this,
