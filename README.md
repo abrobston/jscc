@@ -19,39 +19,24 @@ LICENSE
 -------
 
 JS/CC is initially written by Jan Max Meyer (Phorward Software Technologies)
-with contributions by Louis P. Santillan and Sergiy Shatunov.  JS/CC is
-released under the terms and conditions of the 3-clause BSD license.
-The file src/v8/v8sh.cc is based on Google's V8 shell.cc and is released under
-the terms and conditions of the New BSD License (see file header for details).
+with contributions by Louis P. Santillan and Sergiy Shatunov.  Work 
+to migrate JS/CC to GitHub, add modularity, and package for npm and Bower
+was done by Andrew Brobston.  JS/CC is released under the terms and
+conditions of the 3-clause BSD license.
 
 REQUIREMENTS
 ------------
 
-To use JS/CC, you need either Mozilla/Rhino, Mozilla/Spidermonkey, Microsoft
-Windows Script Host, Microsoft JScript.NET, Google V8, or an ordinary
-ECMAScript compatible web browser!
+To use JS/CC, you need either Mozilla/Rhino, Node.js, Nashorn, or an
+ordinary ECMAScript compatible web browser!  Versions through 0.37.0
+supported Mozilla/Spidermonkey, Google V8, and Microsoft JScript.
+If resumed support for these platforms is desired, pull requests are welcome.
 
-Both the Mozilla implementations under Linux are now the assumed default
-platforms.
-
-To get additional help and howtos on the various platforms and how to build
-JS/CC there, look into the Makefile.<platform> file within the src directory.
-
-A list of the supported platforms and their namings.
-
-	rhino       - Mozilla/Rhino
-	sm          - Mozilla/Spidermonkey
-	jscript     - Microsoft JScript
-	              (both for Windows Script Host and .NET platform)
-	v8          - Google V8
-	webenv      - Platform-independent, browser-based web environment
-
-_jscc_<platform>.js in the src directory is a bootstrap version of JS/CC to
-build JS/CC using itself as parser generator. You can replace these boot-
-strappers by using "bootstrap" as make target in the according Makefile.
-These bootstrap versions are useful for making changes to the internals of
-JS/CC for the same or another platform and then having your local JS/CC
-rebuild that new JS/CC.
+The build system uses Gulp.  Google's Closure Compiler is used for verifying
+and minifying the code for the various platforms.  Code contributions should
+ensure that all tests pass (using the Mocha framework, with the TDD code style
+and Chai assertion library) and that there are no Closure Compiler warnings
+or errors.
 
 ABOUT
 -----
@@ -65,9 +50,8 @@ Backus-Naur-Form-based meta language, and allows the insertion of individual
 semantic code to be evaluated on a rule's reduction. JS/CC itself has been
 entirely written in JavaScript so it can be executed in many different ways:
 as platform-independent, browser-based JavaScript embedded on a Website, as
-a Windows Script Host Application, as a compiled JScript.NET executable,
-as a Mozilla/Rhino or Mozilla/Spidermonkey interpreted application, or a
-V8 shell script on Windows, *nix, Linux and Mac OSX. However, for productive
+as a Mozilla/Rhino or Java Nashorn interpreted application, or a
+Node shell script on Windows, *nix, Linux and Mac OSX. However, for productive
 execution, it is recommended to use the command-line versions.
 These versions are capable of assembling a complete compiler from a JS/CC
 parser specification, which is then stored to a .js JavaScript source file.
@@ -79,23 +63,60 @@ construction theory, in general, is assumed.
 BUILDING
 --------
 
-The makefiles in src/ support 3 targets for a given platform.  So, for the
-rhino platform, you would issue the following commands:
+ 1. Ensure that you have Node.js and npm.  See
+    https://docs.npmjs.com/getting-started/installing-node for details.
+    Building and testing JS/CC most recently used Node version 5.10.1, but
+    other versions will likely work also.
+ 2. Ensure that you have Gulp version 3.x.  See
+    https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md.
+    Gulp version 4.x may work but has not been tested.
+ 3. Ensure that Java 8 or later is installed and that the `JAVA_HOME`
+    environment variable points to the correct path of this installation.
+    Builds and tests have been done with Oracle's distribution of
+    Java 8.  OpenJDK 8 may work but has not been tested.
+ 4. From the root project directory, run `npm update`.
+ 5. To run the default build target, simply run `gulp`.  The default
+    build target downloads some additional dependencies, generates
+    documentation, builds for the four platforms currently supported,
+    and runs all Mocha tests.  For other targets, see gulpfile.js.
+    
+USE
+---
 
-To build JS/CC:
-	`make -f Makefile.rhino`
+JS/CC can be used as a JavaScript module or with one of the command-line runners.
 
-To rebuild JS/CC from the bootstrap files:
-	`make -f Makefile.rhino bootstrap`
+### As a Module
 
-To clean up the JS/CC before issuing one of the above:
-	`make -f Makefile.rhino clean`
+After `var jscc = require("jscc")` or equivalent, call the `jscc` function with an object containing options:
 
-USAGE
------
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `out_file` | `string` | Empty string, meaning to print to standard output or the engine's equivalent | The path of the output file. |
+| `src_file` | `string` | Empty string, meaning to read from standard input or the engine's equivalent. | The path of the input grammar file. |
+| `tpl_file` | `string` | A default template file for generic compilation tasks. | The path of the input template file. |
+| `input` | `string` or `function` | None | If a string, the contents of the input grammar.  If a function, a function that returns the contents of the grammar.  When `input` is specified, `src_file` is ignored. |
+| `template` | `string` or `function` | None | If a string, the contents of the template.  If a function with no arguments, a function that returns the contents of the template.  When `template` is specified, `tpl_file` is ignored. |
+| `outputCallback` | `function(string)` | None | A function with a parameter that will be called with the output.  When `outputCallback` is specified, `out_file` is ignored. |
+| `dump_nfa` | `boolean` | `false` | Whether to output the nondeterministic finite automata for debugging purposes. |
+| `dump_dfa` | `boolean` | `false` | Whether to output the deterministic finite automata for debugging purposes. |
+| `verbose` | `boolean` | `false` | Makes output slightly chattier.  Will probably be deprecated in favor of using only `logLevel` at some point. |
+| `logLevel` | `string` or member of the `jscc.enums.LOG_LEVEL` enumeration (`FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`) | `WARN` | The logging level. |
+| `throwIfErrors` | `boolean` | `false` | Whether to throw an exception before completion of the main method if there are any compilation errors. |
+| `exitIfErrors` | `boolean` | `false` | Whether to exit the process with a non-zero exit code if there are any errors, provided that the platform permits doing so.  Intended for use with shell scripts. |
 
-In general, using JS/CC uses the following command line:
-`<js engine> jscc.js -v -o <output.file.js> -p <prefix> -t driver_<platform>.js_ <input.js.par>`
+### From the Command Line
 
-For example, when using rhino, issue the following:
-`rhino jscc.js -v -o rhino_out.js -p rhino -t driver_rhino.js_ rhino_input.js.par`
+After building JS/CC, the `bin` directory should contain shell scripts for both *nix
+and Windows.  There are scripts for each platform.  For example, to run using the
+Nashorn engine on Linux:
+
+    ./bin/jscc-nashorn.sh --src_file "./path/to/src" --out_file "./path/to/output" --logLevel INFO
+    
+The `throwIfErrors` and `exitIfErrors` options are not supported from the command line because
+each runner sets those options according to its needs.
+
+GRAMMAR FILES
+-------------
+
+See the [PDF manual](https://github.com/abrobston/jscc/blob/master/doc/jscc_manual.pdf) for information
+on the grammar file syntax that JS/CC requires.
