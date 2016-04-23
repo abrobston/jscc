@@ -193,55 +193,6 @@
         downloadAndUnzip("closure-latest.zip", "http://dl.google.com/closure-compiler/compiler-latest.zip", cb);
     });
 
-    gulp.task('_urequire-optimize', ['_parse.js', '_regex.js'], function(cb) {
-        var urequire = require('urequire');
-        var done = false;
-        var error = null;
-        var config = {
-            bundle: {
-                path: "./lib",
-                filez: ["*.js", "jscc/*.js", "jscc/io/ioNode.js", "jscc/log/logNode.js", "jscc/bitset/BitSet32.js",
-                        "jscc/classes/*.js", "jscc/enums/*.js"],
-                name: "jscc",
-                main: "jscc",
-                dependencies: {
-                    replace: {
-                        "jscc/io/ioNode": "jscc/io/io",
-                        "jscc/log/logNode": "jscc/log/log",
-                        "jscc/bitset/BitSet32": "jscc/bitset"
-                    }
-                }
-            },
-            build: {
-                dstPath: "./bin/jscc-node.js",
-                template: "combined",
-                verbose: true,
-                optimize: false,
-                afterBuild: [function(errors) {
-                    if (typeof errors !== 'undefined' && errors !== true) {
-                        error = errors;
-                    }
-                    done = true;
-                }]
-            }
-        };
-        var builder = new urequire.BundleBuilder([config]);
-        builder.buildBundle();
-        var waitForDone = function waitForDone() {
-            if (done) {
-                if (error !== null) {
-                    cb(new Error(error));
-                    process.exit(1);
-                } else {
-                    cb();
-                }
-            } else {
-                setImmediate(waitForDone);
-            }
-        };
-        waitForDone();
-    });
-
     gulp.task('_requirejs-optimize', ['_parse.js', '_regex.js', '_get-rhino', '_get-closure', '_externsWithRequire.js'],
               function(cb) {
                   var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
@@ -502,11 +453,6 @@
     gulp.task('test', ['_test'], function(cb) {
         cb();
         process.exit(testFailures);
-    });
-
-    gulp.task('urequire', ['_urequire-optimize'], function(cb) {
-        cb();
-        process.exit(0);
     });
 
     gulp.task('default', ['_requirejs-optimize', '_test'], function(cb) {
