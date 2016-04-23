@@ -1,73 +1,69 @@
 (function(root, factory) {
     if (typeof define === 'function' && define.amd) {
-        define(['gulp', 'gulp-shell', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
+        define(['gulp', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
                 'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
                 'child_process'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
-            factory(require('gulp'), require('gulp-shell'), require('rest'), require('rest/interceptor/mime'),
+            factory(require('gulp'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
                     require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
                     Buffer,
                     require('os'), require('jformatter'), require('child_process'));
     } else {
         root.gulpfile =
-            factory(root.gulp, root.gulpShell, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
+            factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
                     root.jformatter, root.child_process);
     }
-}(this, function(gulp, shell, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
+}(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
                  jformatter, childProcess) {
     gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
-        var cmd = shell(['jsdoc -c ./conf.json']);
-        var e = null;
-        cmd.on('error', function(err) {
-            e = err;
-        });
-        cmd.on('end', function() {
-            if (e) {
-                cb(e);
-            } else {
-                cb();
-            }
-        });
-        gulp.src('')
-            .pipe(cmd);
+        childProcess.exec(
+            '"' + path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "jsdoc.cmd" : "jsdoc") +
+            '" -c ./conf.json',
+            {
+                cwd: __dirname,
+                stdio: "inherit"
+            }, function(error) {
+                if (error) {
+                    cb(error);
+                } else {
+                    cb();
+                }
+            });
     });
 
     gulp.task('_parse.js', function(cb) {
-        var cmd = shell(
-            ['node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/parse.par']);
-        var e = null;
-        cmd.on('error', function(err) {
-            e = err;
-        });
-        cmd.on('end', function() {
-            if (e) {
-                cb(e);
-            } else {
-                cb();
-            }
-        });
-        gulp.src('')
-            .pipe(cmd);
+        childProcess.exec(
+            "node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/parse.par",
+            {
+                cwd: __dirname,
+                stdio: "inherit"
+            },
+            function(error) {
+                if (error) {
+                    cb(error);
+                } else {
+                    cb();
+                }
+            });
     });
+
     gulp.task('_regex.js', function(cb) {
-        var cmd = shell(
-            ['node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/regex.par']);
-        var e = null;
-        cmd.on('error', function(err) {
-            e = err;
-        });
-        cmd.on('end', function() {
-            if (e) {
-                cb(e);
-            } else {
-                cb();
-            }
-        });
-        gulp.src('')
-            .pipe(cmd);
+        childProcess.exec(
+            'node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/regex.par',
+            {
+                cwd: __dirname,
+                stdio: "inherit"
+            },
+            function(error) {
+                if (error) {
+                    cb(error);
+                } else {
+                    cb();
+                }
+            });
     });
 
     gulp.task('_externsWithRequire.js', function(cb) {
@@ -244,12 +240,14 @@
                                   }, function(error, stdout, stderr) {
                                       that._currentParallelCount--;
                                       var stdoutBuffer = Buffer.concat([
-                                                                           Buffer.from("Standard output for " + chunkPath +
-                                                                                       ":" + os.EOL, "utf8"),
+                                                                           Buffer.from(
+                                                                               "Standard output for " + chunkPath +
+                                                                               ":" + os.EOL, "utf8"),
                                                                            stdout]),
                                           stderrBuffer = Buffer.concat([
-                                                                           Buffer.from("Standard error for " + chunkPath +
-                                                                                       ":" + os.EOL, "utf8"),
+                                                                           Buffer.from(
+                                                                               "Standard error for " + chunkPath +
+                                                                               ":" + os.EOL, "utf8"),
                                                                            stderr]);
                                       that._shellResults.push({
                                                                   path: chunkPath,
@@ -353,15 +351,18 @@
                                       cb(new Error("The JAVA_HOME environment variable has no value.  Ensure that JAVA_HOME is set to the path to the JDK to use."));
                                       return;
                                   }
-                                  var javaPath = path.join(javaHome, "bin", process.platform === "win32" ? "java.exe" : "java");
+                                  var javaPath = path.join(javaHome, "bin",
+                                                           process.platform === "win32" ? "java.exe" : "java");
                                   try {
                                       fs.accessSync(javaPath, fs.X_OK);
                                   } catch (e) {
-                                      cb(new Error("Cannot execute java at path '" + javaPath + "'.  Check your JAVA_HOME environment variable."));
+                                      cb(new Error("Cannot execute java at path '" + javaPath +
+                                                   "'.  Check your JAVA_HOME environment variable."));
                                       return;
                                   }
                                   var lastError = "";
-                                  var rjsCommand = '"' + javaPath + '" -server -XX:+TieredCompilation -classpath "' + rhinoJarPath +
+                                  var rjsCommand = '"' + javaPath + '" -server -XX:+TieredCompilation -classpath "' +
+                                                   rhinoJarPath +
                                                    '"' +
                                                    path.delimiter + '"' +
                                                    closureJarPath +
@@ -439,9 +440,10 @@
 
     gulp.task('_get-phantom', function(cb) {
         var phantomWorkingDirectory = path.join(__dirname, "node_modules", "phantomjs-prebuilt");
-        childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" }, function(error) {
-            cb(error);
-        });
+        childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" },
+                          function(error) {
+                              cb(error);
+                          });
     });
 
     gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom'], function(cb) {
@@ -455,9 +457,9 @@
         process.exit(testFailures);
     });
 
-    gulp.task('default', ['_requirejs-optimize', '_test'], function(cb) {
+    gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_test'], function(cb) {
         cb();
-        process.exit(0);
+        process.exit(testFailures);
     });
 
     gulp.task('unminify', ['_requirejs-optimize', '_formatMinifiedCode'], function(cb) {
@@ -467,6 +469,6 @@
 
     gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test', '_formatMinifiedCode'], function(cb) {
         cb();
-        process.exit(0);
+        process.exit(testFailures);
     });
 }));
