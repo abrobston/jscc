@@ -4,11 +4,11 @@ REM Use PhantomJS from npm (the phantomjs-prebuilt package), but use the standal
 REM (non-Node) executable
 SET _search_dir=%~dp0\..\node_modules\phantomjs-prebuilt
 SET _phantom_path=none
-FOR /F "delims=`" %%g IN ('DIR %_search_dir% /S /A:-D /O:D /b ^| FINDSTR /I "phantomjs\.exe$"') DO IF "%_phantom_path%"=="none" SET _phantom_path=%%g
+FOR /F "delims=`" %%g IN ('DIR "%_search_dir%" /S /A:-D /O:D /b ^| FINDSTR /I "phantomjs\.exe$"') DO IF "%_phantom_path%"=="none" SET _phantom_path=%%g
 IF "%_phantom_path%"=="none" (
     ECHO "phantomjs.exe was not found in any subdirectory of %_search_dir%"
     EXIT 1
 )
-"%_phantom_path%" %~dp0\runner-browser.js %*
+"%_phantom_path%" "%~dp0\runner-browser.js" %*
 EXIT %ERRORLEVEL%
 ENDLOCAL

@@ -1,6 +1,13 @@
+function stripQuotes (input) {
+    // Argument quoting, at least from Windows, has some issues.  Strip quotes
+    // from the arguments if needed.
+    var match = /^"(.*)"$/.exec(input);
+    return match ? match[1] : input;
+}
+
 var args = arguments;
-var currentDirectory = args[0];
-var runnerName = args[1];
+var currentDirectory = stripQuotes(args[0]);
+var runnerName = stripQuotes(args[1]);
 var possibleOptions = {
     "out_file": "string",
     "src_file": "string",
@@ -47,7 +54,7 @@ for (var index = 2; index < argLength; index++) {
                 }
             }
         } else if (!options.hasOwnProperty("src_file")) {
-            options["src_file"] = args[index];
+            options["src_file"] = stripQuotes(args[index]);
         } else {
             java.lang.System.err.println("Extra command-line argument: " + args[index]);
             quit(1);
@@ -81,7 +88,7 @@ for (var index = 2; index < argLength; index++) {
                 break;
         }
     } else {
-        options[onDeck] = args[index];
+        options[onDeck] = stripQuotes(args[index]);
         onDeck = "";
     }
 }
