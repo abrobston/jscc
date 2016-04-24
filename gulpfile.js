@@ -2,22 +2,22 @@
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
                 'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
-                'child_process'], factory);
+                'child_process', 'async'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
                     require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
                     Buffer,
-                    require('os'), require('jformatter'), require('child_process'));
+                    require('os'), require('jformatter'), require('child_process'), require('async'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
-                    root.jformatter, root.child_process);
+                    root.jformatter, root.child_process, root.async);
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
-                 jformatter, childProcess) {
+                 jformatter, childProcess, async) {
     gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
         childProcess.exec(
             '"' + path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "jsdoc.cmd" : "jsdoc") +
@@ -457,8 +457,107 @@
                           });
     });
 
+    var Unlinker = function() {
+        stream.Writable.call(this, { objectMode: true });
+    };
+    Unlinker.prototype = Object.create(stream.Writable.prototype);
+    Unlinker.prototype.constructor = Unlinker;
+    Unlinker.prototype._serialNumber = 1;
+    Unlinker.prototype._checkMemo = async.memoize(function(fullPath, serialNumber, cb) {
+        async.setImmediate(cb, null, serialNumber);
+    }, function(fullPath) {
+        return fullPath;
+    });
+    Unlinker.prototype._filterError = function(err) {
+        if (!err) {
+            return null;
+        }
+        var msg = err.message || err;
+        if (typeof msg === "string" && /no such file or directory/i.test(msg)) {
+            return null;
+        }
+        return err;
+    };
+    Unlinker.prototype._recurse = function(fullPath, cb) {
+        var that = this, serial = ++this._serialNumber;
+        this._checkMemo(fullPath, serial, function(checkError, returnedSerial) {
+            if (returnedSerial !== serial) {
+                cb();
+                return;
+            }
+            fs.lstat(fullPath, function(err, stats) {
+                if (!err) {
+                    if (stats.isDirectory()) {
+                        console.log("Processing " + fullPath);
+                        fs.readdir(fullPath, function(e, files) {
+                            var fileCount = files.length;
+                            var currentCountdownError = null;
+                            var countdown = function(countdownError) {
+                                currentCountdownError = countdownError || currentCountdownError;
+                                if (--fileCount < 1) {
+                                    console.log("Deleting " + fullPath);
+                                    fs.rmdir(fullPath, function(rmdirError) {
+                                        var errorToUse = rmdirError || countdownError;
+                                        cb(that._filterError(errorToUse));
+                                    });
+                                }
+                            };
+                            if (fileCount < 1) {
+                                setImmediate(countdown);
+                            } else {
+                                for (var index = 0; index < files.length; index++) {
+                                    that._recurse(path.join(fullPath, files[index]), countdown);
+                                }
+                            }
+                        });
+                    } else {
+                        console.log("Deleting " + fullPath);
+                        fs.unlink(fullPath, function(unlinkError) {
+                            cb(that._filterError(unlinkError));
+                        });
+                    }
+                } else {
+                    cb(that._filterError(err));
+                }
+            });
+        });
+    };
+    Unlinker.prototype._write = function(vinylFile, encoding, callback) {
+        this._recurse(vinylFile.path, callback);
+    };
+
+    gulp.task('_clean', function(cb) {
+        var lastError = null;
+        gulp.src(["./bin/formatted/jscc-*.js", "./bin/*.map", "./bin/jscc-*.js", "./lib/jscc/parse.js",
+                  "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~"], { read: false })
+            .pipe(new Unlinker())
+            .on("finish", function() {
+                if (lastError) {
+                    cb(lastError);
+                } else {
+                    cb();
+                }
+            })
+            .on("error", function(err) {
+                var message = err.message || err;
+                if ((typeof message !== "string") || !/no such file or directory/i.test(message)) {
+                    lastError = err;
+                }
+            });
+    });
+
+    gulp.task('_distclean', ['_clean'], function() {
+        return gulp.src(["./html-documentation", "./jar"], { read: false, allowEmpty: true })
+                   .pipe(new Unlinker());
+    });
+
     gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom'], function(cb) {
         // Process does not otherwise exit under IntelliJ's runner
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('build', ['_requirejs-optimize'], function(cb) {
         cb();
         process.exit(0);
     });
@@ -481,5 +580,15 @@
     gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test', '_formatMinifiedCode'], function(cb) {
         cb();
         process.exit(testFailures);
+    });
+
+    gulp.task('clean', ['_clean'], function(cb) {
+        cb();
+        process.exit(0);
+    });
+
+    gulp.task('distclean', ['_distclean'], function(cb) {
+        cb();
+        process.exit(0);
     });
 }));

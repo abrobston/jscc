@@ -42,7 +42,8 @@
     "almond": "~0.3.2",
     "amdclean": "~2.7.0",
     "jformatter": "~1.0.13",
-    "phantomjs-prebuilt": "~2.1.7"
+    "phantomjs-prebuilt": "~2.1.7",
+    "async": "~2.0.0-rc.3"
   },
   "homepage": "http://jscc.phorward-software.com/",
   "engine": ["node", "rhino", "nashorn"],
