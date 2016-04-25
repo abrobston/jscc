@@ -34,6 +34,21 @@
             });
     });
 
+    gulp.task('_generate-npm-runners', function() {
+        return gulp.src("./npm-bin-template.js")
+                   .pipe(new stream.Writable({
+                       objectMode: true,
+                       write: function(vinylFile, encoding, next) {
+                           async.each(["browser", "nashorn", "node", "rhino"],
+                                      function(item, callback) {
+                                          var content = vinylFile.contents.toString("utf8").replace("##RUNNER##", item);
+                                          fs.writeFile(path.join(__dirname, "bin", "npm-" + item + ".js"), content,
+                                                       { encoding: "utf8", mode: 511 }, callback);
+                                      }, next);
+                       }
+                   }));
+    });
+
     gulp.task('_parse.js', function(cb) {
         childProcess.exec(
             "node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/parse.par",
@@ -427,7 +442,7 @@
 
     var testFailures = 0;
 
-    gulp.task('_test', ['_requirejs-optimize', '_get-phantom'], function(cb) {
+    gulp.task('_test', ['_requirejs-optimize', '_get-phantom', '_generate-npm-runners'], function(cb) {
         testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
@@ -529,7 +544,7 @@
     gulp.task('_clean', function(cb) {
         var lastError = null;
         gulp.src(["./bin/formatted/jscc-*.js", "./bin/*.map", "./bin/jscc-*.js", "./lib/jscc/parse.js",
-                  "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~"], { read: false })
+                  "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~", "./bin/npm-*.js"], { read: false })
             .pipe(new Unlinker())
             .on("finish", function() {
                 if (lastError) {
@@ -551,13 +566,13 @@
                    .pipe(new Unlinker());
     });
 
-    gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom'], function(cb) {
+    gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom', '_generate-npm-runners'], function(cb) {
         // Process does not otherwise exit under IntelliJ's runner
         cb();
         process.exit(0);
     });
 
-    gulp.task('build', ['_requirejs-optimize'], function(cb) {
+    gulp.task('build', ['_requirejs-optimize', '_generate-npm-runners', '_jsdoc'], function(cb) {
         cb();
         process.exit(0);
     });
@@ -567,7 +582,7 @@
         process.exit(testFailures);
     });
 
-    gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_test'], function(cb) {
+    gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_test'], function(cb) {
         cb();
         process.exit(testFailures);
     });
@@ -577,7 +592,7 @@
         process.exit(0);
     });
 
-    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_test', '_formatMinifiedCode'], function(cb) {
+    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_test', '_formatMinifiedCode'], function(cb) {
         cb();
         process.exit(testFailures);
     });

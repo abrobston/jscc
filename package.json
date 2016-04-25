@@ -9,6 +9,7 @@
       "type": "git",
       "url": "https://github.com/abrobston/jscc.git"
     },
+  "bugs": "https://github.com/abrobston/jscc/issues",
   "contributors": [
     {
       "name": "Jan Max Meyer",
@@ -47,8 +48,17 @@
   },
   "homepage": "http://jscc.phorward-software.com/",
   "engine": ["node", "rhino", "nashorn"],
+  "bin": {
+    "jscc-browser": "./bin/npm-browser.js",
+    "jscc-nashorn": "./bin/npm-nashorn.js",
+    "jscc-node": "./bin/npm-node.js",
+    "jscc-rhino": "./bin/npm-rhino.js"
+  },
   "directories": {
-    "lib": "lib",
-    "bin": "bin"
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "gulp test",
+    "prepublish": "gulp clean && gulp build"
   }
 }

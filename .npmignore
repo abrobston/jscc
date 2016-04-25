@@ -10,6 +10,7 @@ externs*.js
 fileoverview*.js
 global-backfills.js
 gulpfile.js
+npm-bin-template.js
 require-*-build.js
 require-*-config.js
 run-amdclean.js
