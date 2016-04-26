@@ -266,12 +266,12 @@
                                   }, function(error, stdout, stderr) {
                                       that._currentParallelCount--;
                                       var stdoutBuffer = Buffer.concat([
-                                                                           Buffer.from(
+                                                                           new Buffer(
                                                                                "Standard output for " + chunkPath +
                                                                                ":" + os.EOL, "utf8"),
                                                                            stdout]),
                                           stderrBuffer = Buffer.concat([
-                                                                           Buffer.from(
+                                                                           new Buffer(
                                                                                "Standard error for " + chunkPath +
                                                                                ":" + os.EOL, "utf8"),
                                                                            stderr]);
