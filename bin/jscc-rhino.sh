@@ -1,5 +1,6 @@
 #!/bin/sh
-jarDir=$_/../jar
+dirname=$(dirname $0)
+jarDir=${dirname}/../jar
 javaPath=${JAVA_HOME}/bin/java
 if [ ! -x "${javaPath}" ]
 then
@@ -7,11 +8,12 @@ then
     exit 1
 fi
 
-rhinoPath=$(find ${jarDir} -iname 'rhino*.jar' | head -n 1)
+rhinoPath=$(find "${jarDir}" -iname 'rhino*.jar' | head -n 1)
 
 if [ -r "${rhinoPath}" ]
 then
-    "${javaPath}" -server -XX:+TieredCompilation -classpath "${rhinoPath}" org.mozilla.javascript.tools.shell.Main -opt -1 $_/runner-java.js $_ rhino "$@"
+    "${javaPath}" -server -XX:+TieredCompilation -classpath "${rhinoPath}" org.mozilla.javascript.tools.shell.Main -opt -1 "${dirname}/runner-java.js" "${dirname}" rhino "$@"
+    exit $?
 else
     echo "Rhino jar file not found in '${jarDir}' or its subdirectories."
     exit 1

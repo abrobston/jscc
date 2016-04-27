@@ -45,35 +45,57 @@ suite("runners", function() {
     ].forEach(function(platformName) {
         test("Runner for " + platformName + " executes without errors",
              function(done) {
-                 this.timeout(30000);
+                 this.timeout(40000);
                  var outFilePath = path.join(tempDir, "output-" + platformName + ".js");
                  var srcFilePath = path.join(__dirname, "../samples/xpl.par");
                  var runnerPath = path.join(__dirname, "../bin",
                                             "jscc-" + platformName + (os.platform() === "win32" ? ".bat" : ".sh"));
                  var command = "\"" + runnerPath + "\" --src_file \"" + srcFilePath + "\" --out_file \"" + outFilePath +
                                "\" --logLevel INFO";
-                 child_process.exec(command, { timeout: 28000, stdio: "inherit" }).on("exit", function(code, signal) {
+                 child_process.exec(command, { timeout: 38000 }, function(error, stdout, stderr) {
+                     if (error) {
+                         console.error(error.message);
+                     }
+                     if (stdout) {
+                         console.log("Standard output:");
+                         console.log(stdout);
+                     }
+                     if (stderr) {
+                         console.log("Standard error:");
+                         console.log(stderr);
+                     }
+                     done(error);
+                 }); /*.on("exit", function(code, signal) {
                      assert.isTrue(code === null || code === 0, "There was a non-zero exit code");
                      assert.isNull(signal);
                      done();
-                 });
+                 }); */
              });
 
         test("Runner for " + platformName + " has a non-zero exit code when there is an error",
              function(done) {
-                 this.timeout(30000);
+                 this.timeout(40000);
+                 try {
                  var outFilePath = path.join(tempDir, "output-" + platformName + ".js");
                  var srcFilePath = path.join(__dirname, "../samples/xpl.par.invalid");
                  var runnerPath = path.join(__dirname, "../bin",
                                             "jscc-" + platformName + (os.platform() === "win32" ? ".bat" : ".sh"));
                  var command = "\"" + runnerPath + "\" --src_file \"" + srcFilePath + "\" --out_file \"" + outFilePath +
                                "\" --logLevel INFO";
-                 child_process.exec(command, { timeout: 28000, stdio: "inherit" }).on("exit", function(code, signal) {
-                     assert.isNumber(code);
-                     assert.notStrictEqual(code, 0);
-                     assert.isNull(signal);
+                 child_process.exec(command, { timeout: 38000, stdio: "inherit" }).on("exit", function(code, signal) {
+                     try {
+			 assert.isNull(signal);
+			 assert.isNumber(code);
+			 assert.notStrictEqual(code, 0);
+                     } catch (e) {
+                         done(e);
+                         return;
+                     }
                      done();
                  });
+                 } catch (e) {
+                     done(e);
+                 }
              });
     });
 });
