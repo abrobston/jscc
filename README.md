@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/abrobston/jscc.svg?branch=master)](https://travis-ci.org/abrobston/jscc)
+
 JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
 http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
