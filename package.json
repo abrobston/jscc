@@ -1,5 +1,5 @@
 {
-  "name": "jscc",
+  "name": "jscc-parser",
   "version": "0.39.0",
   "main": "lib/jscc.js",
   "description": "A LALR(1) Parser Generator for JavaScript written in JavaScript.",

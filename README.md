@@ -40,6 +40,8 @@ ensure that all tests pass (using the Mocha framework, with the TDD code style
 and Chai assertion library) and that there are no Closure Compiler warnings
 or errors.
 
+The npm package is named `jscc-parser`, as `jscc` was already taken.
+
 ABOUT
 -----
 
@@ -89,7 +91,7 @@ JS/CC can be used as a JavaScript module or with one of the command-line runners
 
 ### As a Module
 
-After `var jscc = require("jscc")` or equivalent, call the `jscc` function with an object containing options:
+After `var jscc = require("jscc-parser")` or equivalent, call the `jscc` function with an object containing options:
 
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
