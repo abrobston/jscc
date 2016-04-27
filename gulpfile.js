@@ -442,7 +442,7 @@
 
     var testFailures = 0;
 
-    gulp.task('_test', ['_requirejs-optimize', '_get-phantom', '_generate-npm-runners'], function(cb) {
+    gulp.task('_test', function(cb) {
         testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
@@ -582,7 +582,7 @@
         process.exit(testFailures);
     });
 
-    gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_test'], function(cb) {
+    gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners'], function(cb) {
         cb();
         process.exit(testFailures);
     });
@@ -592,7 +592,7 @@
         process.exit(0);
     });
 
-    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_test', '_formatMinifiedCode'], function(cb) {
+    gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_formatMinifiedCode'], function(cb) {
         cb();
         process.exit(testFailures);
     });
