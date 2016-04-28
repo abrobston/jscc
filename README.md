@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/abrobston/jscc.svg?branch=master)](https://travis-ci.org/abrobston/jscc)
+[![codecov](https://codecov.io/gh/abrobston/jscc/branch/master/graph/badge.svg)](https://codecov.io/gh/abrobston/jscc)
+[![npm](https://img.shields.io/npm/v/jscc-parser.svg?maxAge=2592000)](https://www.npmjs.com/package/jscc-parser)
 
 JS/CC LALR(1) Parser Generator
 Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer

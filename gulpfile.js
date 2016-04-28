@@ -14,7 +14,7 @@
         root.gulpfile =
             factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
-                    root.jformatter, root.child_process, root.async, root.istanbul);
+                    root.jformatter, root.child_process, root.async);
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
                  jformatter, childProcess, async) {
@@ -545,7 +545,7 @@
         var lastError = null;
         gulp.src(["./bin/formatted/jscc-*.js", "./bin/*.map", "./bin/jscc-*.js", "./lib/jscc/parse.js",
                   "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~", "./bin/npm-*.js",
-                  "./coverage", "./.nyc_output"], { read: false, allowEmpty: true })
+                  "./coverage", "./.nyc_output", "./*.lcov"], { read: false, allowEmpty: true })
             .pipe(new Unlinker())
             .on("finish", function() {
                 if (lastError) {

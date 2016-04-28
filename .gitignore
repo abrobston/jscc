@@ -13,6 +13,7 @@ jscc-*.js.map
 /lib/jscc/regex.js
 /coverage
 /.nyc_output
+*.lcov
 
 ### Windows template
 # Windows image file caches

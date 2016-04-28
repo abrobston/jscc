@@ -18,6 +18,7 @@ require-*-config.js
 run-amdclean.js
 typedef.js
 wrap-*.js
+*.lcov
 
 ### Windows template
 # Windows image file caches
