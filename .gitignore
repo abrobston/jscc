@@ -11,6 +11,8 @@ jscc-*.js.map
 /externsWithRequire.js
 /lib/jscc/parse.js
 /lib/jscc/regex.js
+/coverage
+/.nyc_output
 
 ### Windows template
 # Windows image file caches

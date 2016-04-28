@@ -19,7 +19,7 @@ of the BSD license. Please see LICENSE for more information.
 	if (typeof define === 'function' && define.amd) {
 		define(['./global', './regex', './tabgen', './log/log', './classes/Production', './enums/ASSOC', './enums/SYM', './enums/SPECIAL'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./regex'), require('./tabgen'), require('./log/log'), require('./classes/Production'), require('./enums/ASSOC'), require('./enums/SYM'), require('./enums/SPECIAL'));
+		module.exports = factory(require('./global'), require('./regex'), require('./tabgen'), require('./log/logNode'), require('./classes/Production'), require('./enums/ASSOC'), require('./enums/SYM'), require('./enums/SPECIAL'));
 	} else {
 		root.parse = factory(root.global, root.regex, root.tabgen, root.log, root.Production, root.ASSOC, root.SYM, root.SPECIAL);
 	}

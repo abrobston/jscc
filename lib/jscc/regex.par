@@ -20,7 +20,7 @@ of the BSD license. Please see LICENSE for more information.
 	if (typeof define === 'function' && define.amd) {
 		define(['./global', './log/log', './classes/Param', './classes/Nfa', './enums/EDGE'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./log/log'), require('./classes/Param'), require('./classes/Nfa'), require('./enums/EDGE'));
+		module.exports = factory(require('./global'), require('./log/logNode'), require('./classes/Param'), require('./classes/Nfa'), require('./enums/EDGE'));
 	} else {
 		root.regex = factory(root.global, root.log, root.Param, root.Nfa, root.EDGE);
 	}

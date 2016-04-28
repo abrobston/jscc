@@ -13,4 +13,5 @@ install:
   - npm install
 before_script:
   - npm install -g gulp
-script: gulp test
+script: npm test
+after_success: npm run coverage

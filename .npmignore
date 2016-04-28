@@ -1,4 +1,6 @@
 # Various directories and files that need not be in a published package
+/.nyc_output
+/coverage
 /samples
 /test
 /webenv

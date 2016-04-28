@@ -2,22 +2,23 @@
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
                 'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
-                'child_process', 'async'], factory);
+                'child_process', 'async', 'istanbul'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
                     require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
                     Buffer,
-                    require('os'), require('jformatter'), require('child_process'), require('async'));
+                    require('os'), require('jformatter'), require('child_process'), require('async'),
+                    require('istanbul'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
-                    root.jformatter, root.child_process, root.async);
+                    root.jformatter, root.child_process, root.async, root.istanbul);
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
-                 jformatter, childProcess, async) {
+                 jformatter, childProcess, async, istanbul) {
     gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
         childProcess.exec(
             '"' + path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "jsdoc.cmd" : "jsdoc") +
@@ -544,7 +545,8 @@
     gulp.task('_clean', function(cb) {
         var lastError = null;
         gulp.src(["./bin/formatted/jscc-*.js", "./bin/*.map", "./bin/jscc-*.js", "./lib/jscc/parse.js",
-                  "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~", "./bin/npm-*.js"], { read: false })
+                  "./lib/jscc/regex.js", "./externsWithRequire.js", "./bin/**/*~", "./bin/npm-*.js",
+                  "./coverage", "./.nyc_output"], { read: false, allowEmpty: true })
             .pipe(new Unlinker())
             .on("finish", function() {
                 if (lastError) {

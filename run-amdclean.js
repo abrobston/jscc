@@ -42,6 +42,13 @@ try {
                         parts[0] = "jscc";
                     }
                 }
+                var last = parts.pop();
+                var match = /^(io|log)Node$/.exec(last);
+                if (match) {
+                    parts.push(match[1]);
+                } else if (last !== "BitSet32") {
+                    parts.push(last);
+                }
                 return parts.join("_").replace(/[^A-Za-z0-9_]/g, "_");
             }
         });
