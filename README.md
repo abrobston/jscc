@@ -83,8 +83,9 @@ BUILDING
  4. From the root project directory, run `npm update`.
  5. To run the default build target, simply run `gulp`.  The default
     build target downloads some additional dependencies, generates
-    documentation, builds for the four platforms currently supported,
-    and runs all Mocha tests.  For other targets, see gulpfile.js.
+    documentation, and builds for the four platforms currently
+    supported.  To run Mocha tests, first build with `gulp`, then
+    run `gulp test`.  For other targets, see gulpfile.js.
     
 USE
 ---
