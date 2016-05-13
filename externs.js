@@ -286,6 +286,7 @@ process.stdout.end = function() {
  * @type {?string}
  */
 var __dirname = "";
+// do not actually GULP REMOVE START
 var path = {};
 /**
  * @param {string} p
@@ -343,6 +344,7 @@ fs.prototype.existsSync = function(f) {
  */
 fs.prototype.writeFileSync = function(f, d, opt) {
 };
+// do not actually GULP REMOVE END
 /**
  * @param {string=} str
  * @param {string=} encoding

@@ -1,7 +1,11 @@
 ({
     "mainConfigFile": "./require-rhino-config.js",
+    "baseUrl": ".",
     "pragmas": {
         "closure": true
+    },
+    "has": {
+        "node": false
     },
     "optimize": "closure",
     "preserveLicenseComments": false,
@@ -16,12 +20,12 @@
         "loggingLevel": "FINE",
         "externExportsPath": "./externs.js"
     },
-    "name": "../bin/almond",
-    "include": ["jscc"],
-    "insertRequire": ["jscc"],
+    "name": "bin/almond",
+    "include": ["main"],
+    "stubModules": ["text"],
     "wrap": {
         "startFile": ["fileoverview.js", "typedef.js", "global-backfills.js", "lib/jscc/io/io.js", "lib/jscc/log/log.js", "lib/jscc/bitset/bitset.js"],
-        "endFile": ["exports.js", "exports-require.js"]
+        "endFile": ["exports.js", "exports-require.js", "require-rhino-config.js", "require-main.js"]
     },
     "out": "./bin/jscc-rhino.js",
     "logLevel": 2

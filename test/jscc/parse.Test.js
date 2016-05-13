@@ -3,7 +3,7 @@ suite("parse", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
@@ -13,11 +13,17 @@ suite("parse", function() {
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "bitset": "bitset/BitSet32",
+                                     "io/io": "io/ioNode",
+                                     "log/log": "log/logNode"
+                                 }
                              }
                          });
     }
@@ -50,9 +56,10 @@ suite("parse", function() {
                                        setLevel: function(level) {
                                        }
                                    });
-        injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", requirejs("jscc/io/ioNode"));
-        injector.store(["jscc/log/log", "jscc/global", "jscc/util"]);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.mock("io/io", requirejs("io/ioNode"));
+        injector.store(["log/log", "log/logNode", "global", "util"]);
     });
 
     teardown("teardown", function() {
@@ -68,12 +75,12 @@ suite("parse", function() {
         { semi: "; /~ Comment ~/", description: "a semicolon followed by a comment" }
     ].forEach(function(item) {
         test("Permits " + item.description + " after whitespace terminal definition",
-             injector.run(["mocks", "jscc/parse", "jscc/enums/EXEC"], function(mocks, parse) {
-                 var log = mocks.store["jscc/log/log"];
+             injector.run(["mocks", "parse", "enums/EXEC"], function(mocks, parse) {
+                 var log = mocks.store["log/logNode"];
                  log.fatal.reset();
                  log.error.reset();
 
-                 var global = mocks.store["jscc/global"];
+                 var global = mocks.store["global"];
 
                  var source = "!   ' '" + item.semi + "\n" +
                               "##\n" +

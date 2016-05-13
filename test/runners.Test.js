@@ -7,21 +7,18 @@ suite("runners", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../lib'),
+                             baseUrl: path.join(__dirname, '../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text"
                              }
                          });
     }

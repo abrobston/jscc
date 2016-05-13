@@ -251,3 +251,39 @@ var DfaOptions;
  */
 var mainOptions;
 
+//>>includeStart("amdclean", pragmas.amdclean);
+/**
+ * @typedef {(function(!string):*|Object)}
+ */
+//>>includeEnd("amdclean");
+//>>excludeStart("amdclean", pragmas.amdclean);
+/**
+ * @typedef {function(!string):*}
+ */
+//>>excludeEnd("amdclean");
+var reqParameter;
+
+/**
+ * @typedef {function((undefined|string|Array<string>|{deps: (string|Array<string>), callback: (string|Function)}), (string|Function|Array<string>)=, (string|Function)=, (string|boolean)=, boolean=):almondRequire}
+ */
+var almondRequire;
+
+
+var almondRequireExtension =
+/**
+ * @lends {almondRequire}
+ */
+({
+    /**
+     * @type {!Object<string, *>}
+     */
+    _defined: {},
+    /**
+     * @param {Object<string, *>} cfg
+     * @returns {almondRequire}
+     */
+    config: function(cfg) {
+    }
+});
+
+

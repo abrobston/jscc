@@ -101,7 +101,7 @@ if (onDeck !== "") {
 var jsccPath = java.nio.file.Paths.get(currentDirectory, "jscc-" + runnerName + ".js").toAbsolutePath().toString();
 
 load(jsccPath);
-var jscc = require("jscc");
+var jscc = require("main");
 try {
     jscc(options);
 } catch (e) {

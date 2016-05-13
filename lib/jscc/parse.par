@@ -5,7 +5,7 @@ http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 File:	parse.par
 Author:	Jan Max Meyer
-Usage:	A parser for parsing JS/CC parser definitions; The first verions of
+Usage:	A parser for parsing JS/CC parser definitions; The first versions of
 		JS/CC until v0.14 (had never been released!) worked with a hand-written
 		recursive descent parser.
 
@@ -17,13 +17,36 @@ of the BSD license. Please see LICENSE for more information.
 [*
 (function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
-		define(['./global', './regex', './tabgen', './log/log', './classes/Production', './enums/ASSOC', './enums/SYM', './enums/SPECIAL'], factory);
+		define(['require', './global', './regex', './tabgen', './log/log', './classes/Production', './enums/ASSOC', './enums/SYM', './enums/SPECIAL'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./regex'), require('./tabgen'), require('./log/logNode'), require('./classes/Production'), require('./enums/ASSOC'), require('./enums/SYM'), require('./enums/SPECIAL'));
+		module.exports = factory(require);
 	} else {
-		root.parse = factory(root.global, root.regex, root.tabgen, root.log, root.Production, root.ASSOC, root.SYM, root.SPECIAL);
+		root.jsccparse = factory(function(mod) {
+		    return root["jscc" + mod.split("/").pop()];
+		});
 	}
-}(this, function(global, compile_regex, tabgen, log, Production, ASSOC, SYM, SPECIAL) {
+}(this,
+  /**
+   * @param {reqParameter} require
+   * @param {...*} others
+   * @returns {function(string, string=):number}
+   */
+  function(require, others) {
+var log, global = /** @type {jscc.global} */ (require("./global")),
+    compile_regex = /** @type {function(string, number, boolean, number)} */ (require("./regex")),
+    tabgen = /** @type {jscc.tabgen} */ (require("./tabgen")),
+    Production = /** @type {function(new:jscc.classes.Production, ?ProductionOptions=)} */ (require("./classes/Production")),
+    ASSOC = require("./enums/ASSOC"),
+    SYM = require("./enums/SYM"),
+    SPECIAL = require("./enums/SPECIAL");
+
+//>>includeStart("node", pragmas.node);
+log = /** @type {jscc.log} */ (require("./log/logNode"));
+//>>includeEnd("node");
+//>>excludeStart("node", pragmas.node);
+log = /** @type {jscc.log} */ (require("./log/log"));
+//>>excludeEnd("node");
+
 var		first_lhs;
 var		cur_line;
 
@@ -158,9 +181,10 @@ productions:	productions '|' rhs					[*	%1.push(%3); %% = %1; *]
 rhs:			sequence_opt rhs_prec code_opt		[*
 														var prod = new Production({
 															id:global.productions.length,
-															rhs:%1,
-															level:%2,
-															code:(%3=="")?global.DEF_PROD_CODE:(%3)
+															lhs:null,
+															rhs:/** @type {Array<number>} */ (%1),
+															level:/** @type {number} */ (%2),
+															code:(%3=="")?global.DEF_PROD_CODE:/** @type {string} */ (%3)
 														});
 														//Get level of the leftmost terminal
 														//as production level.

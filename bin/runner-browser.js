@@ -173,7 +173,7 @@ try {
     phantom.onError = onError;
     var jsccPath = phantom.libraryPath + fs.separator + "jscc-browser.js";
     phantom.injectJs(jsccPath);
-    var jscc = requireLib("jscc");
+    var jscc = requireLib("main");
     jscc(options);
     if (innerErrorMessage) {
         throw new Error(innerErrorMessage);

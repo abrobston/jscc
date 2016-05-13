@@ -18,6 +18,21 @@
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
                  jformatter, childProcess, async) {
+
+    function ensureDir(dirPath, cb) {
+        var dirname = path.dirname(dirPath);
+
+        function createDir() {
+            fs.mkdir(dirPath, cb);
+        }
+
+        if (!/^\.?$/.test(dirname)) {
+            ensureDir(dirname, createDir);
+        } else {
+            createDir();
+        }
+    }
+
     gulp.task('_jsdoc', ['_parse.js', '_regex.js'], function(cb) {
         childProcess.exec(
             '"' + path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "jsdoc.cmd" : "jsdoc") +
@@ -51,7 +66,7 @@
 
     gulp.task('_parse.js', function(cb) {
         childProcess.exec(
-            "node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/parse.par",
+            "node ./bin/_boot_node.js -o ./lib/jscc/parse.js -t ./lib/jscc/template/parser-driver-js.txt ./lib/jscc/parse.par",
             {
                 cwd: __dirname,
                 stdio: "inherit"
@@ -67,7 +82,7 @@
 
     gulp.task('_regex.js', function(cb) {
         childProcess.exec(
-            'node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./lib/jscc/template/parser-driver.js.txt ./lib/jscc/regex.par',
+            'node ./bin/_boot_node.js -o ./lib/jscc/regex.js -t ./lib/jscc/template/parser-driver-js.txt ./lib/jscc/regex.par',
             {
                 cwd: __dirname,
                 stdio: "inherit"
@@ -83,6 +98,9 @@
 
     gulp.task('_externsWithRequire.js', function(cb) {
         var bufferOutput = false,
+            chunkArray = [],
+            duplexWriteFinished = false,
+            duplexReadFinished = false,
             buffer = new Buffer("// This file is generated.  Edit externs.js instead." + os.EOL +
                                 "/**" + os.EOL +
                                 " * @type {function(?, ?=, ?=)}" + os.EOL +
@@ -104,6 +122,54 @@
                   next(null, chunk);
               }
           }))
+          .pipe(new stream.Duplex({
+              write: function(chunk, encoding, next) {
+                  if (Buffer.isBuffer(chunk)) {
+                      chunkArray.push(chunk.toString("utf8"));
+                  } else {
+                      chunkArray.push(chunk);
+                  }
+                  next();
+              },
+              read: function() {
+                  var that = this;
+
+                  function filter() {
+                      if (!duplexWriteFinished) {
+                          setTimeout(filter, 50);
+                          return;
+                      }
+                      if (duplexReadFinished) {
+                          that.push(null);
+                          return;
+                      }
+                      var totalString = chunkArray.join("");
+                      var startIndex = 0;
+                      do {
+                          var blockStartIndex = totalString.indexOf("// GULP REMOVE START", startIndex);
+                          if (blockStartIndex !== -1) {
+                              var blockEndIndex = totalString.indexOf("// GULP REMOVE END", blockStartIndex);
+                              if (blockEndIndex !== -1) {
+                                  totalString = totalString.substring(0, blockStartIndex - 1) + os.EOL +
+                                                totalString.substring(blockEndIndex + "// GULP REMOVE END".length);
+                                  startIndex = blockStartIndex;
+                              }
+                          }
+                      } while (blockStartIndex !== -1 && blockEndIndex !== -1);
+
+                      var keepReading = that.push(new Buffer(totalString, "utf8"));
+                      duplexReadFinished = true;
+                      if (keepReading) {
+                          that.push(null);
+                      }
+                  }
+
+                  setImmediate(filter);
+              }
+          }))
+          .on("finish", function() {
+              duplexWriteFinished = true;
+          })
           .pipe(fs.createWriteStream('./externsWithRequire.js'))
           .on('finish', cb)
           .on('error', cb);
@@ -183,9 +249,9 @@
 
     gulp.task('_get-rhino', function(cb) {
         var client = rest.wrap(mime, {
-                             mime: "application/json",
-                             accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
-                         })
+            mime: "application/json",
+            accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
+        })
                          .wrap(errorCode);
         client({
                    path: "https://api.github.com/repos/mozilla/rhino/releases/latest",
@@ -215,97 +281,185 @@
         downloadAndUnzip("closure-latest.zip", "http://dl.google.com/closure-compiler/compiler-latest.zip", cb);
     });
 
-    gulp.task('_requirejs-optimize', ['_parse.js', '_regex.js', '_get-rhino', '_get-closure', '_externsWithRequire.js'],
+    function voloGet(archiveString, cb) {
+        ensureDir("volo", function() {
+            var execName = process.platform === "win32" ? "volo.cmd" : "volo";
+            childProcess.exec("\"" + path.join(__dirname, "node_modules", ".bin", execName) +
+                              "\" add -amd -nostamp -noprompt " + archiveString, {
+                                  cwd: path.join(__dirname, "volo")
+                              },
+                              function(error, stdout, stderr) {
+                                  if (stdout) {
+                                      console.log(stdout);
+                                  }
+                                  if (stderr) {
+                                      console.log(stderr);
+                                  }
+                                  cb(error);
+                              });
+        });
+    }
+
+    gulp.task('_get-requirejs-plugins', function(cb) {
+        voloGet("millermedeiros/requirejs-plugins/v1.0.3#src/json.js", cb);
+    });
+
+    gulp.task('_get-has-js', function(cb) {
+        voloGet("phiggins42/has.js", cb);
+    });
+
+    gulp.task('_convert-cjs-modules', function(cb) {
+        var rjsPath = path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "r.js.cmd" : "r.js"),
+            convertedModulesPath = path.join(__dirname, "converted_modules");
+        fs.mkdir(convertedModulesPath, function() {
+            gulp.src(["./node_modules/amdclean/node_modules/escodegen",
+                      "./node_modules/amdclean/node_modules/sourcemap-to-ast"], { read: false })
+                .pipe(new stream.Writable({
+                    objectMode: true,
+                    write: function(vinylFile, encoding, next) {
+                        var baseDir = path.basename(vinylFile.path);
+                        childProcess.exec("\"" + rjsPath + "\" -convert \"" + vinylFile.path + "\" \"" +
+                                          path.join(convertedModulesPath, baseDir) + "\"",
+                                          function(error, stdout, stderr) {
+                                              if (stdout) {
+                                                  console.log(stdout);
+                                              }
+                                              if (stderr) {
+                                                  console.log(stderr);
+                                              }
+                                              next(error);
+                                          });
+                    }
+                }))
+                .on("finish", function(e) {
+                    cb(e);
+                });
+
+        });
+    });
+
+    gulp.task('_replace-require-json', ['_convert-cjs-modules'], function() {
+        return gulp.src(["./converted_modules/**/*.js"])
+                   .pipe(new stream.Transform({
+                       objectMode: true,
+                       transform: function(vinylFile, encoding, next) {
+                           var isBuffer = Buffer.isBuffer(vinylFile.contents);
+                           var contents = isBuffer ? vinylFile.contents.toString("utf8") : vinylFile.contents;
+                           var output = contents.replace(/\brequire\(\s*(['"])([^!]+?\.[jJ][sS][oO][nN])\1\s*\)/g,
+                                                         "require(\"json!$2\")");
+                           vinylFile.contents = isBuffer ? new Buffer(output, "utf8") : output;
+                           next(null, vinylFile);
+                       }
+                   }))
+                   .pipe(gulp.dest("./converted_modules"));
+    });
+
+    gulp.task('_requirejs-optimize',
+              ['_parse.js', '_regex.js', '_get-closure', '_externsWithRequire.js',
+               '_convert-cjs-modules', '_get-requirejs-plugins', '_replace-require-json', '_get-has-js'],
               function(cb) {
                   var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
-                  var newestRhinoZip = "";
-                  var newestRhinoZipDate = new Date(0);
-                  gulp.src("./jar/*rhino*.zip", { read: false })
-                      .pipe(new stream.Writable({
-                          objectMode: true,
-                          write: function(vinylFile, encoding, next) {
-                              fs.stat(vinylFile.path, function(err, stats) {
-                                  if (!err && (stats.birthtime > newestRhinoZipDate)) {
-                                      newestRhinoZip = vinylFile.path;
-                                      newestRhinoZipDate = stats.birthtime;
-                                  }
-                                  next();
-                              });
-                          }
-                      }))
-                      .on('finish', function() {
-                          if (newestRhinoZip == "") {
-                              cb(new Error("No Rhino zip files were found; something may be wrong with this gulpfile."));
-                              return;
-                          }
-                          var rhinoJarPath = "";
-                          var ParallelCompiler = function(rjsCommand) {
-                              var that = this;
-                              stream.Duplex.call(this, { writableObjectMode: true });
-                              this._rjsCommand = rjsCommand;
-                              this._maxParallel = Math.max(1, os.cpus().length - 2);
-                              this.on("finish", function() {
-                                  that._writingFinished = true;
-                              });
-                          };
-                          ParallelCompiler.prototype = Object.create(stream.Duplex.prototype);
-                          ParallelCompiler.prototype.constructor = ParallelCompiler;
-                          ParallelCompiler.prototype._writingFinished = false;
-                          ParallelCompiler.prototype._processesRemaining = 0;
-                          ParallelCompiler.prototype._maxParallel = 0;
-                          ParallelCompiler.prototype._currentParallelCount = 0;
-                          ParallelCompiler.prototype._rjsCommand = null;
-                          ParallelCompiler.prototype._shellResults = [];
-                          ParallelCompiler.prototype._writeExec = function(command, chunkPath, next) {
-                              var that = this;
-                              if (this._currentParallelCount < this._maxParallel) {
-                                  this._currentParallelCount++;
-                                  childProcess.exec(command, {
-                                      maxBuffer: 1024 * 1024,
-                                      encoding: "buffer"
-                                  }, function(error, stdout, stderr) {
-                                      that._currentParallelCount--;
-                                      var stdoutBuffer = Buffer.concat([
-                                                                           new Buffer(
-                                                                               "Standard output for " + chunkPath +
-                                                                               ":" + os.EOL, "utf8"),
-                                                                           stdout]),
-                                          stderrBuffer = Buffer.concat([
-                                                                           new Buffer(
-                                                                               "Standard error for " + chunkPath +
-                                                                               ":" + os.EOL, "utf8"),
-                                                                           stderr]);
-                                      that._shellResults.push({
-                                                                  path: chunkPath,
-                                                                  stdout: stdoutBuffer,
-                                                                  stderr: stderrBuffer,
-                                                                  error: error,
-                                                                  stdoutPos: 0,
-                                                                  stderrPos: 0
-                                                              });
-                                  });
-                                  next();
-                              } else {
-                                  setTimeout(function() {
-                                      that._writeExec(command, chunkPath, next);
-                                  }, 250);
+                  var ParallelCompiler = function(rjsCommand) {
+                      var that = this;
+                      stream.Duplex.call(this, { writableObjectMode: true });
+                      this._rjsCommand = rjsCommand;
+                      this._maxParallel = Math.max(1, os.cpus().length - 2);
+                      this.on("finish", function() {
+                          that._writingFinished = true;
+                      });
+                  };
+                  ParallelCompiler.prototype = Object.create(stream.Duplex.prototype);
+                  ParallelCompiler.prototype.constructor = ParallelCompiler;
+                  ParallelCompiler.prototype._writingFinished = false;
+                  ParallelCompiler.prototype._processesRemaining = 0;
+                  ParallelCompiler.prototype._maxParallel = 0;
+                  ParallelCompiler.prototype._currentParallelCount = 0;
+                  ParallelCompiler.prototype._rjsCommand = null;
+                  ParallelCompiler.prototype._shellResults = [];
+                  ParallelCompiler.prototype._writeExec = function(command, chunkPath, next) {
+                      var that = this;
+                      if (this._currentParallelCount < this._maxParallel) {
+                          this._currentParallelCount++;
+                          childProcess.exec(command, {
+                              maxBuffer: 1024 * 1024,
+                              encoding: "utf8"
+                          }, function(error, stdout, stderr) {
+                              that._currentParallelCount--;
+                              var stdoutBuffer = Buffer.concat([
+                                                                   new Buffer(
+                                                                       "Standard output for " + chunkPath +
+                                                                       ":" + os.EOL, "utf8"),
+                                                                   new Buffer(stdout, "utf8")]),
+                                  stderrBuffer = Buffer.concat([
+                                                                   new Buffer(
+                                                                       "Standard error for " + chunkPath +
+                                                                       ":" + os.EOL, "utf8"),
+                                                                   new Buffer(stderr, "utf8")]);
+                              if (/^\s*(?:WARNING|SEVERE):/m.test(stderr)) {
+                                  error = error ||
+                                          new Error("There were build warnings or errors when compiling " +
+                                                    chunkPath + ".");
                               }
-                          };
-                          ParallelCompiler.prototype._write = function(chunk, encoding, next) {
-                              var that = this, command = this._rjsCommand + " -o \"" + chunk.path + "\"";
-                              this._processesRemaining++;
-                              setImmediate(function() {
-                                  that._writeExec(command, chunk.path, next);
-                              });
-                          };
-                          ParallelCompiler.prototype._innerRead = function(bytes) {
-                              var that = this,
-                                  currentResult = this._shellResults.shift(),
-                                  keepReading = true,
-                                  currentStart, currentEnd, currentChunk;
-                              if (bytes <= 0) {
-                                  bytes = 1024;
+                              that._shellResults.push({
+                                                          path: chunkPath,
+                                                          stdout: stdoutBuffer,
+                                                          stderr: stderrBuffer,
+                                                          error: error,
+                                                          stdoutPos: 0,
+                                                          stderrPos: 0
+                                                      });
+                          });
+                          next();
+                      } else {
+                          setTimeout(function() {
+                              that._writeExec(command, chunkPath, next);
+                          }, 250);
+                      }
+                  };
+                  ParallelCompiler.prototype._write = function(chunk, encoding, next) {
+                      var that = this, command = this._rjsCommand + " -o \"" + chunk.path + "\"";
+                      this._processesRemaining++;
+                      setImmediate(function() {
+                          that._writeExec(command, chunk.path, next);
+                      });
+                  };
+                  ParallelCompiler.prototype._innerRead = function(bytes) {
+                      var that = this,
+                          currentResult = this._shellResults.shift(),
+                          keepReading = true,
+                          currentStart, currentEnd, currentChunk;
+                      if (bytes <= 0) {
+                          bytes = 1024;
+                      }
+                      if (typeof currentResult === "undefined") {
+                          keepReading = false;
+                          if (this._writingFinished && this._processesRemaining === 0) {
+                              this.push(null);
+                          } else {
+                              setTimeout(function() {
+                                  that._innerRead(bytes);
+                              }, 250);
+                          }
+                      }
+                      while (keepReading) {
+                          if (currentResult.stdoutPos < currentResult.stdout.length) {
+                              currentStart = currentResult.stdoutPos;
+                              currentEnd = Math.min(currentStart + bytes, currentResult.stdout.length);
+                              currentChunk = currentResult.stdout.toString("utf8", currentStart, currentEnd);
+                              keepReading = this.push(currentChunk, "utf8");
+                              currentResult.stdoutPos = currentEnd;
+                          } else if (currentResult.stderrPos < currentResult.stderr.length) {
+                              currentStart = currentResult.stderrPos;
+                              currentEnd = Math.min(currentStart + bytes, currentResult.stderr.length);
+                              currentChunk = currentResult.stderr.toString("utf8", currentStart, currentEnd);
+                              keepReading = this.push(currentChunk, "utf8");
+                              currentResult.stderrPos = currentEnd;
+                          } else {
+                              if (currentResult.error) {
+                                  this.emit("error", currentResult.error);
                               }
+                              this._processesRemaining--;
+                              currentResult = this._shellResults.shift();
                               if (typeof currentResult === "undefined") {
                                   keepReading = false;
                                   if (this._writingFinished && this._processesRemaining === 0) {
@@ -316,109 +470,64 @@
                                       }, 250);
                                   }
                               }
-                              while (keepReading) {
-                                  if (currentResult.stdoutPos < currentResult.stdout.length) {
-                                      currentStart = currentResult.stdoutPos;
-                                      currentEnd = Math.min(currentStart + bytes, currentResult.stdout.length);
-                                      currentChunk = currentResult.stdout.toString("utf8", currentStart, currentEnd);
-                                      keepReading = this.push(currentChunk, "utf8");
-                                      currentResult.stdoutPos = currentEnd;
-                                  } else if (currentResult.stderrPos < currentResult.stderr.length) {
-                                      currentStart = currentResult.stderrPos;
-                                      currentEnd = Math.min(currentStart + bytes, currentResult.stderr.length);
-                                      currentChunk = currentResult.stderr.toString("utf8", currentStart, currentEnd);
-                                      keepReading = this.push(currentChunk, "utf8");
-                                      currentResult.stderrPos = currentEnd;
-                                  } else {
-                                      this._processesRemaining--;
-                                      currentResult = this._shellResults.shift();
-                                      if (typeof currentResult === "undefined") {
-                                          keepReading = false;
-                                          if (this._writingFinished && this._processesRemaining === 0) {
-                                              this.push(null);
-                                          } else {
-                                              setTimeout(function() {
-                                                  that._innerRead(bytes);
-                                              }, 250);
-                                          }
-                                      }
-                                  }
-                              }
-                              if (typeof currentResult !== "undefined") {
-                                  this._shellResults.unshift(currentResult);
-                              }
-                          };
-                          ParallelCompiler.prototype._read = function(bytes) {
-                              var that = this;
-                              setImmediate(function() {
-                                  that._innerRead(bytes);
-                              });
-                          };
+                          }
+                      }
+                      if (typeof currentResult !== "undefined") {
+                          this._shellResults.unshift(currentResult);
+                      }
+                  };
+                  ParallelCompiler.prototype._read = function(bytes) {
+                      var that = this;
+                      setImmediate(function() {
+                          that._innerRead(bytes);
+                      });
+                  };
 
-                          gulp.src(
-                              path.join(process.cwd(), "jar", path.basename(newestRhinoZip, ".zip"), "**/rhino*.jar"),
-                              { read: false })
-                              .pipe(new stream.Writable({
-                                  objectMode: true,
-                                  write: function(vinylFile, encoding, next) {
-                                      rhinoJarPath = vinylFile.path;
-                                      next();
-                                  }
-                              }))
-                              .on('finish', function() {
-                                  if (rhinoJarPath == "") {
-                                      cb(new Error("rhino*.jar was not found in the Rhino directory '" +
-                                                   path.join(process.cwd(), "jar",
-                                                             path.basename(newestRhinoZip, ".zip")) + "'"));
-                                      return;
-                                  }
-                                  var javaHome = process.env["JAVA_HOME"];
-                                  if (!javaHome) {
-                                      cb(new Error("The JAVA_HOME environment variable has no value.  Ensure that JAVA_HOME is set to the path to the JDK to use."));
-                                      return;
-                                  }
-                                  var javaPath = path.join(javaHome, "bin",
-                                                           process.platform === "win32" ? "java.exe" : "java");
-                                  try {
-                                      fs.accessSync(javaPath, fs.X_OK);
-                                  } catch (e) {
-                                      cb(new Error("Cannot execute java at path '" + javaPath +
-                                                   "'.  Check your JAVA_HOME environment variable."));
-                                      return;
-                                  }
-                                  var lastError = "";
-                                  var rjsCommand = '"' + javaPath + '" -server -XX:+TieredCompilation -classpath "' +
-                                                   rhinoJarPath +
-                                                   '"' +
-                                                   path.delimiter + '"' +
-                                                   closureJarPath +
-                                                   '" org.mozilla.javascript.tools.shell.Main -opt -1 "' +
-                                                   path.join(process.cwd(), "node_modules", "requirejs", "bin",
-                                                             "r.js") +
-                                                   '" ';
-                                  gulp.src('./require-*-build.js', { read: false })
-                                      .pipe(new ParallelCompiler(rjsCommand))
-                                      .pipe(new stream.Writable({
-                                          write: function(chunk, encoding, next) {
-                                              var text = chunk;
-                                              if (encoding === "buffer") {
-                                                  text = chunk.toString("utf8");
-                                              }
-                                              console.log(text);
-                                              next();
-                                          }
-                                      }))
-                                      .on('error', function(err) {
-                                          lastError = err;
-                                      })
-                                      .on('finish', function() {
-                                          if (lastError === "") {
-                                              cb();
-                                          } else {
-                                              cb(new Error(lastError));
-                                          }
-                                      });
-                              });
+                  var javaHome = process.env["JAVA_HOME"];
+                  if (!javaHome) {
+                      cb(new Error("The JAVA_HOME environment variable has no value.  Ensure that JAVA_HOME is set to the path to the JDK to use."));
+                      return;
+                  }
+                  var jjsPath = path.join(javaHome, "bin",
+                                          process.platform === "win32" ? "jjs.exe" : "jjs");
+                  try {
+                      fs.accessSync(jjsPath, fs.X_OK);
+                  } catch (e) {
+                      cb(new Error("Cannot execute jjs (Nashorn) at path '" + javaPath +
+                                   "'.  Check your JAVA_HOME environment variable -- Java 8 or later is required."));
+                      return;
+                  }
+                  var lastError = "";
+                  var rjsCommand = '"' + jjsPath + '" -scripting -classpath "' + closureJarPath +
+                                   // Uncomment next line, and comment out the following line, to debug using IntelliJ
+                                   // remote debugger
+                                   // '" -J-agentlib:jdwp=transport=dt_socket,server=n,address=localhost:5005,suspend=y "' +
+                                   '" "' +
+                                   path.join(__dirname, "node_modules", "requirejs", "bin", "r.js") + '" -- ';
+                  gulp.src('./require-*-build.js', { read: false })
+                      .pipe(new ParallelCompiler(rjsCommand))
+                      .on("error", function(err) {
+                          lastError = err;
+                      })
+                      .pipe(new stream.Writable({
+                          write: function(chunk, encoding, next) {
+                              var text = chunk;
+                              if (encoding === "buffer") {
+                                  text = chunk.toString("utf8");
+                              }
+                              console.log(text);
+                              next();
+                          }
+                      }))
+                      .on('error', function(err) {
+                          lastError = err;
+                      })
+                      .on('finish', function() {
+                          if (lastError === "") {
+                              cb();
+                          } else {
+                              cb(new Error(lastError));
+                          }
                       });
               });
 
@@ -442,7 +551,7 @@
 
     var testFailures = 0;
 
-    gulp.task('_test', function(cb) {
+    gulp.task('_test', ['_get-rhino'], function(cb) {
         testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })
@@ -563,15 +672,17 @@
     });
 
     gulp.task('_distclean', ['_clean'], function() {
-        return gulp.src(["./html-documentation", "./jar"], { read: false, allowEmpty: true })
+        return gulp.src(["./html-documentation", "./jar", "./volo"],
+                        { read: false, allowEmpty: true })
                    .pipe(new Unlinker());
     });
 
-    gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom', '_generate-npm-runners'], function(cb) {
-        // Process does not otherwise exit under IntelliJ's runner
-        cb();
-        process.exit(0);
-    });
+    gulp.task('intellij-pretest', ['_requirejs-optimize', '_get-phantom', '_generate-npm-runners', '_get-rhino'],
+              function(cb) {
+                  // Process does not otherwise exit under IntelliJ's runner
+                  cb();
+                  process.exit(0);
+              });
 
     gulp.task('build', ['_requirejs-optimize', '_generate-npm-runners', '_jsdoc'], function(cb) {
         cb();

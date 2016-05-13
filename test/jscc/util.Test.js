@@ -3,21 +3,27 @@ suite("util", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "io/io": "io/ioNode",
+                                     "log/log": "log/logNode",
+                                     "bitset": "bitset/BitSet32"
+                                 }
                              }
                          });
     }
@@ -58,8 +64,10 @@ suite("util", function() {
                                       write_output: function(options) {
                                       }
                                   });
-        injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", ioStub);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.mock("io/io", ioStub);
+        injector.mock("io/ioNode", ioStub);
     });
 
     teardown("teardown", function() {
@@ -75,13 +83,13 @@ suite("util", function() {
     ].forEach(function(item) {
         test("Union of dest_array [" + item.dest.join(", ") + "] and src_array [" + item.src.join(", ") +
              "] produces result [" + item.result.join(", ") + "] in any order",
-             injector.run(["mocks", "jscc/util"], function(mocks, util) {
+             injector.run(["mocks", "util"], function(mocks, util) {
                  var result = util.union(item.dest, item.src);
                  assert.sameMembers(result, item.result);
              }));
     });
 
-    test("Union does not affect its src_array parameter", injector.run(["mocks", "jscc/util"], function(mocks, util) {
+    test("Union does not affect its src_array parameter", injector.run(["mocks", "util"], function(mocks, util) {
         var src = [1, 2, 3];
         var dest = [4, 5, 6];
         var result = util.union(dest, src);
@@ -89,7 +97,7 @@ suite("util", function() {
     }));
 
     test("Union modifies dest_array and returns it as the result",
-         injector.run(["mocks", "jscc/util"], function(mocks, util) {
+         injector.run(["mocks", "util"], function(mocks, util) {
              var src = [1, 2, 3];
              var dest = [4, 5, 6];
              var result = util.union(dest, src);

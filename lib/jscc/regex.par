@@ -18,15 +18,36 @@ of the BSD license. Please see LICENSE for more information.
 [*
 (function(root, factory) {
 	if (typeof define === 'function' && define.amd) {
-		define(['./global', './log/log', './classes/Param', './classes/Nfa', './enums/EDGE'], factory);
+		define(['require', './global', './log/log', './classes/Param', './classes/Nfa', './enums/EDGE'], factory);
 	} else if (typeof module === 'object' && module.exports) {
-		module.exports = factory(require('./global'), require('./log/logNode'), require('./classes/Param'), require('./classes/Nfa'), require('./enums/EDGE'));
+		module.exports = factory(require);
 	} else {
-		root.regex = factory(root.global, root.log, root.Param, root.Nfa, root.EDGE);
+		root.jsccregex = factory(function(mod) {
+		    return root["jscc" + mod.split("/").pop()];
+		});
 	}
-}(this, function(/** jscc.global */ global, /** jscc.log */ log, /** function(new:jscc.classes.Param, number=, number=) */ Param, /** function(new:jscc.classes.Nfa, ?NfaOptions=) */ Nfa, EDGE) {
+}(this,
+  /**
+   * @param {reqParameter} require
+   * @param {...*} others
+   * @returns {function(string, number, boolean, number)}
+   */
+  function(require, others) {
 var first_nfa;
 var last_nfa;
+
+var log, global = /** @type {jscc.global} */ (require("./global")),
+    Param = /** @type {function(new:jscc.classes.Param, number=, number=)} */ (require("./classes/Param")),
+    Nfa = /** @type {function(new:jscc.classes.Nfa, ?NfaOptions=)} */ (require("./classes/Nfa")),
+    EDGE = require("./enums/EDGE");
+
+//>>includeStart("node", pragmas.node);
+log = /** @type {jscc.log} */ (require("./log/logNode"));
+//>>includeEnd("node");
+//>>excludeStart("node", pragmas.node);
+log = /** @type {jscc.log} */ (require("./log/log"));
+//>>excludeEnd("node");
+
 *]
 
 

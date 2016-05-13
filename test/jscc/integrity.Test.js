@@ -3,21 +3,27 @@ suite("integrity", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "bitset": "bitset/BitSet32",
+                                     "io/io": "io/ioNode",
+                                     "log/log": "log/logNode"
+                                 }
                              }
                          });
     }
@@ -50,16 +56,18 @@ suite("integrity", function() {
                                        setLevel: function(msg) {
                                        }
                                    });
-        injector.mock("jscc/log/log", logStub);
-        injector.store(["jscc/log/log", "jscc/global", "jscc/integrity"]);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.store(["log/log", "log/logNode", "global", "integrity"]);
     });
 
     teardown("teardown", function() {
         injector.remove();
         sandbox.restore();
-        requirejs.undef("jscc/log/log");
-        requirejs.undef("jscc/global");
-        requirejs.undef("jscc/integrity");
+        requirejs.undef("log/log");
+        requirejs.undef("log/logNode");
+        requirejs.undef("global");
+        requirejs.undef("integrity");
     });
 
     [
@@ -71,10 +79,10 @@ suite("integrity", function() {
         test("integrity.undef logs " + item.errorCount + " error" + (item.errorCount == 1 ? "" : "s") +
              " with " + item.symbolTypes.length + " symbol" + (item.symbolTypes.length == 1 ? "" : "s") +
              " and " + item.errorCount + " undefined terminal" + (item.errorCount == 1 ? "" : "s"),
-             injector.run(["mocks", "jscc/integrity", "jscc/classes/Symbol", "jscc/enums/SYM"],
+             injector.run(["mocks", "integrity", "classes/Symbol", "enums/SYM"],
                           function(mocks, integrity, Symbol, SYM) {
-                              var global = mocks.store["jscc/global"];
-                              var log = mocks.store["jscc/log/log"];
+                              var global = mocks.store["global"];
+                              var log = mocks.store["log/logNode"];
                               log.error.reset();
                               var term = new Symbol({ kind: SYM.TERM, defined: false });
                               var defined = new Symbol({ kind: SYM.NONTERM, defined: true });

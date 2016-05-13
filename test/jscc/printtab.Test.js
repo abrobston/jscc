@@ -3,7 +3,7 @@ suite("printtab", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
@@ -13,11 +13,17 @@ suite("printtab", function() {
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "bitset": "bitset/BitSet32",
+                                     "log/log": "log/logNode",
+                                     "io/io": "io/ioNode"
+                                 }
                              }
                          });
     }
@@ -58,9 +64,11 @@ suite("printtab", function() {
                                       write_output: function(options) {
                                       }
                                   });
-        injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", ioStub);
-        injector.store(["jscc/global", "jscc/log/log"]);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.mock("io/io", ioStub);
+        injector.mock("io/ioNode", ioStub);
+        injector.store(["global", "log/log", "log/logNode"]);
     });
 
     teardown("teardown", function() {
@@ -69,9 +77,9 @@ suite("printtab", function() {
     });
 
     test("print_actions logs an error if a %n wildcard does not match the right-hand side of a production",
-         injector.run(["mocks", "jscc/printtab", "jscc/classes/Production"], function(mocks, printtab, Production) {
-             var global = mocks.store["jscc/global"];
-             var log = mocks.store["jscc/log/log"];
+         injector.run(["mocks", "printtab", "classes/Production"], function(mocks, printtab, Production) {
+             var global = mocks.store["global"];
+             var log = mocks.store["log/logNode"];
              global.productions = [];
              global.productions.push(new Production({
                  id: 0,

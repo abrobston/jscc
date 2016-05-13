@@ -6,7 +6,11 @@
 //be followed.
 /*global setTimeout: false */
 
-var requirejs, require, define;
+/** @type {almondRequire} */
+var requirejs;
+/** @type {almondRequire} */
+var require;
+var define;
 (function (undef) {
     var main, req, makeMap, handlers,
         /** @type {!Object<string, *>} */
@@ -369,14 +373,7 @@ var requirejs, require, define;
         }
     };
 
-    /**
-     * @param {(undefined|string|Array<string>|{deps: (string|Array<string>), callback: (string|Function)})} deps
-     * @param {(string|Function|Array<string>)=} callback
-     * @param {(string|Function)=} relName
-     * @param {(string|boolean)=} forceSync
-     * @param {boolean=} alt
-     */
-    requirejs = require = req = function (deps, callback, relName, forceSync, alt) {
+    requirejs = require = req = /** @type {almondRequire} */ (function (deps, callback, relName, forceSync, alt) {
         if (typeof deps === "string") {
             if (handlers[deps]) {
                 //callback in this case is really relName
@@ -435,7 +432,7 @@ var requirejs, require, define;
         }
 
         return req;
-    };
+    });
 
     /**
      * Just drops the config on the floor, but returns req in case

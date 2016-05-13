@@ -89,5 +89,6 @@ if (onDeck !== "") {
     process.exit(1);
 }
 
-jscc.jscc(options);
+//jscc.jscc(options);
+jscc.main(options);
 process.exit(0);

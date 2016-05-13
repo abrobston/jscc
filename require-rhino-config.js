@@ -2,17 +2,22 @@
  * RequireJS configuration for Rhino.
  */
 requirejs.config({
-    baseUrl: "./lib",
+    baseUrl: ".",
     paths: {
-        "jscc/io/io": "jscc/io/ioRhino",
-        "jscc/log/log": "jscc/log/logJava",
-        "jscc/bitset": "jscc/bitset/BitSetJava",
-        "text": "../bin/text"
+        "text": "bin/text",
+        "has": "volo/has"
+    },
+    map: {
+        "*": {
+            "lib/jscc/io/io": "lib/jscc/io/ioRhino",
+            "lib/jscc/log/log": "lib/jscc/log/logJava",
+            "lib/jscc/bitset": "lib/jscc/bitset/BitSetJava"
+        }
     },
     nodeRequire: require,
     config: {
-        "jscc/global": {
-            "version": "0.39.0"
+        "lib/jscc/global": {
+            "version": "0.40.0"
         },
         "env": "rhino"
     }

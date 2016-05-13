@@ -3,21 +3,26 @@ suite("regex", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "log/log": "log/logNode",
+                                     "io/io": "io/ioNode",
+                                     "bitset": "bitset/BitSet32"
+                                 }
                              }
                          });
     }
@@ -58,9 +63,11 @@ suite("regex", function() {
                                       write_output: function(options) {
                                       }
                                   });
-        injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", ioStub);
-        injector.store(["jscc/global", "jscc/log/log"]);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.mock("io/io", ioStub);
+        injector.mock("io/ioNode", ioStub);
+        injector.store(["global", "log/log", "log/logNode"]);
     });
 
     teardown("teardown", function() {
@@ -96,9 +103,9 @@ suite("regex", function() {
         { pattern: "\\220", valid: true }
     ].forEach(function(item) {
         test("Regex '" + item.pattern + "' " + (item.valid ? "does not log" : "logs") + " an error",
-             injector.run(["mocks", "jscc/regex"],
+             injector.run(["mocks", "regex"],
                           function(mocks, regex) {
-                              var log = mocks.store["jscc/log/log"];
+                              var log = mocks.store["log/logNode"];
                               log.error.reset();
                               regex(item.pattern, 0, false);
                               if (item.valid) {

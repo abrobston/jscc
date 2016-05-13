@@ -2,17 +2,23 @@
  * RequireJS configuration for Node.
  */
 requirejs.config({
-    baseUrl: "./lib",
+    baseUrl: ".",
     paths: {
-        "jscc/io/io": "jscc/io/ioNode",
-        "jscc/log/log": "jscc/log/logNode",
-        "jscc/bitset": "jscc/bitset/BitSet32",
-        "text": "../bin/text"
+        "text": "bin/text",
+        "json": "volo/json",
+        "has": "volo/has"
+    },
+    map: {
+        "*": {
+            "lib/jscc/io/io": "lib/jscc/io/ioNode",
+            "lib/jscc/log/log": "lib/jscc/log/logNode",
+            "lib/jscc/bitset": "lib/jscc/bitset/BitSet32"
+        }
     },
     nodeRequire: require,
     config: {
-        "jscc/global": {
-            "version": "0.39.0"
+        "lib/jscc/global": {
+            "version": "0.40.0"
         },
         "env": "node"
     }

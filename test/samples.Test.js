@@ -3,21 +3,27 @@ suite("samples", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../lib'),
+                             baseUrl: path.join(__dirname, '../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "log/log": "log/logNode",
+                                     "io/io": "io/ioNode",
+                                     "bitset": "bitset/BitSet32"
+                                 }
                              }
                          });
     }
@@ -35,7 +41,7 @@ suite("samples", function() {
     setup("setup", function() {
         injector.configure();
         sandbox = sinon.sandbox.create();
-        injector.store(["jscc/log/log"]);
+        injector.store(["log/log", "log/logNode"]);
         tempDir = temp.mkdirSync();
 
     });
@@ -53,13 +59,13 @@ suite("samples", function() {
     ].forEach(function(inputPath) {
         test("Parses sample file '" + inputPath + "' without errors",
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
-                 var log = mocks.store["jscc/log/log"];
+                 var log = mocks.store["log/logNode"];
                  var fatalSpy = sandbox.spy(log, "fatal");
                  var errorSpy = sandbox.spy(log, "error");
                  var output = "";
                  jscc({
                           src_file: path.join(__dirname, inputPath),
-                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver.js.txt"),
+                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver-js.txt"),
                           outputCallback: function(text) {
                               output = text;
                           }
@@ -79,18 +85,21 @@ suite("samples", function() {
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  jscc({
                           src_file: path.join(__dirname, "../samples/xpl.par"),
-                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver.js.txt"),
+                          tpl_file: path.join(__dirname, "../lib/jscc/template/parser-driver-js.txt"),
                           out_file: path.join(tempDir, "xpl.js")
                       });
                  var req = requirejs.config({
                                                 context: "Parser generated from... " + inputPath,
-                                                baseUrl: path.join(__dirname, "../lib"),
+                                                baseUrl: path.join(__dirname, "../lib/jscc"),
                                                 paths: {
-                                                    "jscc/io/io": "jscc/io/ioNode",
-                                                    "jscc/log/log": "jscc/log/logNode",
-                                                    "jscc/bitset": "jscc/bitset/BitSet32",
-                                                    "text": "../node_modules/requirejs-text/text",
+                                                    "text": "../../node_modules/requirejs-text/text",
                                                     "xpl": path.join(tempDir, "xpl")
+                                                },
+                                                map: {
+                                                    "*": {
+                                                        "io/io": "io/ioNode",
+                                                        "log/log": "log/logNode"
+                                                    }
                                                 }
                                             });
                  assert.doesNotThrow(function() {

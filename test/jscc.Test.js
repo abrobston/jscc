@@ -3,21 +3,27 @@ suite("main", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../lib'),
+                             baseUrl: path.join(__dirname, '../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
                                      name: "squirejs",
-                                     location: "../node_modules/squirejs",
+                                     location: "../../node_modules/squirejs",
                                      main: "src/Squire"
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "bitset": "../jscc/bitset/BitSet32",
+                                     "io/io": "io/ioNode",
+                                     "log/log": "log/logNode"
+                                 }
                              }
                          });
     }
@@ -80,12 +86,14 @@ suite("main", function() {
             return retVal;
         });
 
-        injector.mock("jscc/io/io", ioStub)
-                .mock("jscc/log/log", logStub)
-                .mock("jscc/integrity", integrityStub)
-                .mock("jscc/parse", parseStub)
-                .store(["jscc/tabgen", "jscc/printtab", "jscc/global", "jscc/util", "jscc/first", "jscc/integrity",
-                        "jscc/parse"]);
+        injector.mock("io/io", ioStub)
+                .mock("io/ioNode", ioStub)
+                .mock("log/log", logStub)
+                .mock("log/logNode", logStub)
+                .mock("integrity", integrityStub)
+                .mock("parse", parseStub)
+                .store(["tabgen", "printtab", "global", "util", "first", "integrity",
+                        "parse"]);
     });
 
     teardown("teardown", function() {
@@ -103,22 +111,22 @@ suite("main", function() {
     }
 
     function stubPartialModules(mocks) {
-        sandbox.stub(mocks.store["jscc/tabgen"], "lalr1_parse_table");
+        sandbox.stub(mocks.store["tabgen"], "lalr1_parse_table");
         ["print_parse_tables", "print_dfa_table", "print_term_actions", "print_symbol_labels",
          "print_actions"].forEach(function(methodName) {
-            sandbox.stub(mocks.store["jscc/printtab"], methodName, function() {
+            sandbox.stub(mocks.store["printtab"], methodName, function() {
                 return ""
             });
         });
     }
 
     function unstubPartialModules(mocks) {
-        mocks.store["jscc/tabgen"].lalr1_parse_table.restore();
-        mocks.store["jscc/printtab"].print_parse_tables.restore();
-        mocks.store["jscc/printtab"].print_dfa_table.restore();
-        mocks.store["jscc/printtab"].print_term_actions.restore();
-        mocks.store["jscc/printtab"].print_symbol_labels.restore();
-        mocks.store["jscc/printtab"].print_actions.restore();
+        mocks.store["tabgen"].lalr1_parse_table.restore();
+        mocks.store["printtab"].print_parse_tables.restore();
+        mocks.store["printtab"].print_dfa_table.restore();
+        mocks.store["printtab"].print_term_actions.restore();
+        mocks.store["printtab"].print_symbol_labels.restore();
+        mocks.store["printtab"].print_actions.restore();
     }
 
     test("Ignores src_file when input string is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
@@ -241,7 +249,7 @@ suite("main", function() {
         test("Replaces ##" + item.token + "## with global." + item.field,
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
-                     mocks.store["jscc/global"][item.field] = "Replacement text";
+                     mocks.store["global"][item.field] = "Replacement text";
                      var output = "";
                      jscc({
                               src_file: "invalidFileName.par",
@@ -265,8 +273,8 @@ suite("main", function() {
         test("Replaces ##" + item.token + "## with results of printtab." + item.method,
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
-                     mocks.store["jscc/printtab"][item.method].restore();
-                     sandbox.stub(mocks.store["jscc/printtab"], item.method, function() {
+                     mocks.store["printtab"][item.method].restore();
+                     sandbox.stub(mocks.store["printtab"], item.method, function() {
                          return "Replacement text";
                      });
                      var output = "";
@@ -291,7 +299,7 @@ suite("main", function() {
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
                      try {
-                         sandbox.stub(mocks.store["jscc/printtab"], item.method, function() {
+                         sandbox.stub(mocks.store["printtab"], item.method, function() {
                              return 87654;
                          });
                          var output = "";
@@ -304,7 +312,7 @@ suite("main", function() {
                               });
                          assert.strictEqual(output, "Replace 87654 with something");
                      } finally {
-                         mocks.store["jscc/printtab"][item.method].restore();
+                         mocks.store["printtab"][item.method].restore();
                      }
                  });
              }));
@@ -323,16 +331,16 @@ suite("main", function() {
         test("Does not write output if printtab." + methodName + " indicates errors",
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
-                     var printtab = mocks.store["jscc/printtab"];
+                     var printtab = mocks.store["printtab"];
                      if (/_id$/.test(methodName)) {
                          sandbox.stub(printtab, methodName, function() {
-                             mocks.store["jscc/global"].errors = 1;
+                             mocks.store["global"].errors = 1;
                              return 1;
                          });
                      } else {
                          printtab[methodName].restore();
                          sandbox.stub(printtab, methodName, function() {
-                             mocks.store["jscc/global"].errors = 1;
+                             mocks.store["global"].errors = 1;
                              return "";
                          });
                      }
@@ -351,7 +359,7 @@ suite("main", function() {
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
                  parseStubCallbacks.push(function() {
-                     mocks.store["jscc/global"].errors = 1;
+                     mocks.store["global"].errors = 1;
                      return 1;
                  });
                  parseStub.reset();
@@ -379,11 +387,11 @@ suite("main", function() {
                      try {
                          integrityStub[method].restore();
                          sandbox.stub(integrityStub, method, function() {
-                             mocks.store["jscc/global"].errors = 1;
+                             mocks.store["global"].errors = 1;
                          });
                          integrityStub[method].reset();
-                         firstSpy = sandbox.spy(mocks.store["jscc/first"], "first");
-                         mocks.store["jscc/tabgen"].lalr1_parse_table.reset();
+                         firstSpy = sandbox.spy(mocks.store["first"], "first");
+                         mocks.store["tabgen"].lalr1_parse_table.reset();
                          integrityStub.check_empty_states.reset();
                          jscc({
                                   src_file: "invalidFileName.par",
@@ -392,11 +400,11 @@ suite("main", function() {
                               });
                          sinon.assert.called(integrityStub[method]);
                          sinon.assert.notCalled(firstSpy);
-                         sinon.assert.notCalled(mocks.store["jscc/tabgen"].lalr1_parse_table);
+                         sinon.assert.notCalled(mocks.store["tabgen"].lalr1_parse_table);
                          sinon.assert.notCalled(integrityStub.check_empty_states);
                      } finally {
                          if (firstSpy) {
-                             mocks.store["jscc/first"].first.restore();
+                             mocks.store["first"].first.restore();
                          }
                          integrityStub[method].restore();
                          sandbox.stub(integrityStub, method);
@@ -413,7 +421,7 @@ suite("main", function() {
         test("Does not write output if " + item.module + "." + item.method + " indicates errors",
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
-                     var fullModule = "jscc/" + item.module;
+                     var fullModule = item.module;
                      var skipFinallyRestore = true;
                      try {
                          try {
@@ -422,7 +430,7 @@ suite("main", function() {
                              skipFinallyRestore = false;
                          }
                          sandbox.stub(mocks.store[fullModule], item.method, function() {
-                             mocks.store["jscc/global"].errors = 1;
+                             mocks.store["global"].errors = 1;
                          });
                          var outputCallback = sandbox.stub();
                          jscc({
@@ -447,12 +455,12 @@ suite("main", function() {
                  var skipFinallyRestore = true;
                  try {
                      try {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
-                         mocks.store["jscc/global"].errors = 1;
+                     sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                         mocks.store["global"].errors = 1;
                      });
                      assert.throws(function() {
                          jscc({
@@ -465,7 +473,7 @@ suite("main", function() {
                      }, Error);
                  } finally {
                      if (!skipFinallyRestore) {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      }
                  }
              });
@@ -477,12 +485,12 @@ suite("main", function() {
                  var integrityStub, skipFinallyRestore = true;
                  try {
                      try {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     integrityStub = sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
-                         mocks.store["jscc/global"].errors = 1;
+                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                         mocks.store["global"].errors = 1;
                      });
                      assert.doesNotThrow(function() {
                          jscc({
@@ -495,7 +503,7 @@ suite("main", function() {
                      assert.called(integrityStub);
                  } finally {
                      if (!skipFinallyRestore) {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      }
                  }
              });
@@ -507,12 +515,12 @@ suite("main", function() {
                  var skipFinallyRestore = true, exitStub = ioStub.exit;
                  try {
                      try {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
-                         mocks.store["jscc/global"].errors = 1;
+                     sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                         mocks.store["global"].errors = 1;
                      });
                      exitStub.reset();
                      jscc({
@@ -527,7 +535,7 @@ suite("main", function() {
                      assert.alwaysCalledWith(exitStub, sinon.match.number);
                  } finally {
                      if (!skipFinallyRestore) {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      }
                  }
              });
@@ -539,12 +547,12 @@ suite("main", function() {
                  var integrityStub, skipFinallyRestore = true, exitStub = ioStub.exit;
                  try {
                      try {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     integrityStub = sandbox.stub(mocks.store["jscc/integrity"], "check_empty_states", function() {
-                         mocks.store["jscc/global"].errors = 1;
+                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                         mocks.store["global"].errors = 1;
                      });
                      exitStub.reset();
                      jscc({
@@ -557,7 +565,7 @@ suite("main", function() {
                      assert.called(integrityStub);
                  } finally {
                      if (!skipFinallyRestore) {
-                         mocks.store["jscc/integrity"].check_empty_states.restore();
+                         mocks.store["integrity"].check_empty_states.restore();
                      }
                  }
              })

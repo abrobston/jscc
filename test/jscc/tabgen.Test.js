@@ -3,7 +3,7 @@ suite("tabgen", function() {
     if (typeof requirejs === 'undefined') {
         requirejs = require('requirejs');
         requirejs.config({
-                             baseUrl: path.join(__dirname, '../../lib'),
+                             baseUrl: path.join(__dirname, '../../lib/jscc'),
                              nodeRequire: require,
                              packages: [
                                  {
@@ -13,11 +13,17 @@ suite("tabgen", function() {
                                  }
                              ],
                              paths: {
-                                 "sinon": "../node_modules/sinon/pkg/sinon",
-                                 "jscc/bitset": "jscc/bitset/BitSet32",
-                                 "jscc/io/io": "jscc/io/ioNode",
-                                 "jscc/log/log": "jscc/log/logNode",
-                                 "text": "../node_modules/requirejs-text/text"
+                                 "jscc": "main",
+                                 "sinon": "../../node_modules/sinon/pkg/sinon",
+                                 "text": "../../node_modules/requirejs-text/text",
+                                 "has": "../../volo/has"
+                             },
+                             map: {
+                                 "*": {
+                                     "log/log": "log/logNode",
+                                     "io/io": "io/ioNode",
+                                     "bitset": "bitset/BitSet32"
+                                 }
                              }
                          });
     }
@@ -58,9 +64,11 @@ suite("tabgen", function() {
                                       write_output: function(options) {
                                       }
                                   });
-        injector.mock("jscc/log/log", logStub);
-        injector.mock("jscc/io/io", ioStub);
-        injector.store(["jscc/global"]);
+        injector.mock("log/log", logStub);
+        injector.mock("log/logNode", logStub);
+        injector.mock("io/io", ioStub);
+        injector.mock("io/ioNode", ioStub);
+        injector.store(["global"]);
     });
 
     teardown("teardown", function() {
@@ -92,9 +100,9 @@ suite("tabgen", function() {
              (item.terminating ? "TERM" : "NONTERM") + "', and special '" +
              (typeof item.special === 'undefined' ? "undefined" : item.special) + "' returns " +
              item.expected,
-             injector.run(["mocks", "jscc/tabgen", "jscc/enums/SYM", "jscc/enums/SPECIAL",
-                           "jscc/classes/Symbol"], function(mocks, tabgen, SYM, SPECIAL, Symbol) {
-                 var global = mocks.store["jscc/global"];
+             injector.run(["mocks", "tabgen", "enums/SYM", "enums/SPECIAL",
+                           "classes/Symbol"], function(mocks, tabgen, SYM, SPECIAL, Symbol) {
+                 var global = mocks.store["global"];
                  // Remove default symbols now added by the jscc.global constructor
                  global.symbols = [];
                  item.overrides.forEach(function(override) {
