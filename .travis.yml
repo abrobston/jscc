@@ -4,12 +4,20 @@ node_js:
   - "6"
   - "5"
   - "4"
+env:
+  - JAVA_HOME=/usr/lib/jvm/java-8-oracle
+  - JAVA_HOME=/usr/lib/jvm/java-9-oracle
+matrix:
+  allow_failures:
+    - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
-    - oracle-java8-installer
-before_install:
-  - export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+      - oracle-java8-installer
+      - oracle-java9-installer
+      - g++-4.8
 install:
   - npm install
 before_script:
