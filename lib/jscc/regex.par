@@ -35,18 +35,25 @@ of the BSD license. Please see LICENSE for more information.
   function(require, others) {
 var first_nfa;
 var last_nfa;
+//>>excludeStart("closure", pragmas.closure);
+var has = /** @type {hasObject} */ (require("./localHas"));
+//>>excludeEnd("closure");
 
 var log, global = /** @type {jscc.global} */ (require("./global")),
     Param = /** @type {function(new:jscc.classes.Param, number=, number=)} */ (require("./classes/Param")),
     Nfa = /** @type {function(new:jscc.classes.Nfa, ?NfaOptions=)} */ (require("./classes/Nfa")),
     EDGE = require("./enums/EDGE");
 
-//>>includeStart("node", pragmas.node);
-log = /** @type {jscc.log} */ (require("./log/logNode"));
-//>>includeEnd("node");
-//>>excludeStart("node", pragmas.node);
-log = /** @type {jscc.log} */ (require("./log/log"));
-//>>excludeEnd("node");
+/**
+ * @suppress {uselessCode}
+ */
+(function() {
+    if (has("node")) {
+        log = /** @type {jscc.log} */ (require("./log/logNode"));
+    } else {
+        log = /** @type {jscc.log} */ (require("./log/log"));
+    }
+})();
 
 *]
 

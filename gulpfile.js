@@ -551,7 +551,7 @@
 
     var testFailures = 0;
 
-    gulp.task('_test', ['_get-rhino'], function(cb) {
+    gulp.task('_test', ['_get-rhino', '_get-has-js', '_get-phantom'], function(cb) {
         testFailures = 0;
         var mocha = new Mocha({ ui: "tdd" }).globals(["define", "requirejs"]);
         gulp.src("test/**/*.js", { read: false })

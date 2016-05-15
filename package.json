@@ -73,8 +73,29 @@
   "directories": {
     "lib": "lib"
   },
+  "nyc": {
+    "cache": true,
+    "require": ["./main"],
+    "exclude": [
+      "test/**/*.js",
+      "gulpfile.js",
+      "volo/**/*.js",
+      "lib/jscc/bitset/bitset.js",
+      "lib/jscc/bitset/BitSetBool.js",
+      "lib/jscc/bitset/BitSetJava.js",
+      "lib/jscc/io/io.js",
+      "lib/jscc/io/ioBrowser.js",
+      "lib/jscc/io/ioNashorn.js",
+      "lib/jscc/io/ioRhino.js",
+      "lib/jscc/io/ioSpiderMonkey.js",
+      "lib/jscc/io/ioV8.js",
+      "lib/jscc/log/log.js",
+      "lib/jscc/log/logBrowser.js",
+      "lib/jscc/log/logJava.js"
+    ]
+  },
   "scripts": {
-    "test": "nyc --cache --require ./lib/jscc gulp test",
+    "test": "nyc gulp test",
     "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
     "prepublish": "gulp clean && gulp build"
   }

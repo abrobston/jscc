@@ -40,12 +40,20 @@ var log, global = /** @type {jscc.global} */ (require("./global")),
     SYM = require("./enums/SYM"),
     SPECIAL = require("./enums/SPECIAL");
 
-//>>includeStart("node", pragmas.node);
-log = /** @type {jscc.log} */ (require("./log/logNode"));
-//>>includeEnd("node");
-//>>excludeStart("node", pragmas.node);
-log = /** @type {jscc.log} */ (require("./log/log"));
-//>>excludeEnd("node");
+//>>excludeStart("closure", pragmas.closure);
+var has = /** @type {hasObject} */ (require("./localHas"));
+//>>excludeEnd("closure");
+
+/**
+ * @suppress {uselessCode}
+ */
+(function() {
+    if (has("node")) {
+        log = /** @type {jscc.log} */ (require("./log/logNode"));
+    } else {
+        log = /** @type {jscc.log} */ (require("./log/log"));
+    }
+})();
 
 var		first_lhs;
 var		cur_line;

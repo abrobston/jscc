@@ -286,4 +286,63 @@ var almondRequireExtension =
     }
 });
 
+/**
+ * @typedef {string}
+ */
+var stringWithErrorMessage;
 
+var stringWithErrorMessageExtension =
+    /**
+     * @lends {stringWithErrorMessage}
+     */
+    ({
+        /**
+         * @type {string}
+         */
+        ERROR_MSG: ""
+    });
+
+/**
+ * @typedef {function(string):boolean}
+ */
+var hasObject;
+
+var hasObjectExtension =
+    /**
+     * @lends {hasObject}
+     */
+    ({
+        /**
+         * @param {string} name
+         * @param {function(...*):boolean} test
+         * @param {boolean=} now
+         */
+        add: function(name, test, now) {
+        },
+        /**
+         * @param {T} el
+         * @returns {T}
+         * @template T
+         */
+        clearElement: function(el) {
+        },
+        /**
+         * @param {string} name
+         * @param {*} el
+         * @returns {boolean}
+         */
+        cssprop: function(name, el) {
+        },
+        /**
+         * @param {*} obj
+         * @param {*=} property
+         * @returns {boolean}
+         */
+        isHostType: function(obj, property) {
+        },
+        /**
+         * @returns {Object<string, (boolean|stringWithErrorMessage)>}
+         */
+        all: function() {
+        }
+    });

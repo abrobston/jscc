@@ -295,7 +295,7 @@ var path = {};
 path.isAbsolute = function(p) {
 };
 /**
- * @param {...string} x
+ * @param {...(null|string|undefined)} x
  * @return {string}
  */
 path.join = function(x) {
