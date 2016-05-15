@@ -13,9 +13,9 @@ env:
 matrix:
   exclude:
   - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
-      node_js: "6"
+    node_js: "6"
   - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
-      node_js: "5"
+    node_js: "5"
   allow_failures:
     - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
 addons:
