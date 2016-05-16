@@ -28,6 +28,9 @@
                 resultQueue.push(current.trim().replace(/^[\\\/]*/, "").replace(/[\\\/]*$/, ""));
             }
         }
+        if (!/^[A-Za-z]:(?:[\\\/].*)?$/.test(resultQueue[0])) {
+            resultQueue.unshift("");
+        }
         return resultQueue.join("/");
     }
 
