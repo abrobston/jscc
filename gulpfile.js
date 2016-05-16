@@ -2,23 +2,23 @@
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
                 'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
-                'child_process', 'async'], factory);
+                'child_process', 'async', './resolvePackageDirectories'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('rest'), require('rest/interceptor/mime'),
                     require('rest/interceptor/errorCode'), require('path'), require('fs'), require('http'),
                     require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
                     Buffer,
-                    require('os'), require('jformatter'), require('child_process'), require('async'));
+                    require('os'), require('jformatter'), require('child_process'), require('async'),
+                    require('./resolvePackageDirectories'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
-                    root.jformatter, root.child_process, root.async);
+                    root.jformatter, root.child_process, root.async, root.jsccresolvePackageDirectories);
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
-                 jformatter, childProcess, async) {
-
+                 jformatter, childProcess, async, resolvePackageDirectories) {
     function ensureDir(dirPath, cb) {
         var dirname = path.dirname(dirPath);
 
@@ -26,7 +26,7 @@
             fs.mkdir(dirPath, cb);
         }
 
-        if (!/^\.?$/.test(dirname)) {
+        if (!/^(?:\.|\/|[A-Za-z]:[\\\/]?)?$/.test(dirname)) {
             ensureDir(dirname, createDir);
         } else {
             createDir();
@@ -311,30 +311,38 @@
     gulp.task('_convert-cjs-modules', function(cb) {
         var rjsPath = path.join(__dirname, "node_modules", ".bin", process.platform === "win32" ? "r.js.cmd" : "r.js"),
             convertedModulesPath = path.join(__dirname, "converted_modules");
-        fs.mkdir(convertedModulesPath, function() {
-            gulp.src(["./node_modules/amdclean/node_modules/escodegen",
-                      "./node_modules/amdclean/node_modules/sourcemap-to-ast"], { read: false })
-                .pipe(new stream.Writable({
-                    objectMode: true,
-                    write: function(vinylFile, encoding, next) {
-                        var baseDir = path.basename(vinylFile.path);
-                        childProcess.exec("\"" + rjsPath + "\" -convert \"" + vinylFile.path + "\" \"" +
-                                          path.join(convertedModulesPath, baseDir) + "\"",
-                                          function(error, stdout, stderr) {
-                                              if (stdout) {
-                                                  console.log(stdout);
-                                              }
-                                              if (stderr) {
-                                                  console.log(stderr);
-                                              }
-                                              next(error);
-                                          });
-                    }
-                }))
-                .on("finish", function(e) {
-                    cb(e);
-                });
+        ensureDir(convertedModulesPath, function() {
+            resolvePackageDirectories(["amdclean escodegen", "amdclean escodegen esutils", "amdclean sourcemap-to-ast"],
+                                         function(error, modulePaths) {
+                                             if (error) {
+                                                 cb(error);
+                                                 return;
+                                             }
+                                             gulp.src(modulePaths, { read: false })
+                                                 .pipe(new stream.Writable({
+                                                     objectMode: true,
+                                                     write: function(vinylFile, encoding, next) {
+                                                         var baseDir = path.basename(vinylFile.path);
+                                                         childProcess.exec(
+                                                             "\"" + rjsPath + "\" -convert \"" + vinylFile.path +
+                                                             "\" \"" +
+                                                             path.join(convertedModulesPath, baseDir) + "\"",
+                                                             function(error, stdout, stderr) {
+                                                                 if (stdout) {
+                                                                     console.log(stdout);
+                                                                 }
+                                                                 if (stderr) {
+                                                                     console.log(stderr);
+                                                                 }
+                                                                 next(error);
+                                                             });
+                                                     }
+                                                 }))
+                                                 .on("finish", function(e) {
+                                                     cb(e);
+                                                 });
 
+                                         });
         });
     });
 
@@ -574,11 +582,17 @@
     });
 
     gulp.task('_get-phantom', function(cb) {
-        var phantomWorkingDirectory = path.join(__dirname, "node_modules", "phantomjs-prebuilt");
-        childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" },
-                          function(error) {
-                              cb(error);
-                          });
+        resolvePackageDirectories("phantomjs-prebuilt", function(err, modulePaths) {
+            if (err) {
+                cb(err);
+                return;
+            }
+            var phantomWorkingDirectory = modulePaths[0];
+            childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" },
+                              function(error) {
+                                  cb(error);
+                              });
+        });
     });
 
     var Unlinker = function() {
@@ -672,7 +686,7 @@
     });
 
     gulp.task('_distclean', ['_clean'], function() {
-        return gulp.src(["./html-documentation", "./jar", "./volo"],
+        return gulp.src(["./html-documentation", "./jar", "./volo", "./node_modules"],
                         { read: false, allowEmpty: true })
                    .pipe(new Unlinker());
     });

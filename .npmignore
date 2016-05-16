@@ -1,12 +1,14 @@
-/volo
-/converted_modules
 # Various directories and files that need not be in a published package
 /.nyc_output
+/converted_modules
 /coverage
 /samples
 /test
+/volo
 /webenv
 .travis.yml
+amdclean-node-globals.js
+asyncSupport.js
 code-style.xml
 conf.json
 exports*.js
@@ -17,6 +19,8 @@ gulpfile.js
 npm-bin-template.js
 require-*-build.js
 require-*-config.js
+require-main.js
+resolvePackageDirectories.js
 run-amdclean.js
 typedef.js
 wrap-*.js

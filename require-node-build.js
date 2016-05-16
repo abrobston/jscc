@@ -81,6 +81,11 @@
             }
             if (isNashorn) {
                 loadWithNewGlobal("./node_modules/requirejs/bin/r.js", "./run-amdclean.js", mainPath);
+                // We need to wait until the various asynchronous threads all complete, since this
+                // isn't Node.
+                var commonPool = Java.type("java.util.concurrent.ForkJoinPool").commonPool();
+                var minuteUnit = Java.type("java.util.concurrent.TimeUnit").MINUTES;
+                commonPool.awaitQuiescence(9, minuteUnit);
             }
         })(data.path);
     }
