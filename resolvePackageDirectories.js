@@ -47,7 +47,8 @@
             var rhinoFile = new java.io.File(dirPath);
             callback(null, rhinoFile.exists() && rhinoFile.isDirectory());
         } else {
-            callback(new Error("Platform is not Node, Nashorn, or Rhino, so filesystem operations are currently unsupported."));
+            callback(
+                new Error("Platform is not Node, Nashorn, or Rhino, so filesystem operations are currently unsupported."));
         }
     }
 
@@ -77,7 +78,7 @@
         }
     }
 
-    var resolve = async.memoize(function (packageTreeString, callback) {
+    var resolve = async.memoize(function(packageTreeString, callback) {
         var match = /^(.*)\s(\S+)$/.exec(packageTreeString.trim());
         if (match) {
             resolve(match[1], function(err, parentPath) {
@@ -90,10 +91,10 @@
         } else {
             resolveDefault(packageTreeString.trim(), callback);
         }
-    }, function (packageTreeString) {
+    }, function(packageTreeString) {
         return packageTreeString.trim().replace(/\s+/g, " ");
     });
-    
+
     /**
      * To work with npm versions 2 and 3, whose installation behavior differs,
      * use this function.  Specify each module path as a space-delimited package
@@ -115,22 +116,22 @@
 
         if (typeof cb === "function") {
             async.map(modulePaths, resolve, cb);
-        } else {
-            var outerError, outerResult, done = false;
-            async.map(modulePaths, resolve, function(error, result) {
-                outerError = error;
-                outerResult = result;
-                done = true;
-            });
-            while (!done) {
-                // no-op
-            }
-            if (outerError) {
-                throw outerError;
-            }
-            return outerResult;
+            return;
         }
+        var outerError, outerResult, done = false;
+        async.map(modulePaths, resolve, function(error, result) {
+            outerError = error;
+            outerResult = result;
+            done = true;
+        });
+        while (!done) {
+            // no-op
+        }
+        if (outerError) {
+            throw outerError;
+        }
+        return outerResult;
     }
-    
+
     return getNodeModuleDependencyPaths;
 }));
