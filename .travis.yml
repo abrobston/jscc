@@ -1,37 +1,38 @@
 language: node_js
 sudo: false
 node_js:
-  - "6"
-  - "5"
-  - "4"
+- '6'
+- '5'
+- '4'
 env:
   global:
-    - CXX=g++-4.8
+  - CXX=g++-4.8
+  - secure: JQike4USg7Kf8IIcNPKTmSZOUT0Qx7qMKiQh22LfHbQSFmcWGg30wTrqftsg6GI5OUu3z7ushlf+25I+eUGYBTyxB11j5dpSc6SZmylk5sCd5dtA/raAjasqqL9ZnldFh3u8BJfzeM2FJKY5GeovSXkGmF0aCctHyc1z6N7s0iE761EKtMioqU2CLbxE47Eh49qz92D8exIaQMmjXRGelJbOFX2W/1qWzCwg4PvXvuufhvGe4ckrwqvPBA+WWTq5+5ypR60/iMShwodCkhz05a0cHW6HtDH2EiKxPV+G51ItlnhTTPQjKbYFiCsu4+FH49zhyDXClBizLrrMqUb//Eo8dWMbZe7EXks7t867XZCkgGaYkcRDOKitEwFEewWpXZwtalzHk7ZVRd8agFxpe+OmpNSdKDfQfFZQI9l0C212I4Kc4etp+AqqP3Ujz7/ROoGEjdVrbWo1KMN2gmb9p/EL74TDDOd4aVeHPJjC4Ho1p/LpzbxPbBPNdfHOvsZwT7CHDR6WNnCE4EHzadYnjvxPQH4c2Ewz4b46zrHuRzfEk/OnhhfyfwDzyHlHnJjpuIkpAXeWqhPrtu9immoxhq3P7jl6iWX25fDPDVpQJpqJe8ki/9f8uTOXCpuApaJQ3nvzN0ByQAFXJr/q/JWaxV2fTrCohGdgBCvAVyMl0sw=
   matrix:
-    - JAVA_HOME=/usr/lib/jvm/java-8-oracle
-    - JAVA_HOME=/usr/lib/jvm/java-9-oracle
+  - JAVA_HOME=/usr/lib/jvm/java-8-oracle
+  - JAVA_HOME=/usr/lib/jvm/java-9-oracle
 matrix:
   exclude:
   - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
-    node_js: "6"
+    node_js: '6'
   - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
-    node_js: "5"
+    node_js: '5'
   allow_failures:
-    - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
+  - env: JAVA_HOME=/usr/lib/jvm/java-9-oracle
 addons:
   apt:
     sources:
-      - ubuntu-toolchain-r-test
+    - ubuntu-toolchain-r-test
     packages:
-      - oracle-java8-installer
-      - oracle-java9-installer
-      - g++-4.8
-      - python2.7
-      - make
+    - oracle-java8-installer
+    - oracle-java9-installer
+    - g++-4.8
+    - python2.7
+    - make
 before_install:
-  - npm install -g node-gyp
-  - npm config set python /usr/bin/python2.7
+- npm install -g node-gyp
+- npm config set python /usr/bin/python2.7
 install:
-  - npm install
+- npm install
 script: npm test
 after_success: npm run coverage

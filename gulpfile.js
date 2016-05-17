@@ -2,7 +2,7 @@
     if (typeof define === 'function' && define.amd) {
         define(['gulp', 'rest', 'rest/interceptor/mime', 'rest/interceptor/errorCode', 'path', 'fs',
                 'http', 'https', 'url', 'stream', 'mocha', 'extract-zip', 'buffer', 'os', 'jformatter',
-                'child_process', 'async', './resolvePackageDirectories'], factory);
+                'child_process', 'async', './resolvePackageDirectories', 'rest/interceptor/basicAuth'], factory);
     } else if (typeof module === 'object' && module.exports) {
         module.exports =
             factory(require('gulp'), require('rest'), require('rest/interceptor/mime'),
@@ -10,15 +10,16 @@
                     require('https'), require('url'), require('stream'), require('mocha'), require('extract-zip'),
                     Buffer,
                     require('os'), require('jformatter'), require('child_process'), require('async'),
-                    require('./resolvePackageDirectories'));
+                    require('./resolvePackageDirectories'), require('rest/interceptor/basicAuth'));
     } else {
         root.gulpfile =
             factory(root.gulp, root.rest, root.mime, root.errorCode, root.path, root.fs, root.http,
                     root.https, root.url, root.stream, root.mocha, root.extractZip, root.buffer, root.os,
-                    root.jformatter, root.child_process, root.async, root.jsccresolvePackageDirectories);
+                    root.jformatter, root.child_process, root.async, root.jsccresolvePackageDirectories,
+                    root.basicAuth);
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
-                 jformatter, childProcess, async, resolvePackageDirectories) {
+                 jformatter, childProcess, async, resolvePackageDirectories, basicAuth) {
 
     // Wrap gulp.task for debugging purposes
     var oldGulpTask = gulp.task.bind(gulp), taskStatus = {};
@@ -408,6 +409,10 @@
             accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
         })
                          .wrap(errorCode);
+        // Use a GitHub token, if present, to attempt to increase API rate limits and avoid errors
+        if (process.env.hasOwnProperty("GITHUB_API_TOKEN")) {
+            client = client.wrap(basicAuth, { username: "abrobston", password: process.env["GITHUB_API_TOKEN"] });
+        }
         client({
                    path: "https://api.github.com/repos/mozilla/rhino/releases/latest",
                    headers: { "User-Agent": "jscc" }
