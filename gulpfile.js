@@ -22,7 +22,7 @@
 
     // Wrap gulp.task for debugging purposes
     var oldGulpTask = gulp.task.bind(gulp), taskStatus = {};
-    
+
     function logRunningTasks() {
         var tasks = [];
         Object.keys(taskStatus).forEach(function(key) {
@@ -36,7 +36,7 @@
             console.log("Running tasks: (none)");
         }
     }
-    
+
     gulp.task = function(name, deps, fn) {
         var fnString, wrappedFunction;
         if (typeof deps === "function") {
@@ -77,7 +77,7 @@
                     return retVal;
                 };
             }
-        
+
             if (deps) {
                 oldGulpTask(name, deps, wrappedFunction);
             } else {
@@ -87,7 +87,7 @@
             oldGulpTask(name, deps);
         }
     }.bind(gulp);
-    
+
     function warnAboutUnfinishedTasks() {
         Object.keys(taskStatus).forEach(function(key) {
             // Only log non-final tasks here
@@ -464,7 +464,10 @@
     });
 
     gulp.task('_get-has-js', function(cb) {
-        voloGet("phiggins42/has.js", cb);
+        // volo sometimes hangs on this one too, else we would do this:
+        // voloGet("phiggins42/has.js", cb);
+        downloadOnly(path.join(__dirname, "volo", "has.js"),
+                     "https://raw.githubusercontent.com/phiggins42/has.js/master/has.js", cb);
     });
 
     gulp.task('_convert-cjs-modules', function(cb) {
