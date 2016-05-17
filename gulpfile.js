@@ -175,6 +175,56 @@
           .on('error', cb);
     });
 
+    function downloadOnly(filePath, url, cb) {
+        var redirectCount = 0;
+        function downloadCallback(err, stat) {
+            var requestHeaders = {};
+            if (!err && stat.isFile()) {
+                var compareDateTime = stat.birthtime;
+                requestHeaders["If-Modified-Since"] = compareDateTime.toUTCString();
+            }
+            var parsedUrl = urlUtil.parse(url);
+            var web = /^https:?$/i.test(parsedUrl.protocol) ? https : http;
+            web.get({
+                        protocol: parsedUrl.protocol,
+                        hostname: parsedUrl.hostname,
+                        port: parsedUrl.port,
+                        path: parsedUrl.path,
+                        headers: requestHeaders
+                    }, function(res) {
+                switch (res.statusCode) {
+                    case 304:
+                        // Not modified
+                        cb();
+                        break;
+                    case 302:
+                        // Moved
+                        if (++redirectCount > 10) {
+                            cb(new Error("Too many redirects"));
+                            return;
+                        }
+                        url = res.headers.location;
+                        downloadCallback(err, stat);
+                        break;
+                    case 200:
+                        // OK
+                        res.pipe(fs.createWriteStream(filePath, { defaultEncoding: "binary" }))
+                            .on("finish", function(e) {
+                                cb(e);
+                            });
+                        break;
+                    default:
+                        cb(new Error("Asset download from " + url + " returned HTTP status code " + res.statusCode));
+                        break;
+                }
+            });
+        }
+
+        ensureDir(path.dirname(filePath), function() {
+            fs.stat(filePath, downloadCallback);
+        });
+    }
+
     function downloadAndUnzip(filename, url, cb) {
         var jarDir = path.join(__dirname, "jar");
         try {
@@ -301,7 +351,10 @@
     }
 
     gulp.task('_get-requirejs-plugins', function(cb) {
-        voloGet("millermedeiros/requirejs-plugins/v1.0.3#src/json.js", cb);
+        // At least temporarily not using volo because it fails on Node 6 at present.
+        // Otherwise, we would do this:
+        // voloGet("millermedeiros/requirejs-plugins/v1.0.3#src/json.js", cb);
+        downloadOnly(path.join(__dirname, "volo", "json.js"), "https://raw.githubusercontent.com/millermedeiros/requirejs-plugins/v1.0.3/src/json.js", cb);
     });
 
     gulp.task('_get-has-js', function(cb) {
