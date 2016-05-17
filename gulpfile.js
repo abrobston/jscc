@@ -179,6 +179,10 @@
         var redirectCount = 0;
 
         function downloadCallback(err, stat) {
+            if (err) {
+                cb(err);
+                return;
+            }
             var requestHeaders = {};
             if (!err && stat.isFile()) {
                 var compareDateTime = stat.birthtime;
@@ -250,6 +254,10 @@
         var destFile = path.join(jarDir, filename);
         var redirectCount = 0;
         var downloadCallback = function(err, stat) {
+            if (err) {
+                cb(err);
+                return;
+            }
             var requestHeaders = {
                 "Accept": "application/zip"
             };
