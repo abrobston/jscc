@@ -179,7 +179,7 @@
         var redirectCount = 0;
 
         function downloadCallback(err, stat) {
-            if (err) {
+            if (err && !/no\ssuch\sfile\sor\sdirectory/i.test(err.message)) {
                 cb(err);
                 return;
             }
@@ -254,7 +254,7 @@
         var destFile = path.join(jarDir, filename);
         var redirectCount = 0;
         var downloadCallback = function(err, stat) {
-            if (err) {
+            if (err && !/no\ssuch\sfile\sor\sdirectory/i.test(err.message)) {
                 cb(err);
                 return;
             }
