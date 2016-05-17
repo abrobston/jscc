@@ -177,6 +177,7 @@
 
     function downloadOnly(filePath, url, cb) {
         var redirectCount = 0;
+
         function downloadCallback(err, stat) {
             var requestHeaders = {};
             if (!err && stat.isFile()) {
@@ -208,10 +209,19 @@
                         break;
                     case 200:
                         // OK
-                        res.pipe(fs.createWriteStream(filePath, { defaultEncoding: "binary" }))
-                            .on("finish", function(e) {
-                                cb(e);
-                            });
+                        var lastError = null;
+                        res.on("error", function(e) {
+                            lastError = e;
+                        }).pipe(fs.createWriteStream(filePath, { defaultEncoding: "binary" }))
+                           .on("error", function(e) {
+                               lastError = e;
+                           })
+                           .on("finish", function(e) {
+                               if (e) {
+                                   lastError = e;
+                               }
+                               cb(lastError);
+                           });
                         break;
                     default:
                         cb(new Error("Asset download from " + url + " returned HTTP status code " + res.statusCode));
@@ -354,7 +364,8 @@
         // At least temporarily not using volo because it fails on Node 6 at present.
         // Otherwise, we would do this:
         // voloGet("millermedeiros/requirejs-plugins/v1.0.3#src/json.js", cb);
-        downloadOnly(path.join(__dirname, "volo", "json.js"), "https://raw.githubusercontent.com/millermedeiros/requirejs-plugins/v1.0.3/src/json.js", cb);
+        downloadOnly(path.join(__dirname, "volo", "json.js"),
+                     "https://raw.githubusercontent.com/millermedeiros/requirejs-plugins/v1.0.3/src/json.js", cb);
     });
 
     gulp.task('_get-has-js', function(cb) {
@@ -366,36 +377,36 @@
             convertedModulesPath = path.join(__dirname, "converted_modules");
         ensureDir(convertedModulesPath, function() {
             resolvePackageDirectories(["amdclean escodegen", "amdclean escodegen esutils", "amdclean sourcemap-to-ast"],
-                                         function(error, modulePaths) {
-                                             if (error) {
-                                                 cb(error);
-                                                 return;
-                                             }
-                                             gulp.src(modulePaths, { read: false })
-                                                 .pipe(new stream.Writable({
-                                                     objectMode: true,
-                                                     write: function(vinylFile, encoding, next) {
-                                                         var baseDir = path.basename(vinylFile.path);
-                                                         childProcess.exec(
-                                                             "\"" + rjsPath + "\" -convert \"" + vinylFile.path +
-                                                             "\" \"" +
-                                                             path.join(convertedModulesPath, baseDir) + "\"",
-                                                             function(error, stdout, stderr) {
-                                                                 if (stdout) {
-                                                                     console.log(stdout);
-                                                                 }
-                                                                 if (stderr) {
-                                                                     console.log(stderr);
-                                                                 }
-                                                                 next(error);
-                                                             });
-                                                     }
-                                                 }))
-                                                 .on("finish", function(e) {
-                                                     cb(e);
-                                                 });
+                                      function(error, modulePaths) {
+                                          if (error) {
+                                              cb(error);
+                                              return;
+                                          }
+                                          gulp.src(modulePaths, { read: false })
+                                              .pipe(new stream.Writable({
+                                                  objectMode: true,
+                                                  write: function(vinylFile, encoding, next) {
+                                                      var baseDir = path.basename(vinylFile.path);
+                                                      childProcess.exec(
+                                                          "\"" + rjsPath + "\" -convert \"" + vinylFile.path +
+                                                          "\" \"" +
+                                                          path.join(convertedModulesPath, baseDir) + "\"",
+                                                          function(error, stdout, stderr) {
+                                                              if (stdout) {
+                                                                  console.log(stdout);
+                                                              }
+                                                              if (stderr) {
+                                                                  console.log(stderr);
+                                                              }
+                                                              next(error);
+                                                          });
+                                                  }
+                                              }))
+                                              .on("finish", function(e) {
+                                                  cb(e);
+                                              });
 
-                                         });
+                                      });
         });
     });
 
@@ -562,7 +573,8 @@
                   var rjsCommand = '"' + jjsPath + '" -scripting -classpath "' + closureJarPath +
                                    // Uncomment next line, and comment out the following line, to debug using IntelliJ
                                    // remote debugger
-                                   // '" -J-agentlib:jdwp=transport=dt_socket,server=n,address=localhost:5005,suspend=y "' +
+                                   // '" -J-agentlib:jdwp=transport=dt_socket,server=n,address=localhost:5005,suspend=y
+                                   // "' +
                                    '" "' +
                                    path.join(__dirname, "node_modules", "requirejs", "bin", "r.js") + '" -- ';
                   gulp.src('./require-*-build.js', { read: false })
@@ -641,7 +653,8 @@
                 return;
             }
             var phantomWorkingDirectory = modulePaths[0];
-            childProcess.exec("\"" + process.execPath + "\" install.js", { cwd: phantomWorkingDirectory, stdio: "inherit" },
+            childProcess.exec("\"" + process.execPath + "\" install.js",
+                              { cwd: phantomWorkingDirectory, stdio: "inherit" },
                               function(error) {
                                   cb(error);
                               });
