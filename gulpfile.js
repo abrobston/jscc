@@ -19,6 +19,85 @@
     }
 }(this, function(gulp, rest, mime, errorCode, path, fs, http, https, urlUtil, stream, Mocha, extract, Buffer, os,
                  jformatter, childProcess, async, resolvePackageDirectories) {
+
+    // Wrap gulp.task for debugging purposes
+    var oldGulpTask = gulp.task.bind(gulp), taskStatus = {};
+    
+    function logRunningTasks() {
+        var tasks = [];
+        Object.keys(taskStatus).forEach(function(key) {
+            if (/^_/.test(key) && taskStatus[key] === false) {
+                tasks.push(key);
+            }
+        });
+        if (tasks.length > 0) {
+            console.log("Running tasks: " + tasks.join(", "));
+        } else {
+            console.log("Running tasks: (none)");
+        }
+    }
+    
+    gulp.task = function(name, deps, fn) {
+        var fnString, wrappedFunction;
+        if (typeof deps === "function") {
+            fn = deps;
+            deps = null;
+        } else if (typeof fn !== "function") {
+            throw new Error("A non-function was passed to the task definition named '" + name + "'.");
+        }
+        if (fn) {
+            fnString = fn.toString();
+            if (/^\s*function\s*\(\s*[_a-z0-9]+/i.test(fnString)) {
+                // There is a callback parameter
+                wrappedFunction = function(cb) {
+                    taskStatus[name] = false;
+                    console.log("Starting task '" + name + "' with callback completion");
+                    var wrappedCb = function(err) {
+                        if (err) {
+                            console.log(
+                                "Ending task '" + name + "' with callback completion, which was passed an error");
+                        } else {
+                            console.log("Ending task '" + name + "' with callback completion");
+                        }
+                        taskStatus[name] = true;
+                        logRunningTasks();
+                        cb(err);
+                    };
+                    fn(wrappedCb);
+                };
+            } else {
+                // Returns stream, returns promise, or is synchronous
+                wrappedFunction = function() {
+                    taskStatus[name] = false;
+                    console.log("Starting task '" + name + "' with non-callback completion");
+                    var retVal = fn();
+                    console.log("Ending task '" + name + "' with non-callback completion");
+                    taskStatus[name] = true;
+                    logRunningTasks();
+                    return retVal;
+                };
+            }
+        
+            if (deps) {
+                oldGulpTask(name, deps, wrappedFunction);
+            } else {
+                oldGulpTask(name, wrappedFunction);
+            }
+        } else {
+            oldGulpTask(name, deps);
+        }
+    }.bind(gulp);
+    
+    function warnAboutUnfinishedTasks() {
+        Object.keys(taskStatus).forEach(function(key) {
+            // Only log non-final tasks here
+            if (/^_/.test(key) && taskStatus[key] === false) {
+                console.warn("Task '" + key + "' did not complete");
+            }
+        });
+    }
+
+
     function ensureDir(dirPath, cb) {
         var dirname = path.dirname(dirPath);
 
@@ -246,7 +325,12 @@
         } catch (e) {
             // Directory probably exists, so ignore error
         }
-        var jarDirStat = fs.statSync(jarDir);
+        try {
+            var jarDirStat = fs.statSync(jarDir);
+        } catch (e) {
+            cb(new Error("Could not create or access jar directory at " + jarDir));
+            return;
+        }
         if (!jarDirStat.isDirectory()) {
             cb(new Error("Could not create or access jar directory at " + jarDir));
             return;
@@ -310,6 +394,9 @@
                         cb(new Error("Asset download from " + url + " returned HTTP status " + res.statusCode));
                         break;
                 }
+            }).on("error", function(e) {
+                cb(e);
+                return;
             });
         };
         fs.stat(destFile, downloadCallback);
@@ -390,6 +477,7 @@
                                               cb(error);
                                               return;
                                           }
+                                          var lastError = null;
                                           gulp.src(modulePaths, { read: false })
                                               .pipe(new stream.Writable({
                                                   objectMode: true,
@@ -410,28 +498,44 @@
                                                           });
                                                   }
                                               }))
+                                              .on("error", function(e) {
+                                                  lastError = e;
+                                              })
                                               .on("finish", function(e) {
-                                                  cb(e);
+                                                  if (e) {
+                                                      lastError = e;
+                                                  }
+                                                  cb(lastError);
                                               });
 
                                       });
         });
     });
 
-    gulp.task('_replace-require-json', ['_convert-cjs-modules'], function() {
-        return gulp.src(["./converted_modules/**/*.js"])
-                   .pipe(new stream.Transform({
-                       objectMode: true,
-                       transform: function(vinylFile, encoding, next) {
-                           var isBuffer = Buffer.isBuffer(vinylFile.contents);
-                           var contents = isBuffer ? vinylFile.contents.toString("utf8") : vinylFile.contents;
-                           var output = contents.replace(/\brequire\(\s*(['"])([^!]+?\.[jJ][sS][oO][nN])\1\s*\)/g,
-                                                         "require(\"json!$2\")");
-                           vinylFile.contents = isBuffer ? new Buffer(output, "utf8") : output;
-                           next(null, vinylFile);
-                       }
-                   }))
-                   .pipe(gulp.dest("./converted_modules"));
+    gulp.task('_replace-require-json', ['_convert-cjs-modules'], function(cb) {
+        var lastError = null;
+        gulp.src(["./converted_modules/**/*.js"])
+            .pipe(new stream.Transform({
+                objectMode: true,
+                transform: function(vinylFile, encoding, next) {
+                    var isBuffer = Buffer.isBuffer(vinylFile.contents);
+                    var contents = isBuffer ? vinylFile.contents.toString("utf8") : vinylFile.contents;
+                    var output = contents.replace(/\brequire\(\s*(['"])([^!]+?\.[jJ][sS][oO][nN])\1\s*\)/g,
+                                                  "require(\"json!$2\")");
+                    vinylFile.contents = isBuffer ? new Buffer(output, "utf8") : output;
+                    next(null, vinylFile);
+                }
+            }))
+            .pipe(gulp.dest("./converted_modules"))
+            .on("error", function(e) {
+                lastError = e;
+            })
+            .on("finish", function(e) {
+                if (e) {
+                    lastError = e;
+                }
+                cb(lastError);
+            });
     });
 
     gulp.task('_requirejs-optimize',
@@ -773,36 +877,43 @@
               });
 
     gulp.task('build', ['_requirejs-optimize', '_generate-npm-runners', '_jsdoc'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(0);
     });
 
     gulp.task('test', ['_test'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(testFailures);
     });
 
     gulp.task('default', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(testFailures);
     });
 
     gulp.task('unminify', ['_requirejs-optimize', '_formatMinifiedCode'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(0);
     });
 
     gulp.task('all', ['_jsdoc', '_requirejs-optimize', '_generate-npm-runners', '_formatMinifiedCode'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(testFailures);
     });
 
     gulp.task('clean', ['_clean'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(0);
     });
 
     gulp.task('distclean', ['_distclean'], function(cb) {
+        warnAboutUnfinishedTasks();
         cb();
         process.exit(0);
     });
