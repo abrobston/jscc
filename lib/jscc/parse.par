@@ -16,6 +16,7 @@ of the BSD license. Please see LICENSE for more information.
 
 [*
 (function(root, factory) {
+    /* istanbul ignore next */
 	if (typeof define === 'function' && define.amd) {
 		define(['require', './global', './regex', './tabgen', './log/log', './classes/Production', './enums/ASSOC', './enums/SYM', './enums/SPECIAL'], factory);
 	} else if (typeof module === 'object' && module.exports) {

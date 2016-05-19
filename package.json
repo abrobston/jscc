@@ -78,7 +78,9 @@
     "require": ["./main"],
     "exclude": [
       "test/**/*.js",
+      "asyncSupport.js",
       "gulpfile.js",
+      "resolvePackageDirectories.js",
       "volo/**/*.js",
       "lib/jscc/bitset/bitset.js",
       "lib/jscc/bitset/BitSetBool.js",
