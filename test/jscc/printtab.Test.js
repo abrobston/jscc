@@ -77,17 +77,24 @@ suite("printtab", function() {
     });
 
     test("print_actions logs an error if a %n wildcard does not match the right-hand side of a production",
-         injector.run(["mocks", "printtab", "classes/Production"], function(mocks, printtab, Production) {
-             var global = mocks.store["global"];
-             var log = mocks.store["log/logNode"];
-             global.productions = [];
-             global.productions.push(new Production({
-                 id: 0,
-                 code: "return %1;",
-                 rhs: []
-             }));
-             log.error.reset();
-             printtab.print_actions();
-             assert.called(log.error);
-         }));
+         injector.run(["mocks", "printtab", "classes/Production", "classes/Symbol"],
+                      function(mocks, printtab, Production, Symbol) {
+                          var global = mocks.store["global"];
+                          var log = mocks.store["log/logNode"];
+                          global.productions = [];
+                          global.symbols = [];
+                          global.productions.push(new Production({
+                              id: 0,
+                              code: "return %1;",
+                              lhs: 0,
+                              rhs: []
+                          }));
+                          global.symbols.push(new Symbol({
+                              id: 0,
+                              label: "testLabel"
+                          }));
+                          log.error.reset();
+                          printtab.print_actions();
+                          assert.called(log.error);
+                      }));
 });
