@@ -1,6 +1,6 @@
 {
   "name": "jscc-parser",
-  "version": "0.40.0",
+  "version": "0.40.1",
   "main": "main.js",
   "description": "A LALR(1) Parser Generator for JavaScript written in JavaScript.",
   "license": "BSD-3-Clause",

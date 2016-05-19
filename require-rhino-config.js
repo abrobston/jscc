@@ -17,7 +17,7 @@ requirejs.config({
     nodeRequire: require,
     config: {
         "lib/jscc/global": {
-            "version": "0.40.0"
+            "version": "0.40.1"
         },
         "env": "rhino"
     }
