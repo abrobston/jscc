@@ -410,8 +410,11 @@
         })
                          .wrap(errorCode);
         // Use a GitHub token, if present, to attempt to increase API rate limits and avoid errors
-        if (process.env.hasOwnProperty("GITHUB_API_TOKEN")) {
-            client = client.wrap(basicAuth, { username: "abrobston", password: process.env["GITHUB_API_TOKEN"] });
+        if (process.env.hasOwnProperty("GITHUB_API_TOKEN") && process.env.hasOwnProperty("GITHUB_API_USERNAME")) {
+            client = client.wrap(basicAuth, {
+                username: process.env["GITHUB_API_USERNAME"],
+                password: process.env["GITHUB_API_TOKEN"]
+            });
         }
         client({
                    path: "https://api.github.com/repos/mozilla/rhino/releases/latest",
