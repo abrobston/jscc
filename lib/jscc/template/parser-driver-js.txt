@@ -85,6 +85,14 @@ var Continue = function(){throw Continue;};
 		        throw new Error("Invalid value for DfaLex.state at chr " + chr + " and pos " + pos);
 		    }
 			var line = this._dfaData[this.state].line;
+			if (typeof line === "undefined" || line === null) {
+			    var badState = this.state;
+			    this.state = null;
+			    throw new Error("At chr " + chr + " and pos " + pos +
+			                    ", DfaLex._dfaData[" + badState +
+			                    "] appears to exist, but its line property is " +
+			                    (typeof line === "undefined" ? "undefined." : "null."));
+			}
 			var p, st;
 			for (p = 1 << 8, st = line; p; p >>= 1) {
 				if ((chr & p) !== 0) {
