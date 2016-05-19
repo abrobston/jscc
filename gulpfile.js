@@ -404,6 +404,13 @@
     }
 
     gulp.task('_get-rhino', function(cb) {
+        // Because encrypted environment variables are not available when building pull requests
+        // on Travis CI, warn that this task may fail.
+        var isPullRequest =
+            process.env.hasOwnProperty("TRAVIS_PULL_REQUEST") && typeof process.env["TRAVIS_PULL_REQUEST"] === "number";
+        if (isPullRequest) {
+            console.log("Pull request detected.  Determining current Rhino version may fail if the GitHub API call fails.");
+        }
         var client = rest.wrap(mime, {
             mime: "application/json",
             accept: "application/vnd.github.v3+json;q=1.0, application/json;q=0.8"
@@ -436,6 +443,11 @@
                 downloadAndUnzip(filename, url, cb);
             }
         }, function(errorResponse) {
+            if (errorResponse.status.code === 403 && isPullRequest) {
+                console.warn("Getting the latest Rhino version failed.  Not recording error here, but tests requiring Rhino will fail.");
+                cb();
+                return;
+            }
             cb(new Error("Request failed with HTTP status " + errorResponse.status.code));
         });
     });
