@@ -1,0 +1,73 @@
+{{#> layout title="Demo"}}
+    <div class="page-header">
+        <h1>JS/CC Demo</h1>
+    </div>
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <strong>Note:</strong> After compiling, you may need to refresh the page before compiling again to avoid spurious errors.
+            A fix for this issue should be released&hellip; sometime.
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="form-group"><label for="source-input" class="control-label">Source Input</label><textarea
+                    name="source-input"
+                    id="source-input"
+                    class="form-control"
+                    cols="120"
+                    rows="20"
+                    spellcheck="false"
+                    data-bind="value: sourceString"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="center-block-fix checkbox">
+                <label for="use-default-template">
+                    <input type="checkbox"
+                           id="use-default-template"
+                           data-bind="checked: useDefaultTemplate"/>
+                    Use default template
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="row collapse hide-use-default-template" aria-expanded="false">
+        <div class="col-xs-12">
+            <div class="form-group">
+                <label for="template-input" class="control-label">Template Input</label>
+                <textarea name="template-input" id="template-input" cols="120" rows="20" class="form-control"
+                          spellcheck="false" data-bind="value: templateString"></textarea>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="center-block-fix">
+                <button class="btn btn-primary btn-lg" type="button"
+                        data-bind="visible: !$root.isCompiling(), click: $root.compile">Compile
+                </button>
+                <div class="text-center" data-bind="visible: isCompiling">Compiling...</div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <figure data-bind="visible: $root.logDisplay() !== ''">
+                <figcaption>Log Messages</figcaption>
+                <pre id="log-message-box">
+                    <samp data-bind="text: logDisplay"></samp>
+                </pre>
+            </figure>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <figure data-bind="visible: $root.outputString() !== ''">
+                <figcaption>Output</figcaption>
+                <pre><code id="output" class="language-javascript" data-bind="text: outputString"></code></pre>
+            </figure>
+        </div>
+    </div>
+
+{{/layout}}

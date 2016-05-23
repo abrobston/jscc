@@ -1,0 +1,152 @@
+/*
+ Solarized Color Schemes originally by Ethan Schoonover
+ http://ethanschoonover.com/solarized
+
+ Ported for PrismJS by Hector Matos
+ Website: https://krakendev.io
+ Twitter Handle: https://twitter.com/allonsykraken)
+
+ Modified to use the solarized-*.less schemes and variables
+ for the JS/CC documentation website.
+*/
+
+/*
+SOLARIZED HEX
+--------- -------
+base03    @base03
+base02    @base02
+base01    @base01
+base00    @base00
+base0     @base0
+base1     @base1
+base2     @base2
+base3     @base3
+yellow    @yellow
+orange    @orange
+red       @red
+magenta   @magenta
+violet    @violet
+blue      @blue
+cyan      @cyan
+green     @green
+*/
+
+code[class*="language-"],
+pre[class*="language-"] {
+	color: @base00; /* base00 */
+	font-family: @font-family-monospace;
+	direction: ltr;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+
+	line-height: 1.5;
+
+	-moz-tab-size: 4;
+	-o-tab-size: 4;
+	tab-size: 4;
+
+	-webkit-hyphens: none;
+	-moz-hyphens: none;
+	-ms-hyphens: none;
+	hyphens: none;
+}
+
+pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
+code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
+	background: @base02; /* base02 */
+}
+
+pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
+code[class*="language-"]::selection, code[class*="language-"] ::selection {
+	background: @base02; /* base02 */
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+	padding: 1em;
+	margin: .5em 0;
+	overflow: auto;
+	border-radius: 0.3em;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+	background-color: @base3; /* base3 */
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+	padding: .1em;
+	border-radius: .3em;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: @base1; /* base1 */
+}
+
+.token.punctuation {
+	color: @base01; /* base01 */
+}
+
+.namespace {
+	opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: @blue; /* blue */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.url,
+.token.inserted {
+	color: @cyan; /* cyan */
+}
+
+.token.entity {
+	color: @base00; /* base00 */
+	background: @base2; /* base2 */
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+	color: @green; /* green */
+}
+
+.token.function {
+	color: @yellow; /* yellow */
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+	color: @orange; /* orange */
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}

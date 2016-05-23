@@ -1,0 +1,33 @@
+{
+  "name": "jscc-pages",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "almond": "^0.3.2",
+    "async": "^2.0.0-rc.5",
+    "grunt": "^1.0.1",
+    "gulp": "^3.9.1",
+    "gulp-autoprefixer": "^3.1.0",
+    "gulp-clean-css": "^2.0.7",
+    "gulp-less": "^3.0.5",
+    "gulp-sourcemaps": "^2.0.0-alpha",
+    "less-plugin-autoprefix": "^1.5.1",
+    "less-plugin-clean-css": "^1.5.1",
+    "lodash-amd": "^4.12.0",
+    "requirejs": "^2.2.0",
+    "temp": "^0.8.3",
+    "uglify-js": "^2.6.2",
+    "vinyl": "^1.1.1"
+  },
+  "dependencies": {
+    "bootstrap": "^3.3.6",
+    "browser-cookies": "^1.0.8",
+    "handlebars": "^4.0.5",
+    "jquery": "^2.2.3",
+    "jscc-parser": ">=0.40.1",
+    "knockout": "^3.4.0",
+    "prismjs": "^1.4.1",
+    "requirejs-domready": "^2.0.3",
+    "requirejs-text": "^2.0.12"
+  }
+}

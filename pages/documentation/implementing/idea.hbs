@@ -1,0 +1,80 @@
+{{#> layout title="The Idea"}}
+<h1>The Idea</h1>
+<p>As a real, practical example, we will now write a simple, interpreted programming language called
+XPL (eXample Programming Language) using JS/CC.  XPL is a C-styled script language interpreter,
+providing simple user input/output operations, loops, and conditional execution as well as variables.
+As variable type, only numbers are supported (integer and floating point both use the same, internal
+JavaScript type "Number").  The definition of user-defined functions is not possible in this
+scripting language, but it would be simple to add this feature.</p>
+<p>For text output, XPL provides a special "say" command which allows to output constant texts.</p>
+<p>To get familiar with XPL's syntax, look at the following example scripts.</p>
+<figure>
+    <figcaption>hello.xpl</figcaption>
+    {{#code "clike"}}
+      // This is a simple Hello World script, written in XPL.
+      say 'Hello World';
+    {{/code}}
+</figure>
+<figure>
+    <figcaption>99-bottles-of-beer.xpl</figcaption>
+    {{#code "clike"}}
+      // The wonderful "99 bottles of beer" program
+      bottles = 99;
+      do
+      {
+          // The output will not be the prettiest, but that is limited
+          // by the implementation (you can change it if you want)
+          write bottles;
+
+          if bottles == 1 say 'bottle of beer on the wall,';
+          else say 'bottles of beer on the wall,';
+
+          write bottles;
+          if bottles == 1
+              say 'bottle of beer';
+          else
+              say 'bottles of beer';
+
+          say 'Take one down, pass it around,';
+          bottles = bottles - 1;
+
+          write bottles;
+          if bottles == 0 say 'no more bottles of beer on the wall';
+          else if bottles == 1 say 'bottle of beer on the wall';
+          else say 'bottles of beer on the wall';
+
+          say ''; //Empty line
+      }
+      while bottles > 0;
+
+      say 'That''s it!';
+    {{/code}}
+</figure>
+<figure>
+    <figcaption>countdown.xpl</figcaption>
+    {{#code "clike"}}
+      // A rocketry launch countdown
+      say '--- The final countdown program ---';
+
+      do
+      {
+          say 'Enter your starting number (it must be greater than or equal to 10):';
+          read count;
+
+          if count < 10 say 'The number is lower than 10!';
+      }
+      while count < 10;
+
+      say 'Starting sequence...';
+      while count >= 0 do
+      {
+          write count;
+
+          //Ignition at 3 loops before lift-off...
+          if count == 3 say 'Ignition...';
+          else if count == 0 say '...and lift-off!';
+          count = count - 1;
+      }
+    {{/code}}
+</figure>
+{{/layout}}

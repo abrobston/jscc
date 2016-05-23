@@ -1,0 +1,13 @@
+{
+  "mainConfigFile": "./config.js",
+  "name": "../node_modules/almond/almond",
+  "include": ["main"],
+  "out": "main-built.js",
+  "optimize": "uglify2",
+  "generateSourceMaps": true,
+  "preserveLicenseComments": false,
+  "wrap": {
+    "startFile": "../buildTemp/almond-start.txt",
+    "endFile": "../buildTemp/almond-end-require-main.txt"
+  }
+}

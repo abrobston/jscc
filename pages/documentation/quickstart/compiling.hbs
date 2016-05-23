@@ -1,0 +1,13 @@
+{{#> layout title="Compiling the Example"}}
+<h1>Compiling the Example</h1>
+<p>To compile a working parser from the <a href="{{resolve "documentation/quickstart/example.html"}}">example</a>,
+    run JS/CC as follows:</p>
+{{#code "bash"}}
+    ./bin/jscc-node.sh --src_file calc.par --out_file calc.js
+{{/code}}
+<p>That's all! The result, <code>calc.js</code>, can now simply be executed using your desired platform.</p>
+<p>Like other *nix programs, JS/CC outputs nothing when it is invoked and successfully builds the parser. For
+    additional output, use the <code>--logLevel</code> option. The <code>--verbose</code> option (for now)
+    prints out some statistics, e.g., how many states and actions had been created in the resulting parse table.
+    <code>--verbose</code> is likely to be deprecated in favor of using only <code>--logLevel</code> at some point.</p>
+{{/layout}}

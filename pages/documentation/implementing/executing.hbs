@@ -1,0 +1,13 @@
+{{#> layout title="Executing the Script"}}
+<h1>Executing the Script</h1>
+<p>It is impossible to interpret an XPL script directly like in the first expression calculator example. It
+    probably works also here, but only for expressions. Statements like <code>while&hellip;do</code> or
+    <code>if&hellip;else</code> are not directly interpretable because they have a body and a conditional part.
+    Because of that, we need to compile the program internally into a structure for a virtual machine. This
+    virtual machine uses an assembly like command language, working with opcodes and operands.</p>
+<p>The parser has the purpose to build up a cascading structure of nodes, which form the program that can be
+    executed. This method avoids the use of dealing with jumps to addresses but cannot be used to write to a file.</p>
+<p>Note that this compiler will not compile into an assembly code file. The assembly program is constructed
+    directly into memory as an internal structure. The virtual machine executing this structure will at least have
+    one function, which calls itself recursively based on the operation it should execute.</p>
+{{/layout}}

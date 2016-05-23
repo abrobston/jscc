@@ -1,0 +1,32 @@
+{{#> layout title="Welcome to JS/CC"}}
+<h2>Welcome to JS/CC!</h2>
+<p>JS/CC is the first available parser development system for JavaScript and ECMAScript-derivatives.</p>
+<p>It has been developed both with the intention of building a productive compiler development system and with the
+    intention of creating an easy-to-use academic environment for people interested in how parse table generation is
+    done generally in bottom-up parsing.</p>
+<p>JS/CC is a platform-independent software that unions both:</p>
+<ul>
+    <li>A regular expression-based lexical analyzer generator matching individual tokens from the input character stream
+        and
+    </li>
+    <li>A LALR(1) parser generator, computing the parse tables for a given context-free grammar specification to build a
+        stand-alone, working parser.
+    </li>
+</ul>
+<p>The context-free grammar fed to JS/CC is defined in a Backus-Naur-Form-based meta language, and allows the insertion
+    of individual semantic code to be evaluated on a rule's reduction. JS/CC itself has been entirely written in
+    JavaScript so it can be executed in many different ways:</p>
+<ul>
+    <li>As platform-independent, browser-based JavaScript embedded on a website, which comes with a graphical parse tree generator;</li>
+    <li>As a Mozilla/Rhino or Nashorn interpreted application; or</li>
+    <li>As a Node.js script.</li>
+</ul>
+<p>All versions can be built and run under Linux, Windows, Mac OS X, and any other *nix-based operating system. For
+    production execution, it is recommended to use the command-line versions, which are capable of assembling a
+    complete compiler from a JS/CC parser specification, which is then stored to a .js JavaScript source file.</p>
+<p>To use JS/CC and for understanding its internals and behavior, some knowledge of context-free grammars, bottom-up
+    parsing techniques, and compiler construction theory is assumed. To get a fundamental introduction to compiler
+    design and the different techniques and appendages on this topic, I warmly suggest the book
+    <i><a href="http://isbn.nu/9780131550452">Compiler Design in C,</a></i> written by Allen I. Holub.</p>
+<p>Now, enjoy JS/CC!</p>
+{{/layout}}

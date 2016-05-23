@@ -1,0 +1,12 @@
+<ul class="nav nav-pills nav-stacked">
+    {{#each documentationTableOfContents.tree}}
+      <li class="dropdown" role="presentation">
+          <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">{{title}} <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+              {{#each tree}}
+                <li><a href="{{resolve url}}">{{title}}</a></li>
+              {{/each}}
+          </ul>
+      </li>
+    {{/each}}
+</ul>

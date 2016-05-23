@@ -1,0 +1,17 @@
+{
+  "mainConfigFile": "./config.js",
+  "name": "../node_modules/almond/almond",
+  "include": ["demo", "moduleStub"],
+  "out": "demo-built.js",
+  "optimize": "uglify2",
+  "generateSourceMaps": true,
+  "preserveLicenseComments": false,
+  "stubModules": ["text", "moduleStub"],
+  "has": {
+    "node": false
+  },
+  "wrap": {
+    "startFile": "../buildTemp/almond-start.txt",
+    "endFile": "../buildTemp/almond-end-require-demo.txt"
+  }
+}

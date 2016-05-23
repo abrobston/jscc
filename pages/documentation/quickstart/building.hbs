@@ -1,0 +1,53 @@
+{{#> layout title="Building JS/CC for Your Platform"}}
+<h1>Building JS/CC for Your Platform</h1>
+<p>JS/CC is platform-independent software. The default build process creates runners for browser platforms (using
+    <a href="http://phantomjs.org/">PhantomJS</a> for running as a script), <a href="https://nodejs.org/">Node.JS</a>,
+    <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/Rhino">Mozilla/Rhino</a>, and
+    <a href="http://docs.oracle.com/javase/8/docs/technotes/guides/scripting/nashorn/">Nashorn</a>. JS/CC can be
+    built on Windows, Linux, or other *nix platforms that support Node.js and Java 8.
+</p>
+<h2>Download Source Code</h2>
+<p>To get the source code, use <code>git</code>:</p>
+<pre>
+    <code class="language-bash">
+        git clone https://github.com/abrobston/jscc.git
+    </code>
+</pre>
+<h2>Install Prerequisites</h2>
+<h3>Node.js and npm</h3>
+<p>Ensure that you have Node.js and npm. See <a href="https://docs.npmjs.com/getting-started/installing-node">https://docs.npmjs.com/getting-started/installing-node</a>
+    for details. Building and testing JS/CC most recently used Node versions 4.4.3 and 5.10.1, but other versions will
+    likely work also.</p>
+<h3>Gulp</h3>
+<p>Ensure that you have Gulp version 3.x. See <a
+        href="https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md">https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md</a>.
+    Gulp version 4.x may work but has not been tested.</p>
+<h3>Java 8</h3>
+<p>The build process uses Java even if you are not using any of the Java-based runners.</p>
+<p>Ensure that Java 8 or later is installed and that the <code>JAVA_HOME</code> environment variable points to the
+    correct path of this installation. Builds and tests have been done with Oracle's distribution of Java 8. OpenJDK 8
+    may work but has not been tested.</p>
+<h2>Build</h2>
+<h3>Get Dependencies from NPM</h3>
+<p>From the root project directory, run:</p>
+<pre>
+    <code class="language-bash">
+        npm update
+    </code>
+</pre>
+<h3>Execute Gulp Task</h3>
+<p>To run the default build target, simply run:</p>
+<pre>
+    <code class="language-bash">
+        gulp
+    </code>
+</pre>
+<p>The default build target downloads some additional dependencies, generates API documentation, and builds for the four
+    platforms currently supported. To run tests, build first, then run:</p>
+<pre>
+    <code class="language-bash">
+        gulp test
+    </code>
+</pre>
+<p>For other targets, see <a href="https://github.com/abrobston/jscc/blob/master/gulpfile.js">gulpfile.js</a>.</p>
+{{/layout}}

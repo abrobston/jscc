@@ -1,0 +1,15 @@
+body {
+  padding-top: 70px;
+}
+
+footer {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid @base2;
+  font-size: @font-size-small;
+}
+
+footer p {
+  &:extend(.text-center);
+  margin-bottom: floor((@font-size-small * @line-height-base) / 3);
+}

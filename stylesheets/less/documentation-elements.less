@@ -1,0 +1,50 @@
+@media (max-width: @screen-xs-max) {
+  .documentation-table-of-contents {
+    .make-xs-column(12);
+    z-index: 5;
+  }
+
+  .documentation-main {
+    .make-xs-column(12);
+  }
+}
+
+@media (min-width: @screen-sm-min) and (max-width: @screen-sm-max) {
+  .documentation-table-of-contents {
+    .make-sm-column(5);
+    position: fixed;
+    z-index: 5;
+  }
+
+  .documentation-main {
+    .make-sm-column-offset(5);
+    .make-sm-column(7);
+
+  }
+}
+
+@media (min-width: @screen-md-min) and (max-width: @screen-md-max) {
+  .documentation-table-of-contents {
+    .make-md-column(3);
+    position: fixed;
+    z-index: 5;
+  }
+
+  .documentation-main {
+    .make-md-column-offset(3);
+    .make-md-column(9);
+  }
+}
+
+@media (min-width: @screen-lg-min) {
+  .documentation-table-of-contents {
+    .make-lg-column(2);
+    position: fixed;
+    z-index: 5;
+  }
+
+  .documentation-main {
+    .make-lg-column-offset(2);
+    .make-lg-column(10);
+  }
+}

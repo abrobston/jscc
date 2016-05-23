@@ -1,0 +1,70 @@
+{{#> layout title="An Example Parser"}}
+<h1>An Example Parser</h1>
+<p>In parser generators like yacc, a simple parser for mathematical expressions is the most widely used example to
+    become familiar with the syntax and usage, so we do this even here. The parser definition language itself is
+    described below in a more detailed way.</p>
+<p>Store the following grammar definition into a text file of your choice. For parser source files, the
+    <code>.par</code> file extension could be used, so the file is named <code>calc.par</code> in such case.</p>
+{{#code "jscc"}}
+/~  Expression calculator written in JS/CC ~/
+
+/~  Tokens to be ignored (e.g. whitespace, comments) ~/
+!   ' |\t'
+    ;
+
+/~  Grammar tokens            ~/
+    '\+'
+    '\-'
+    '\*'
+    '/'
+    '\('
+    '\)'
+    '[0-9]+'      INT  [* %match = parseInt( %match );  *]
+    '[0-9]+\.[0-9]*|[0-9]*\.[0-9]+'  FLOAT  [* %match = parseFloat( %match );  *]
+    ;
+##
+
+/~     The non-terminal "p" is the entry symbol, because it is the first one!    ~/
+program:  expr    [* print( %1 );  *]
+       ;
+
+/~     Don't confuse with the tokens: Here, we use the unescaped values because these
+       are not interpreted as regular expressions at this position!    ~/
+expr:  expr '+' term  [* %% = %1 + %3; *]
+       | expr '-' term  [* %% = %1 - %3; *]
+       | term    /~ Default semantic action fits here! ~/
+       ;
+
+term:  term '*' factor  [* %% = %1 * %3; *]
+       | term '/' factor  [* %% = %1 / %3; *]
+       | factor    /~ Default semantic action fits here! ~/
+       ;
+
+factor: '(' expr ')'  [* %% = %2; *]
+        | INT    /~ Default semantic action fits here! ~/
+        | FLOAT    /~ Default semantic action fits here! ~/
+        ;
+
+/~      This is the parser entry point; Because this entry point could be very individual,
+        the compiler programmer has to decide which way he wants to read the source, parse
+        it and report the errors, if there are any.        ~/
+[*
+var error_offsets = new Array();
+var error_lookaheads = new Array();
+var error_count = 0;
+
+var str = new String( arguments[0] );
+
+if( ( error_count = __parse( str,
+        error_offsets, error_lookaheads ) ) > 0 )
+{
+  for( i = 0; i < error_count; i++ )
+    print( "Parse error near \""
+      + str.substr( error_offsets[i] ) +
+        "\", expecting \"" +
+          error_lookaheads[i].join() +
+            "\"" );
+}
+*]
+{{/code}}
+{{/layout}}

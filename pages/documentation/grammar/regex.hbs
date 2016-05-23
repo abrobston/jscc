@@ -1,0 +1,106 @@
+{{#> layout title="Regular Expressions"}}
+<h1>Regular Expressions</h1>
+<p>Because it was impossible to build a property-working lexical analyzer using JavaScript's built-in RegExp object,
+    JS/CC features its own implementation of regular-expression processing. This is also the reason that not all the
+    features of the JavaScript RegExp object are provided, like back-references and predefined character classes.</p>
+<p>The symbols and operators to be used within JS/CC's own regular-expression language are summarized in the following
+    table. They form a minimal implementation of a regular-expression engine.</p>
+<table class="table table-border">
+    <thead>
+    <tr>
+        <th>Language Element</th>
+        <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td>Character</td>
+        <td>One character specifies exactly that character. If a regular-expression operator like
+            <code>+</code> or <code>*</code> should be used, it must be escaped via <code>\</code>.
+        </td>
+    </tr>
+    <tr>
+        <td><code>\ascii-code</code></td>
+        <td>One character, defined via ASCII-code., e.g., <code>"\220"</code> matches the
+            &Uuml;-umlaut of the extended ASCII table.
+        </td>
+    </tr>
+    <tr>
+        <td><code>\character</code></td>
+        <td>Escaped character. Must be used when a character of the meta-language itself should be
+            matched, e.g., <code>"\|"</code>.
+        </td>
+    </tr>
+    <tr>
+        <td><code>.</code></td>
+        <td>Any character (character class matching all available characters).</td>
+    </tr>
+    <tr>
+        <td><code>[&hellip;]</code></td>
+        <td>Character-class. If a beginning circumflex (<code>^</code>) is given,
+            the character-class is negated. Character ranges can be specified using a
+            dash. For example, <code>"[A-Za-z]"</code> specifies all capital and
+            lower-case alphabet letters.
+        </td>
+    </tr>
+    <tr>
+        <td><code>(&hellip;)</code></td>
+        <td>Sub-expression.</td>
+    </tr>
+    <tr>
+        <td><code>|</code></td>
+        <td>Or-operator. Allows to specify different expressions at one level.</td>
+    </tr>
+    <tr>
+        <td><code>*</code></td>
+        <td>Kleene-closure operator (none or many), to be specified behind a character,
+            character-class, or sub-expression.
+        </td>
+    </tr>
+    <tr>
+        <td><code>+</code></td>
+        <td>Positive-closure operator (one or many), to be specified behind a character,
+            character-class, or sub-expression.
+        </td>
+    </tr>
+    <tr>
+        <td><code>?</code></td>
+        <td>Optional-closure operator (one or none), to be specified behind a character,
+            character-class, or sub-expression.
+        </td>
+    </tr>
+    </tbody>
+</table>
+<p>To allow case-insensitive keywords within grammar definitions, a terminal symbol definition can be
+    specified using single-quoted (<code>'&hellip;'</code>) and double-quoted (<code>"&hellip;"</code>)
+    strings. A single-quoted string means that a terminal symbol is matched case-sensitive, while a
+    double-quoted string matches a terminal in any case order. For example, the terminal symbol
+    definition <code>"PRINT"</code> will match for <i>Print</i>, <i>print</i>, <i>PrINT</i>, and
+    <i>PRINT</i>, while the definition <code>'PRINT'</code> will only match for <i>PRINT</i> itself.</p>
+<p>From these regular expression definitions, JS/CC constructs a deterministic finite automaton which
+    acts as lexer in the resulting parser.</p>
+<h2>Ambiguous Regular Expressions</h2>
+<p>If there are ambiguous regular expressions (where several expressions match the same string) within the
+    terminal definition part, the expressions defined first in the terminal definition part will take higher
+    match precedence than the later-defined terminals. It is recommended to define tokens with a higher
+    specialization level as the first, and tokens with a lower level as the last in your token definition part.</p>
+<h2>Associativity and Precedence</h2>
+<p>Tokens can be grouped by precedence levels and associativity. This feature allows writing faster and even
+    smaller grammars, by resolving grammar conflicts by weighting terminal symbols.</p>
+<p>A group without a group specifier will set no associativity and a precedence level of zero to all terminal
+    symbols in this group (as in the first example).</p>
+<p>Else, if a group begins with the symbol <code>&lt;</code> for left-associativity, <code>&gt;</code> for
+    right-associativity, or <code>^</code> for non-associativity, all terminal symbols within this group are set to
+    the according associativity and precedence level. The precedence level is incremented each time a new group
+    of these three types is opened, so groups that are defined at the bottom of the token definition part take the
+    highest precedence.</p>
+<p>The precedence information as associativity is used to resolve conflicts in ambiguous grammars by modifying the
+    parse table's natural content. How this works in practice is described in
+    <a href="{{resolve "documentation/grammar/grammar.html"}}">The Grammar Definition Part</a> in the section dealing
+    with grammar conflicts and their handling.</p>
+<h2>Whitespace</h2>
+<p>A special type of terminal symbol is introduced by the exclamation-mark (<code>!</code>) symbol: the whitespace
+    symbols!</p>
+<p>In this definition, there is only a regular expression possible. A label or code part is prohibited. As
+    whitespace-tokens, terminals that should always be ignored can be specified, e.g., blanks, tabs, or comments.</p>
+{{/layout}}

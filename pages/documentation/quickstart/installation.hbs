@@ -1,0 +1,40 @@
+{{#> layout title="Installation and Start-Up"}}
+<h1>Installation and Start-Up</h1>
+<h2>Installation</h2>
+<p>See <a href="{{resolve "getting-started.html"}}">Getting Started</a> for instructions on downloading JS/CC from
+    source or via the <code>npm</code> or <code>bower</code> package managers.</p>
+<p>After downloading or building JS/CC, the command-line runners for each platform are in the <code>bin</code>
+    directory. If you installed JS/CC from <code>npm</code>, there may also be runners in the
+    <code>node_modules/.bin</code> directory of the project where you installed from <code>npm</code>.</p>
+<p>In addition to use from the command line, JS/CC may be used as a module from other JavaScript code as shown
+    below.</p>
+<h2>Use As a Module</h2>
+<p>This section presumes the use of Node.js to run your JavaScript code and the use of the <code>npm</code>
+    download of JS/CC, but other platforms should be similar.</p>
+<p>To use the module itself:</p>
+{{#code "javascript"}}
+    // Import the JS/CC module
+    var jscc = require("jscc-parser");
+
+    // Compile your grammar with the default template
+    jscc({
+        src_file: "path/to/grammar.par",
+        out_file: "path/to/output.js"
+    });
+{{/code}}
+<p>For all options that may be passed to the compiler, see <a
+        href="{{resolve "documentation/quickstart/options.html"}}">Compiler Options</a>.</p>
+<h2>Use from the Command Line</h2>
+<p>Use the batch file (<code>.bat</code>) on Windows or the shell script (<code>.sh</code>) on *nix for
+    your desired platform, and pass options as command-line arguments. For example, to run using the Nashorn
+    engine on Linux:</p>
+{{#code "bash"}}
+    ./bin/jscc-nashorn.sh --src_file "path/to/grammar.par" --out_file "path/to/output.js"
+{{/code}}
+<p>Or on Windows:</p>
+{{#code "batch"}}
+    .\bin\jscc-nashorn.bat --src_file "path\to\grammar.par" --out_file "path\to\output.js"
+{{/code}}
+<p>Again, see <a href="{{resolve "documentation/quickstart/options.html"}}">Compiler Options</a> for a
+    complete list of options on the command line.</p>
+{{/layout}}

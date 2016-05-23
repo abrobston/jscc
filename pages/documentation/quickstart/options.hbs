@@ -1,0 +1,107 @@
+{{#> layout title="Compiler Options"}}
+<h1>Compiler Options</h1>
+<p>Options are specified in the object passed to the <code>jscc</code> function when using JS/CC as a module. When
+    using JS/CC from the command line, options are specified as command-line arguments prefixed with two hyphens.</p>
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th>Option</th>
+        <th>Type</th>
+        <th>Default</th>
+        <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td><code>out_file</code></td>
+        <td><code>string</code></td>
+        <td>Empty string, meaning to print to standard output or the engine's equivalent</td>
+        <td>The path of the output file.</td>
+    </tr>
+    <tr>
+        <td><code>src_file</code></td>
+        <td><code>string</code></td>
+        <td>Empty string, meaning to read from standard input or the engine's equivalent</td>
+        <td>The path of the input grammar file.</td>
+    </tr>
+    <tr>
+        <td><code>tpl_file</code></td>
+        <td><code>string</code></td>
+        <td>A default template file for generic compilation tasks.</td>
+        <td>The path of the input template file.</td>
+    </tr>
+    <tr>
+        <td><code>input</code></td>
+        <td><code>string</code> or <code>function</code></td>
+        <td>None</td>
+        <td>If a string, the contents of the input grammar. If a function, a function that returns the contents of the
+            grammar. When
+            <code>input</code> is specified, <code>src_file</code> is ignored.
+        </td>
+    </tr>
+    <tr>
+        <td><code>template</code></td>
+        <td><code>string</code> or <code>function</code></td>
+        <td>None</td>
+        <td>If a string, the contents of the template. If a function with no arguments, a function that returns the
+            contents of the template. When
+            <code>template</code> is specified, <code>tpl_file</code> is ignored.
+        </td>
+    </tr>
+    <tr>
+        <td><code>outputCallback</code></td>
+        <td><code>function(string)</code></td>
+        <td>None</td>
+        <td>A function with a parameter that will be called with the output. When <code>outputCallback</code> is
+            specified,
+            <code>out_file</code> is ignored.
+        </td>
+    </tr>
+    <tr>
+        <td><code>dump_nfa</code></td>
+        <td><code>boolean</code></td>
+        <td><code>false</code></td>
+        <td>Whether to output the nondeterministic finite automata for debugging purposes.</td>
+    </tr>
+    <tr>
+        <td><code>dump_dfa</code></td>
+        <td><code>boolean</code></td>
+        <td><code>false</code></td>
+        <td>Whether to output the deterministic finite automata for debugging purposes.</td>
+    </tr>
+    <tr>
+        <td><code>verbose</code></td>
+        <td><code>boolean</code></td>
+        <td><code>false</code></td>
+        <td>Makes output slightly chattier. Will probably be deprecated in favor of using only <code>logLevel</code> at
+            some point.
+        </td>
+    </tr>
+    <tr>
+        <td><code>logLevel</code></td>
+        <td><code>string</code> or member of the <code>jscc.enums.LOG_LEVEL</code> enumeration
+            (<code>FATAL</code>, <code>ERROR</code>, <code>WARN</code>, <code>INFO</code>, <code>DEBUG
+            </code>, <code>TRACE</code>)
+        </td>
+        <td><code>WARN</code></td>
+        <td>The logging level.</td>
+    </tr>
+    <tr>
+        <td><code>throwIfErrors</code></td>
+        <td><code>boolean</code></td>
+        <td><code>false</code></td>
+        <td>Whether to throw an exception before completion of the main method if there are any compilation errors. Not
+            available from the command line.
+        </td>
+    </tr>
+    <tr>
+        <td><code>exitIfErrors</code></td>
+        <td><code>boolean</code></td>
+        <td><code>false</code></td>
+        <td>Whether to exit the process with a non-zero exit code if there are any errors, provided that the platform
+            permits doing so. Intended for use with shell scripts. Not available from the command line.
+        </td>
+    </tr>
+    </tbody>
+</table>
+{{/layout}}

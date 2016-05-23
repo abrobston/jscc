@@ -1,0 +1,80 @@
+{{#> layout title="Defining the Grammar"}}
+<h1>Defining the Grammar</h1>
+<p>The unaugmented grammar definition for the XPL grammar is the following, consisting of fewer than 80 lines
+    of grammar and terminal definition code.</p>
+{{#code "jscc"}}
+  !      ' |\r|\n|\t|//[^\n]*\n'
+
+         "IF"
+         "ELSE"
+         "WHILE"
+         "DO"
+         "SAY"
+         "WRITE"
+         "READ"
+         '{'
+         '}'
+         ';'
+         '\('
+         '\)'
+         '='
+         '[A-Za-z_][A-Za-z0-9_]*'        Identifier
+         '\'([^\']|\'\')*\''             String
+         '[0-9]+'                        Integer
+         '[0-9]+\.[0-9]*|[0-9]*\.[0-9]+' Float
+         ;
+
+  >      '=='
+         '!='
+         '<='
+         '>='
+         '>'
+         '<'
+         ;
+
+  <      '\+'
+         '\-'
+         ;
+
+  <      '/'
+         '\*'
+         ;
+
+  ##
+
+  Program:    Program Stmt
+              |
+              ;
+
+  Stmt_List:  Stmt_List Stmt
+              |
+              ;
+
+  Stmt:       IF Expression Stmt
+              | IF Expression Stmt ELSE Stmt
+              | WHILE Expression DO Stmt
+              | DO Stmt WHILE Expression ';'
+              | SAY String ';'
+              | WRITE Expression ';'
+              | READ Identifier ';'
+              | Identifier '=' Expression ';'
+              | '{' Stmt_List '}'
+              | ';'
+              ;
+
+  Expression: Expression '==' Expression
+              | Expression '<' Expression
+              | Expression '>' Expression
+              | Expression '<=' Expression
+              | Expression '!=' Expression
+              | Expression '-' Expression
+              | Expression '+' Expression
+              | Expression '/' Expression
+              | '-' Expression             &'*'
+              | '(' Expression ')'
+              | Integer
+              | Float
+              | Identifier
+              ;
+{{/code}}
+{{/layout}}

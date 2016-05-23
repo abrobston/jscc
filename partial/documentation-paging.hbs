@@ -1,0 +1,16 @@
+<div class="row">
+    <nav>
+      {{#doc-page}}
+          <ul class="pager">
+            {{#if previousUrl}}
+                <li class="previous"><a href="{{resolve previousUrl}}"><span
+                        aria-hidden="true">&larr;</span> {{previousTitle}}</a></li>
+            {{/if}}
+            {{#if nextUrl}}
+                <li class="next"><a href="{{resolve nextUrl}}">{{nextTitle}} <span aria-hidden="true">&rarr;</span></a>
+                </li>
+            {{/if}}
+          </ul>
+      {{/doc-page}}
+    </nav>
+</div>
