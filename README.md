@@ -3,8 +3,8 @@
 [![npm](https://img.shields.io/npm/v/jscc-parser.svg?maxAge=2592000)](https://www.npmjs.com/package/jscc-parser)
 
 JS/CC LALR(1) Parser Generator
-Copyright (C) 2007-2012 by Phorward Software Technologies, Jan Max Meyer
-http://jscc.phorward-software.com ++ contact<<AT>>phorward-software<<DOT>>com
+Copyright © 2007-2016 by Phorward Software Technologies; Jan Max Meyer; Brobston Development, Inc.; and other contributors
+http://jscc.brobston.com ++ contact<<AT>>phorward-software<<DOT>>com
 
 INTRODUCTION
 ------------
@@ -125,5 +125,5 @@ each runner sets those options according to its needs.
 GRAMMAR FILES
 -------------
 
-See the [PDF manual](https://github.com/abrobston/jscc/blob/master/doc/jscc_manual.pdf) for information
+See the [online documentation](http://jscc.brobston.com/documentation/grammar/general.html) for information
 on the grammar file syntax that JS/CC requires.
