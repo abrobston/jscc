@@ -46,7 +46,7 @@
     "gulp": "~3.9.1",
     "jformatter": "~1.0.13",
     "jsdoc": "~3.4.0",
-    "mocha": "~2.4.5",
+    "mocha": "~2.5.3",
     "nyc": "~6.4.0",
     "phantomjs-prebuilt": "~2.1.7",
     "requirejs": "~2.2.0",
@@ -75,7 +75,9 @@
   },
   "nyc": {
     "cache": true,
-    "require": ["./main"],
+    "require": [
+      "./main"
+    ],
     "exclude": [
       "test/**/*.js",
       "asyncSupport.js",
