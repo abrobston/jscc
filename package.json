@@ -47,7 +47,7 @@
     "jformatter": "~1.0.13",
     "jsdoc": "~3.4.0",
     "mocha": "~2.5.3",
-    "nyc": "~6.6.1",
+    "nyc": "~7.0.0",
     "phantomjs-prebuilt": "~2.1.7",
     "requirejs": "~2.2.0",
     "requirejs-text": "~2.0.12",
