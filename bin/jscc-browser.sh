@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Use PhantomJS from npm (the phantomjs-prebuilt package), but use the standalone
 # (non-Node) executable
@@ -7,7 +7,11 @@ searchDir=$(dirname $0)/../node_modules/phantomjs-prebuilt
 env=$(which env)
 if [ -r "${searchDir}/lib/location.js" ]
 then
-    phantomPath=${searchDir}/lib/$(grep "module.exports.location" "${searchDir}/lib/location.js" | sed -re 's/^.*=\s*"(.*)"\s*$/\1/')
+    phantomPath=$(grep "module.exports.location" "${searchDir}/lib/location.js" | sed -re 's/^.*=\s*"(.*)"\s*$/\1/')
+    if [[ "${phantomPath}" =~ ^[^/] ]]
+    then
+        phantomPath=${searchDir}/lib/${phantomPath}
+    fi
 else
     if [ "${npm_config_tmp}x" = "x" ]
     then
