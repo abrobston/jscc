@@ -452,40 +452,12 @@
         });
     });
 
-    gulp.task('_get-closure', function(cb) {
-        downloadAndUnzip("closure-latest.zip", "http://dl.google.com/closure-compiler/compiler-latest.zip", cb);
-    });
-
-    function voloGet(archiveString, cb) {
-        ensureDir("volo", function() {
-            var execName = process.platform === "win32" ? "volo.cmd" : "volo";
-            childProcess.exec("\"" + path.join(__dirname, "node_modules", ".bin", execName) +
-                              "\" add -amd -nostamp -noprompt " + archiveString, {
-                                  cwd: path.join(__dirname, "volo")
-                              },
-                              function(error, stdout, stderr) {
-                                  if (stdout) {
-                                      console.log(stdout);
-                                  }
-                                  if (stderr) {
-                                      console.log(stderr);
-                                  }
-                                  cb(error);
-                              });
-        });
-    }
-
     gulp.task('_get-requirejs-plugins', function(cb) {
-        // At least temporarily not using volo because it fails on Node 6 at present.
-        // Otherwise, we would do this:
-        // voloGet("millermedeiros/requirejs-plugins/v1.0.3#src/json.js", cb);
         downloadOnly(path.join(__dirname, "volo", "json.js"),
                      "https://raw.githubusercontent.com/millermedeiros/requirejs-plugins/v1.0.3/src/json.js", cb);
     });
 
     gulp.task('_get-has-js', function(cb) {
-        // volo sometimes hangs on this one too, else we would do this:
-        // voloGet("phiggins42/has.js", cb);
         downloadOnly(path.join(__dirname, "volo", "has.js"),
                      "https://raw.githubusercontent.com/phiggins42/has.js/master/has.js", cb);
     });
@@ -562,10 +534,10 @@
     });
 
     gulp.task('_requirejs-optimize',
-              ['_parse.js', '_regex.js', '_get-closure', '_externsWithRequire.js',
+              ['_parse.js', '_regex.js', '_externsWithRequire.js',
                '_convert-cjs-modules', '_get-requirejs-plugins', '_replace-require-json', '_get-has-js'],
               function(cb) {
-                  var closureJarPath = path.join(process.cwd(), "jar", "closure-latest", "compiler.jar");
+                  var closureJarPath = path.join(process.cwd(), "node_modules", "google-closure-compiler", "compiler.jar");
                   var ParallelCompiler = function(rjsCommand) {
                       var that = this;
                       stream.Duplex.call(this, { writableObjectMode: true });
