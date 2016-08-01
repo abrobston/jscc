@@ -46,7 +46,7 @@
     "gulp": "~3.9.1",
     "jformatter": "~1.0.13",
     "jsdoc": "~3.4.0",
-    "mocha": "~2.5.3",
+    "mocha": "~3.0.0",
     "nyc": "~7.0.0",
     "phantomjs-prebuilt": "~2.1.7",
     "requirejs": "~2.2.0",
