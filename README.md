@@ -71,8 +71,8 @@ BUILDING
 
  1. Ensure that you have Node.js and npm.  See
     https://docs.npmjs.com/getting-started/installing-node for details.
-    Building and testing JS/CC most recently used Node versions 4.4.3
-    and 5.10.1, but other versions will likely work also.  
+    Building and testing JS/CC most recently used Node versions 4.4.7
+    and 6.3.1, but other versions will likely work also.  
  2. Ensure that you have Gulp version 3.x.  See
     https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md.
     Gulp version 4.x may work but has not been tested.
