@@ -100,7 +100,7 @@
   },
   "scripts": {
     "test": "nyc gulp test",
-    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov -f coverage.lcov",
     "prepublish": "npm update --dev && gulp clean && gulp build"
   }
 }
