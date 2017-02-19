@@ -39,7 +39,7 @@
     "almond": "~0.3.2",
     "amdclean": "~2.7.0",
     "amdefine": "~1.0.0",
-    "async": "~2.0.1",
+    "async": "~2.1.5",
     "chai": "~3.5.0",
     "codecov": "~1.0.1",
     "extract-zip": "~1.5.0",
