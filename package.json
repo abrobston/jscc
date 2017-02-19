@@ -50,7 +50,7 @@
     "mocha": "~2.4.5",
     "nyc": "~6.6.1",
     "phantomjs-prebuilt": "~2.1.9",
-    "requirejs": "~2.2.0",
+    "requirejs": "~2.3.3",
     "requirejs-text": "~2.0.12",
     "rest": "^2.0.0",
     "sinon": "~1.17.5",
