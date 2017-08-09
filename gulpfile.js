@@ -509,7 +509,7 @@
 
     gulp.task('_replace-require-json', ['_convert-cjs-modules'], function(cb) {
         var lastError = null;
-        gulp.src(["./converted_modules/**/*.js"])
+        gulp.src(["./converted_modules/**/*.js"], { nodir: true })
             .pipe(new stream.Transform({
                 objectMode: true,
                 transform: function(vinylFile, encoding, next) {
