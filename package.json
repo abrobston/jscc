@@ -46,7 +46,7 @@
     "google-closure-compiler": "=20160517.0.0",
     "gulp": "~3.9.1",
     "jformatter": "~1.0.13",
-    "jsdoc": "~3.4.0",
+    "jsdoc": "~3.5.5",
     "mocha": "~2.4.5",
     "nyc": "~6.6.1",
     "phantomjs-prebuilt": "~2.1.9",
