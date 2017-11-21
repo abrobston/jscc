@@ -114,7 +114,7 @@ suite("main", function() {
         sandbox.stub(mocks.store["tabgen"], "lalr1_parse_table");
         ["print_parse_tables", "print_dfa_table", "print_term_actions", "print_symbol_labels",
          "print_actions"].forEach(function(methodName) {
-            sandbox.stub(mocks.store["printtab"], methodName, function() {
+            sandbox.stub(mocks.store["printtab"], methodName).callsFake(function() {
                 return ""
             });
         });
@@ -131,7 +131,7 @@ suite("main", function() {
 
     test("Ignores src_file when input string is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
-            ioStub.read_all_input.reset();
+            ioStub.read_all_input.resetHistory();
             jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -143,7 +143,7 @@ suite("main", function() {
 
     test("Ignores src_file when input function is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
-            ioStub.read_all_input.reset();
+            ioStub.read_all_input.resetHistory();
             jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -158,7 +158,7 @@ suite("main", function() {
     test("Uses src_file when no input string or function is present",
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
-                 ioStub.read_all_input.reset();
+                 ioStub.read_all_input.resetHistory();
                  jscc({
                           src_file: "invalidFileName.par",
                           tpl_file: "invalidTemplateFile.js"
@@ -171,7 +171,7 @@ suite("main", function() {
     test("Ignores out_file when outputCallback function is present",
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
-                 ioStub.write_output.reset();
+                 ioStub.write_output.resetHistory();
                  var outputCallback = sandbox.stub();
                  jscc({
                           src_file: "invalidFileName.par",
@@ -186,7 +186,7 @@ suite("main", function() {
 
     test("Uses out_file when no outputCallback is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
-            ioStub.write_output.reset();
+            ioStub.write_output.resetHistory();
             jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -199,7 +199,7 @@ suite("main", function() {
 
     test("Ignores template string when tpl_file is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
-            ioStub.read_template.reset();
+            ioStub.read_template.resetHistory();
             jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -212,7 +212,7 @@ suite("main", function() {
 
     test("Ignores tpl_file when template function is present", injector.run(["mocks", "jscc"], function(mocks, jscc) {
         wrapStub(mocks, function() {
-            ioStub.read_template.reset();
+            ioStub.read_template.resetHistory();
             jscc({
                      src_file: "invalidFileName.par",
                      tpl_file: "invalidTemplateFile.js",
@@ -228,7 +228,7 @@ suite("main", function() {
     test("Uses template string when no tpl_file or function is present",
          injector.run(["mocks", "jscc"], function(mocks, jscc) {
              wrapStub(mocks, function() {
-                 ioStub.read_template.reset();
+                 ioStub.read_template.resetHistory();
                  var output = "";
                  jscc({
                           src_file: "invalidFileName.par",
@@ -274,7 +274,7 @@ suite("main", function() {
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
                      mocks.store["printtab"][item.method].restore();
-                     sandbox.stub(mocks.store["printtab"], item.method, function() {
+                     sandbox.stub(mocks.store["printtab"], item.method).callsFake(function() {
                          return "Replacement text";
                      });
                      var output = "";
@@ -299,7 +299,7 @@ suite("main", function() {
              injector.run(["mocks", "jscc"], function(mocks, jscc) {
                  wrapStub(mocks, function() {
                      try {
-                         sandbox.stub(mocks.store["printtab"], item.method, function() {
+                         sandbox.stub(mocks.store["printtab"], item.method).callsFake(function() {
                              return 87654;
                          });
                          var output = "";
@@ -333,13 +333,13 @@ suite("main", function() {
                  wrapStub(mocks, function() {
                      var printtab = mocks.store["printtab"];
                      if (/_id$/.test(methodName)) {
-                         sandbox.stub(printtab, methodName, function() {
+                         sandbox.stub(printtab, methodName).callsFake(function() {
                              mocks.store["global"].errors = 1;
                              return 1;
                          });
                      } else {
                          printtab[methodName].restore();
-                         sandbox.stub(printtab, methodName, function() {
+                         sandbox.stub(printtab, methodName).callsFake(function() {
                              mocks.store["global"].errors = 1;
                              return "";
                          });
@@ -363,8 +363,8 @@ suite("main", function() {
                      return 1;
                  });
                  parseStub.reset();
-                 integrityStub.undef.reset();
-                 integrityStub.unreachable.reset();
+                 integrityStub.undef.resetHistory();
+                 integrityStub.unreachable.resetHistory();
                  jscc({
                           src_file: "invalidFileName.par",
                           tpl_file: "invalidTemplate.js",
@@ -386,13 +386,13 @@ suite("main", function() {
                      var firstSpy;
                      try {
                          integrityStub[method].restore();
-                         sandbox.stub(integrityStub, method, function() {
+                         sandbox.stub(integrityStub, method).callsFake(function() {
                              mocks.store["global"].errors = 1;
                          });
-                         integrityStub[method].reset();
+                         integrityStub[method].resetHistory();
                          firstSpy = sandbox.spy(mocks.store["first"], "first");
-                         mocks.store["tabgen"].lalr1_parse_table.reset();
-                         integrityStub.check_empty_states.reset();
+                         mocks.store["tabgen"].lalr1_parse_table.resetHistory();
+                         integrityStub.check_empty_states.resetHistory();
                          jscc({
                                   src_file: "invalidFileName.par",
                                   tpl_file: "invalidTemplate.js",
@@ -429,7 +429,7 @@ suite("main", function() {
                          } catch (e) {
                              skipFinallyRestore = false;
                          }
-                         sandbox.stub(mocks.store[fullModule], item.method, function() {
+                         sandbox.stub(mocks.store[fullModule], item.method).callsFake(function() {
                              mocks.store["global"].errors = 1;
                          });
                          var outputCallback = sandbox.stub();
@@ -459,7 +459,7 @@ suite("main", function() {
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                     sandbox.stub(mocks.store["integrity"], "check_empty_states").callsFake(function() {
                          mocks.store["global"].errors = 1;
                      });
                      assert.throws(function() {
@@ -489,7 +489,7 @@ suite("main", function() {
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states").callsFake(function() {
                          mocks.store["global"].errors = 1;
                      });
                      assert.doesNotThrow(function() {
@@ -519,10 +519,10 @@ suite("main", function() {
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                     sandbox.stub(mocks.store["integrity"], "check_empty_states").callsFake(function() {
                          mocks.store["global"].errors = 1;
                      });
-                     exitStub.reset();
+                     exitStub.resetHistory();
                      jscc({
                               src_file: "invalidFileName.par",
                               tpl_file: "invalidTemplate.js",
@@ -551,10 +551,10 @@ suite("main", function() {
                      } catch (e) {
                          skipFinallyRestore = false;
                      }
-                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states", function() {
+                     integrityStub = sandbox.stub(mocks.store["integrity"], "check_empty_states").callsFake(function() {
                          mocks.store["global"].errors = 1;
                      });
-                     exitStub.reset();
+                     exitStub.resetHistory();
                      jscc({
                               src_file: "invalidFileName.par",
                               tpl_file: "invalidTemplate.js",

@@ -77,8 +77,8 @@ suite("parse", function() {
         test("Permits " + item.description + " after whitespace terminal definition",
              injector.run(["mocks", "parse", "enums/EXEC"], function(mocks, parse) {
                  var log = mocks.store["log/logNode"];
-                 log.fatal.reset();
-                 log.error.reset();
+                 log.fatal.resetHistory();
+                 log.error.resetHistory();
 
                  var global = mocks.store["global"];
 

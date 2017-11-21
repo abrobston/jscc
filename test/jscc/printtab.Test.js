@@ -93,7 +93,7 @@ suite("printtab", function() {
                               id: 0,
                               label: "testLabel"
                           }));
-                          log.error.reset();
+                          log.error.resetHistory();
                           printtab.print_actions();
                           assert.called(log.error);
                       }));

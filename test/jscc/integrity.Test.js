@@ -83,7 +83,7 @@ suite("integrity", function() {
                           function(mocks, integrity, Symbol, SYM) {
                               var global = mocks.store["global"];
                               var log = mocks.store["log/logNode"];
-                              log.error.reset();
+                              log.error.resetHistory();
                               var term = new Symbol({ kind: SYM.TERM, defined: false });
                               var defined = new Symbol({ kind: SYM.NONTERM, defined: true });
                               var definedTerm = new Symbol({ kind: SYM.TERM, defined: true });

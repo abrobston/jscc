@@ -106,7 +106,7 @@ suite("regex", function() {
              injector.run(["mocks", "regex"],
                           function(mocks, regex) {
                               var log = mocks.store["log/logNode"];
-                              log.error.reset();
+                              log.error.resetHistory();
                               regex(item.pattern, 0, false);
                               if (item.valid) {
                                   assert.notCalled(log.error);
