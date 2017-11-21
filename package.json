@@ -54,7 +54,7 @@
     "requirejs-text": "~2.0.12",
     "rest": "^2.0.0",
     "sinon": "~4.1.2",
-    "source-map": "~0.5.6",
+    "source-map": "~0.6.1",
     "squirejs": "~0.2.1",
     "temp": "~0.8.3"
   },
