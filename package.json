@@ -36,7 +36,7 @@
     }
   ],
   "devDependencies": {
-    "almond": "~0.3.2",
+    "almond": "~0.3.3",
     "amdclean": "~2.7.0",
     "amdefine": "~1.0.0",
     "async": "~2.6.0",
