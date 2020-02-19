@@ -41,7 +41,7 @@
     "amdefine": "~1.0.0",
     "async": "~2.6.0",
     "chai": "~4.1.2",
-    "codecov": "~3.0.0",
+    "codecov": "~3.6.5",
     "extract-zip": "~1.6.6",
     "google-closure-compiler": "=20160517.0.0",
     "gulp": "~3.9.1",
